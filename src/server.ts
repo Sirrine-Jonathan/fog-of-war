@@ -133,6 +133,7 @@ io.on('connection', (socket) => {
       
       const playerIndex = game.addPlayer(userId, username, isBot);
       socket.data.playerIndex = playerIndex;
+      socket.data.userId = userId;
       socket.data.isViewer = false;
 
       console.log(`✅ Player ${userId} (${username}) ${isBot ? 'Bot' : 'Human'} joined game ${gameId} as player ${playerIndex} [Game State: Started=${game.isStarted()}, Ended=${game.isEnded()}]`);
@@ -360,6 +361,26 @@ io.on('connection', (socket) => {
     const roomId = playerRooms.get(socket.id);
     if (roomId) {
       console.log(`🚪 Player ${socket.id} disconnected from room ${roomId}`);
+      
+      // If player was joined but game hasn't started, remove them from the game
+      if (socket.data.playerIndex >= 0 && games.has(roomId)) {
+        const game = games.get(roomId)!;
+        if (!game.isStarted()) {
+          const userId = socket.data.userId;
+          console.log(`🚪 Removing disconnected player ${userId} from game ${roomId}`);
+          game.removePlayer(userId);
+          
+          // Broadcast updated player list
+          io.to(roomId).emit('player_joined', {
+            players: game.getPlayers().map(p => ({
+              username: p.username,
+              index: p.index,
+              isBot: p.isBot,
+              eliminated: p.eliminated
+            }))
+          });
+        }
+      }
       
       // Transfer host if disconnecting player was host
       if (socket.data.isHost && gameHosts.get(roomId) === socket.id) {
