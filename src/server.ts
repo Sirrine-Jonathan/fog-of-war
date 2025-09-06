@@ -16,6 +16,11 @@ const gameHistory = new Map<string, any[]>(); // gameId -> array of completed ga
 // Serve static files
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Root route - redirect to a default game
+app.get('/', (req, res) => {
+  res.redirect('/game/lobby');
+});
+
 // Game history API
 app.get('/api/history/:gameId', (req, res) => {
   const gameId = req.params.gameId;

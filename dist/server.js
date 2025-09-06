@@ -17,6 +17,10 @@ const gameHosts = new Map(); // gameId -> socketId of host
 const gameHistory = new Map(); // gameId -> array of completed games
 // Serve static files
 app.use(express_1.default.static(path_1.default.join(__dirname, '../public')));
+// Root route - redirect to a default game
+app.get('/', (req, res) => {
+    res.redirect('/game/lobby');
+});
 // Game history API
 app.get('/api/history/:gameId', (req, res) => {
     const gameId = req.params.gameId;
