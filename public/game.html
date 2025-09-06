@@ -160,6 +160,46 @@
             border-radius: 8px;
             margin-bottom: 20px;
         }
+        
+        .player-grid {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 8px;
+            align-items: center;
+            padding: 8px;
+            margin: 4px 0;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.7);
+        }
+        
+        .player-name {
+            font-weight: 500;
+        }
+        
+        .player-stats {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .current-player {
+            background: rgba(255,215,0,0.3);
+            border: 2px solid #ffd700;
+            font-weight: bold;
+        }
+        
+        .eliminated-player {
+            opacity: 0.5;
+            text-decoration: line-through;
+        }
+        
+        .transfer-btn {
+            font-size: 11px;
+            padding: 4px 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            background: white;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -169,7 +209,6 @@
             <canvas id="gameBoard" width="500" height="375"></canvas>
             <div style="margin-top: 15px; text-align: center;">
                 <p style="color: #666; font-size: 14px;">Click a tile you own, then click an adjacent tile to attack/move</p>
-                <p style="color: #333; font-weight: 600;">Selected tile: <span id="selectedTile">None</span></p>
             </div>
         </div>
         <div id="info">
@@ -186,15 +225,15 @@
             </div>
             
             <div class="players-list">
-                <h4 style="margin-top: 0; color: #333;">Players</h4>
+                <h4 style="margin-top: 0; color: #333;">Players & Stats</h4>
                 <div id="players"></div>
             </div>
             
-            <div>
+            <div id="joinControls">
                 <input type="text" id="usernameInput" placeholder="Enter your username" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px;">
                 <button id="joinBtn" class="btn">🎮 Join as Player</button>
-                <button id="startBtn" class="btn">🚀 Start Game</button>
             </div>
+            <button id="startBtn" class="btn">🚀 Start Game</button>
         </div>
     </div>
 
@@ -319,14 +358,17 @@
             
             // Show/hide buttons based on status
             updateButtonVisibility();
+            
+            // Update player list to show/hide "Make Host" buttons
+            updatePlayersList();
         });
         
         function updateButtonVisibility() {
-            const joinBtn = document.getElementById('joinBtn');
+            const joinControls = document.getElementById('joinControls');
             const startBtn = document.getElementById('startBtn');
             
-            // Hide join button if already joined as player
-            joinBtn.style.display = (playerIndex >= 0) ? 'none' : 'inline-block';
+            // Hide join controls if already joined as player
+            joinControls.style.display = (playerIndex >= 0) ? 'none' : 'block';
             
             // Show start button only to host
             startBtn.style.display = isHost ? 'inline-block' : 'none';
@@ -343,9 +385,6 @@
             console.log('Player joined:', data);
             players = data.players;
             
-            // Only update playerIndex if this event is specifically about us joining
-            // (Don't update when other players join)
-            
             // Check if current player is eliminated
             if (playerIndex >= 0 && players[playerIndex]?.eliminated) {
                 isEliminated = true;
@@ -355,6 +394,33 @@
             }
             
             updatePlayersList();
+        });
+        
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+            // Show reconnection message
+            const notification = document.getElementById('gameEndNotification');
+            const gameEndText = document.getElementById('gameEndText');
+            gameEndText.textContent = '🔌 Connection lost - attempting to reconnect...';
+            gameEndText.style.color = '#ff9800';
+            notification.style.display = 'block';
+        });
+        
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            // Hide reconnection message
+            const notification = document.getElementById('gameEndNotification');
+            if (notification.style.display === 'block') {
+                notification.style.display = 'none';
+            }
+            
+            // Attempt to rejoin if we were previously in the game
+            if (playerIndex >= 0 && lastUsername) {
+                console.log('Reconnecting as player:', lastUsername);
+                const userId = 'human_' + Date.now();
+                socket.emit('set_username', userId, lastUsername);
+                socket.emit('join_private', roomId, userId);
+            }
         });
         
         socket.on('username_taken', (data) => {
@@ -369,7 +435,6 @@
             // Reset player state for humans (bots will auto-rejoin)
             playerIndex = -1;
             selectedTile = null;
-            document.getElementById('selectedTile').textContent = 'None';
             document.getElementById('gameStarted').textContent = 'Game Ended';
             
             // Show in-game notification instead of modal
@@ -399,7 +464,6 @@
         socket.on('attack_result', (data) => {
             if (data.success) {
                 selectedTile = data.to;
-                document.getElementById('selectedTile').textContent = data.to;
                 updateVisibleTiles();
                 drawGame();
             } else {
@@ -441,6 +505,7 @@
                 
                 updateVisibleTiles();
                 drawGame();
+                updatePlayersList(); // Update stats display
             }
         });
         
@@ -644,7 +709,6 @@
                 // Select any tile owned by player (even with 1 army)
                 if (gameState.terrain[tileIndex] === playerIndex) {
                     selectedTile = tileIndex;
-                    document.getElementById('selectedTile').textContent = tileIndex;
                     drawGame();
                 }
             } else {
@@ -656,7 +720,6 @@
                         // Can't move with only 1 army, but allow reselecting target if it's owned
                         if (gameState.terrain[tileIndex] === playerIndex) {
                             selectedTile = tileIndex;
-                            document.getElementById('selectedTile').textContent = tileIndex;
                             drawGame();
                         }
                     }
@@ -664,10 +727,8 @@
                     // Click on non-adjacent tile - select it if owned, otherwise clear selection
                     if (gameState.terrain[tileIndex] === playerIndex) {
                         selectedTile = tileIndex;
-                        document.getElementById('selectedTile').textContent = tileIndex;
                     } else {
                         selectedTile = null;
-                        document.getElementById('selectedTile').textContent = 'None';
                     }
                     drawGame();
                 }
@@ -686,46 +747,83 @@
             return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
         }
         
+        function calculatePlayerStats() {
+            if (!gameState) return {};
+            
+            const stats = {};
+            players.forEach((player, index) => {
+                stats[index] = { tiles: 0, armies: 0 };
+            });
+            
+            for (let i = 0; i < gameState.terrain.length; i++) {
+                const owner = gameState.terrain[i];
+                if (owner >= 0 && stats[owner]) {
+                    stats[owner].tiles++;
+                    stats[owner].armies += gameState.armies[i];
+                }
+            }
+            
+            return stats;
+        }
+        
         function updatePlayersList() {
             const playersDiv = document.getElementById('players');
             playersDiv.innerHTML = '';
-            players.forEach((player, index) => {
+            const stats = calculatePlayerStats();
+            
+            // Create sorted player list by performance (tiles + armies)
+            const sortedPlayers = players.map((player, index) => ({
+                ...player,
+                index,
+                stats: stats[index] || { tiles: 0, armies: 0 },
+                score: (stats[index]?.tiles || 0) + (stats[index]?.armies || 0)
+            })).sort((a, b) => b.score - a.score);
+            
+            sortedPlayers.forEach((player) => {
                 const div = document.createElement('div');
-                div.style.color = playerColors[index] || 'black';
-                div.style.padding = '5px';
-                div.style.borderRadius = '5px';
-                div.style.margin = '2px 0';
-                div.style.background = 'rgba(255,255,255,0.7)';
-                
-                const status = player.eliminated ? ' 💀' : ' ⚔️';
-                const type = player.isBot ? '🤖' : '👤';
-                div.textContent = `${type} ${player.username}${status}`;
+                div.className = 'player-grid';
+                div.style.color = playerColors[player.index] || 'black';
                 
                 if (player.eliminated) {
-                    div.style.textDecoration = 'line-through';
-                    div.style.opacity = '0.5';
+                    div.classList.add('eliminated-player');
                 }
                 
-                if (index === playerIndex) {
-                    div.style.fontWeight = 'bold';
-                    div.style.border = '2px solid ' + (playerColors[index] || 'black');
+                if (player.index === playerIndex) {
+                    div.classList.add('current-player');
                 }
                 
-                // Add host transfer button for non-bot players (only visible to current host)
-                if (isHost && !player.isBot && index !== playerIndex) {
+                // Player name
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'player-name';
+                let displayName = player.username;
+                if (player.eliminated) {
+                    displayName += ' (eliminated)';
+                } else if (player.disconnected) {
+                    displayName += ' (disconnected)';
+                }
+                nameDiv.textContent = displayName;
+                
+                // Stats
+                const statsDiv = document.createElement('div');
+                statsDiv.className = 'player-stats';
+                if (gameStarted) {
+                    statsDiv.textContent = `${player.stats.tiles} tiles, ${player.stats.armies} armies`;
+                }
+                
+                // Transfer button (only for host viewing non-bot human players)
+                const buttonDiv = document.createElement('div');
+                if (isHost && player.isBot === false && player.index !== playerIndex) {
                     const transferBtn = document.createElement('button');
-                    transferBtn.textContent = '👑';
-                    transferBtn.style.marginLeft = '10px';
-                    transferBtn.style.fontSize = '12px';
-                    transferBtn.style.padding = '2px 6px';
-                    transferBtn.style.border = 'none';
-                    transferBtn.style.borderRadius = '3px';
-                    transferBtn.style.cursor = 'pointer';
+                    transferBtn.textContent = 'Make Host';
+                    transferBtn.className = 'transfer-btn';
                     transferBtn.title = 'Transfer host to this player';
-                    transferBtn.onclick = () => transferHost(index);
-                    div.appendChild(transferBtn);
+                    transferBtn.onclick = () => transferHost(player.index);
+                    buttonDiv.appendChild(transferBtn);
                 }
                 
+                div.appendChild(nameDiv);
+                div.appendChild(statsDiv);
+                div.appendChild(buttonDiv);
                 playersDiv.appendChild(div);
             });
         }
@@ -794,7 +892,6 @@
                 } else if (gameState.terrain[targetTile] === playerIndex) {
                     // Can't move but target is owned - change selection
                     selectedTile = targetTile;
-                    document.getElementById('selectedTile').textContent = targetTile;
                     drawGame();
                 }
                 e.preventDefault();

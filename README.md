@@ -1,6 +1,6 @@
-# Generals Game Server
+# Fog of War
 
-A Socket.IO-based game server compatible with generals.io bots, featuring both bot and human player support.
+A Socket.IO-based game server, featuring both bot and human player support.
 
 ## Features
 
@@ -21,12 +21,10 @@ Server runs on http://localhost:3001
 ## Usage
 
 ### For Bots
-Update your bot to connect to `http://localhost:3001` instead of the official server.
+Update your bot to connect to `http://localhost:3001`.
 
 ### For Human Players
 1. Visit `http://localhost:3001/game/your-room-name`
-2. Press 'j' to join as a human player
-3. Click tiles to select and move armies
 
 ### Game Controls
 - Click owned tile with >1 army to select
@@ -35,7 +33,7 @@ Update your bot to connect to `http://localhost:3001` instead of the official se
 
 ## API Compatibility
 
-Implements the same Socket.IO events as generals.io:
+Socket.IO events:
 - `set_username`
 - `join_private` 
 - `set_force_start`
