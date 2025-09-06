@@ -198,7 +198,8 @@ io.on('connection', (socket) => {
             io.to(gameId).emit('game_update', {
                 cities_diff: [0, gameState.cities.length, ...gameState.cities],
                 map_diff: [0, mapData.length, ...mapData],
-                generals: gameState.generals
+                generals: gameState.generals,
+                players: gameState.players
             });
             // Start sending updates
             const updateInterval = setInterval(async () => {
@@ -250,7 +251,8 @@ io.on('connection', (socket) => {
                 io.to(gameId).emit('game_update', {
                     cities_diff: [0, gameState.cities.length, ...gameState.cities],
                     map_diff: [0, mapData.length, ...mapData],
-                    generals: gameState.generals
+                    generals: gameState.generals,
+                    players: gameState.players
                 });
             }, 100);
         }
