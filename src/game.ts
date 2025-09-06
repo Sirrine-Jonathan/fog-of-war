@@ -63,6 +63,42 @@ export class Game {
     return playerIndex;
   }
 
+  removePlayer(playerId: string): boolean {
+    if (this.state.gameStarted) return false; // Can't remove players after game starts
+    
+    const playerIndex = this.state.players.findIndex(p => p.id === playerId);
+    if (playerIndex === -1) return false;
+    
+    // Remove player's general from map
+    const generalPos = this.state.generals[playerIndex];
+    if (generalPos !== undefined) {
+      this.state.terrain[generalPos] = TILE_EMPTY;
+      this.state.armies[generalPos] = 0;
+    }
+    
+    // Remove player and reindex
+    this.state.players.splice(playerIndex, 1);
+    this.state.generals.splice(playerIndex, 1);
+    
+    // Reindex remaining players and their territories
+    this.state.players.forEach((player, newIndex) => {
+      player.index = newIndex;
+    });
+    
+    // Update terrain indices
+    for (let i = 0; i < this.state.terrain.length; i++) {
+      if (this.state.terrain[i] > playerIndex) {
+        this.state.terrain[i]--;
+      }
+    }
+    
+    return true;
+  }
+
+  getPlayers(): Player[] {
+    return this.state.players;
+  }
+
   private findEmptyPosition(): number {
     let pos;
     do {

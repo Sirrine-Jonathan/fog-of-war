@@ -319,6 +319,43 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('leave_game', (gameId: string, userId: string) => {
+    console.log(`🚪 Player ${userId} leaving game ${gameId}`);
+    
+    if (!games.has(gameId)) {
+      console.log(`❌ Game ${gameId} not found`);
+      return;
+    }
+    
+    const game = games.get(gameId)!;
+    const removed = game.removePlayer(userId);
+    
+    if (removed) {
+      console.log(`✅ Player ${userId} removed from game ${gameId}`);
+      
+      // Reset player data
+      socket.data.playerIndex = -1;
+      socket.data.isViewer = true;
+      
+      // Transfer host if leaving player was host
+      if (socket.data.isHost && gameHosts.get(gameId) === socket.id) {
+        transferHostToNextPlayer(gameId);
+      }
+      
+      // Broadcast updated player list
+      io.to(gameId).emit('player_joined', {
+        players: game.getPlayers().map(p => ({
+          username: p.username,
+          index: p.index,
+          isBot: p.isBot,
+          eliminated: p.eliminated
+        }))
+      });
+      
+      sendGameInfo(gameId);
+    }
+  });
+
   socket.on('disconnect', () => {
     const roomId = playerRooms.get(socket.id);
     if (roomId) {
@@ -358,5 +395,5 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`Generals game server running on port ${PORT}`);
-  console.log(`Visit http://localhost:${PORT}/game/test to view a game`);
+  console.log(`Visit http://localhost:${PORT}`);
 });

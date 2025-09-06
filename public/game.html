@@ -206,9 +206,11 @@
     <h1>Fog of War</h1>
     <div id="gameContainer">
         <div>
-            <canvas id="gameBoard" width="500" height="375"></canvas>
+            <canvas id="gameBoard" width="500" height="375" style="display: none;"></canvas>
             <div style="margin-top: 15px; text-align: center;">
-                <p style="color: #666; font-size: 14px;">Click a tile you own, then click an adjacent tile to attack/move</p>
+                <p style="color: #666; font-size: 14px;"><button id="copyUrlBtn" class="btn">
+                    Copy game url
+                </button></p>
             </div>
         </div>
         <div id="info">
@@ -232,6 +234,7 @@
             <div id="joinControls">
                 <input type="text" id="usernameInput" placeholder="Enter your username" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px;">
                 <button id="joinBtn" class="btn">🎮 Join as Player</button>
+                <button id="leaveBtn" class="btn" style="background: #dc3545; display: none;">🚪 Leave Game</button>
             </div>
             <button id="startBtn" class="btn">🚀 Start Game</button>
         </div>
@@ -260,6 +263,7 @@
         let visibleTiles = new Set();
         let playerGenerals = new Map(); // Track each player's starting position
         let lastUsername = ''; // Remember last used username
+        let currentUserId = ''; // Track current user ID
         let isHost = false;
         let hostSocketId = null;
         let isEliminated = false;
@@ -335,6 +339,7 @@
             console.log('Game started!', data);
             document.getElementById('gameStarted').textContent = gameStarted ? 'Playing' : 'Started';
             document.getElementById('gameEndNotification').style.display = 'none'; // Hide notification
+            document.getElementById('gameBoard').style.display = 'block'; // Show canvas
             playerIndex = data.playerIndex !== undefined ? data.playerIndex : -1;
             gameStarted = true;
             updateButtonVisibility(); // Update button visibility
@@ -366,9 +371,24 @@
         function updateButtonVisibility() {
             const joinControls = document.getElementById('joinControls');
             const startBtn = document.getElementById('startBtn');
+            const joinBtn = document.getElementById('joinBtn');
+            const leaveBtn = document.getElementById('leaveBtn');
             
-            // Hide join controls if already joined as player
-            joinControls.style.display = (playerIndex >= 0) ? 'none' : 'block';
+            if (playerIndex >= 0 && !gameStarted) {
+                // Joined but game not started - show leave button, hide join controls
+                joinBtn.style.display = 'none';
+                leaveBtn.style.display = 'inline-block';
+                document.getElementById('usernameInput').style.display = 'none';
+            } else if (playerIndex >= 0) {
+                // Joined and game started - hide all join controls
+                joinControls.style.display = 'none';
+            } else {
+                // Not joined - show join controls, hide leave button
+                joinControls.style.display = 'block';
+                joinBtn.style.display = 'inline-block';
+                leaveBtn.style.display = 'none';
+                document.getElementById('usernameInput').style.display = 'block';
+            }
             
             // Show start button only to host
             startBtn.style.display = isHost ? 'inline-block' : 'none';
@@ -840,7 +860,10 @@
         
         // Button handlers
         document.getElementById('joinBtn').addEventListener('click', joinAsPlayer);
+        document.getElementById('leaveBtn').addEventListener('click', leaveGame);
         document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('copyUrlBtn').addEventListener('click', copyGameUrl);
+        document.getElementById('copyUrlBtn').innerHTML = `<p style="font-size: 1.5em">Copy game URL</p><p style="font-size: 1em">${window.location.href}</p>`
         
         function joinAsPlayer() {
             if (playerIndex >= 0) return;
@@ -853,13 +876,55 @@
             }
             
             lastUsername = username; // Remember this username
-            const userId = 'human_' + Date.now();
-            socket.emit('set_username', userId, username);
-            socket.emit('join_private', roomId, userId);
+            currentUserId = 'human_' + Date.now();
+            socket.emit('set_username', currentUserId, username);
+            socket.emit('join_private', roomId, currentUserId);
+        }
+        
+        function leaveGame() {
+            if (playerIndex < 0 || gameStarted) return;
+            
+            // Emit leave event to server with current user ID
+            socket.emit('leave_game', roomId, currentUserId);
+            
+            // Reset player state
+            playerIndex = -1;
+            selectedTile = null;
+            isHost = false;
+            currentUserId = '';
+            clearState();
+            
+            updateButtonVisibility();
         }
         
         function startGame() {
             socket.emit('set_force_start', roomId, true);
+        }
+        
+        function copyGameUrl() {
+            navigator.clipboard.writeText(window.location.href).then(() => {
+                const btn = document.getElementById('copyUrlBtn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<p style="font-size: 1.5em">Copied!</p>';
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                }, 2000);
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = window.location.href;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                const btn = document.getElementById('copyUrlBtn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<p style="font-size: 1.5em">Copied!</p>';
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                }, 2000);
+            });
         }
         
         // Arrow key controls
