@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fog of War - Generals.io Style Game</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            margin-top: 50px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #4a5568;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        h2 {
+            color: #2d3748;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+        
+        .game-link {
+            display: inline-block;
+            background: #4299e1;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 8px;
+            margin: 10px 10px 10px 0;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        .game-link:hover {
+            background: #3182ce;
+        }
+        
+        .bot-link {
+            background: #48bb78;
+        }
+        
+        .bot-link:hover {
+            background: #38a169;
+        }
+        
+        .feature {
+            background: #f7fafc;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #4299e1;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .steps {
+            background: #edf2f7;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .steps ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .steps li {
+            margin: 8px 0;
+        }
+        
+        code {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Fog of War</h1>
+        <p style="text-align: center; font-size: 1.2em; color: #666;">
+            A real-time strategy game inspired by Generals.io
+        </p>
+        
+        <h2>🚀 Quick Start</h2>
+        <div class="steps">
+            <ol>
+                <li>Click on a game room below to join</li>
+                <li>Enter your username and click "Join as Player"</li>
+                <li>Wait for other players or add a bot</li>
+                <li>The host can start the game when ready</li>
+                <li>Conquer territories and eliminate opponents!</li>
+            </ol>
+        </div>
+        
+        <h2>🎯 Game Rooms</h2>
+        <p>Join an existing room or create your own by visiting <code>/game/your-room-name</code></p>
+        
+        <a href="/game/lobby" class="game-link">🏛️ Lobby</a>
+        <a href="/game/arena" class="game-link">⚔️ Arena</a>
+        <a href="/game/battlefield" class="game-link">🏰 Battlefield</a>
+        <a href="/game/test" class="game-link">🧪 Test Room</a>
+        
+        <h2>🤖 Bot Documentation</h2>
+        <p>Want to create your own bot? Check out our comprehensive bot development guide:</p>
+        <a href="/docs/bot" class="game-link bot-link">📚 Bot Development Guide</a>
+        
+        <h2>✨ Game Features</h2>
+        
+        <div class="feature">
+            <strong>Real-time Strategy:</strong> Command armies in real-time battles with fog of war mechanics
+        </div>
+        
+        <div class="feature">
+            <strong>Multiplayer Support:</strong> Play with friends or against AI bots
+        </div>
+        
+        <div class="feature">
+            <strong>Host Controls:</strong> Transfer host privileges and manage game settings
+        </div>
+        
+        <div class="feature">
+            <strong>Spectator Mode:</strong> Watch games in progress or continue viewing after elimination
+        </div>
+        
+        <div class="feature">
+            <strong>Bot API:</strong> Create custom AI opponents using our Socket.IO API
+        </div>
+        
+        <h2>🎮 How to Play</h2>
+        <div class="steps">
+            <ul>
+                <li><strong>Movement:</strong> Click on your territory, then click an adjacent tile to move armies</li>
+                <li><strong>Keyboard:</strong> Use arrow keys to move from selected territory</li>
+                <li><strong>Conquest:</strong> Attack enemy territories or expand to neutral lands</li>
+                <li><strong>Strategy:</strong> Manage your armies wisely - you need at least 1 army to hold territory</li>
+                <li><strong>Victory:</strong> Eliminate all opponents by capturing their generals</li>
+            </ul>
+        </div>
+        
+        <h2>🔗 Invite Friends</h2>
+        <p>Share the room URL with friends to play together. Anyone with the link can join as a player or spectator!</p>
+        
+        <div style="text-align: center; margin-top: 40px; color: #666;">
+            <p>Built with Socket.IO • Open Source • Real-time Multiplayer</p>
+        </div>
+    </div>
+</body>
+</html>

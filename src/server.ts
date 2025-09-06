@@ -16,9 +16,14 @@ const gameHistory = new Map<string, any[]>(); // gameId -> array of completed ga
 // Serve static files
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Root route - redirect to a default game
+// Root route - serve welcome page
 app.get('/', (req, res) => {
-  res.redirect('/game/lobby');
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+// Bot documentation route
+app.get('/docs/bot', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/bot-docs.html'));
 });
 
 // Game history API

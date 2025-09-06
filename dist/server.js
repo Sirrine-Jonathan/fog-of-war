@@ -17,9 +17,13 @@ const gameHosts = new Map(); // gameId -> socketId of host
 const gameHistory = new Map(); // gameId -> array of completed games
 // Serve static files
 app.use(express_1.default.static(path_1.default.join(__dirname, '../public')));
-// Root route - redirect to a default game
+// Root route - serve welcome page
 app.get('/', (req, res) => {
-    res.redirect('/game/lobby');
+    res.sendFile(path_1.default.join(__dirname, '../public/index.html'));
+});
+// Bot documentation route
+app.get('/docs/bot', (req, res) => {
+    res.sendFile(path_1.default.join(__dirname, '../public/bot-docs.html'));
 });
 // Game history API
 app.get('/api/history/:gameId', (req, res) => {

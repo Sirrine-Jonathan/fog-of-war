@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Development Guide - Fog of War</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2d3748;
+            border-bottom: 3px solid #4299e1;
+            padding-bottom: 15px;
+        }
+        
+        h2 {
+            color: #2d3748;
+            margin-top: 30px;
+            border-left: 4px solid #4299e1;
+            padding-left: 15px;
+        }
+        
+        h3 {
+            color: #4a5568;
+        }
+        
+        pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        
+        code {
+            background: #edf2f7;
+            color: #2d3748;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+        }
+        
+        .back-link {
+            display: inline-block;
+            background: #4299e1;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        
+        .back-link:hover {
+            background: #3182ce;
+        }
+        
+        .api-section {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #48bb78;
+        }
+        
+        .warning {
+            background: #fed7d7;
+            border: 1px solid #fc8181;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .info {
+            background: #bee3f8;
+            border: 1px solid #63b3ed;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        th {
+            background: #edf2f7;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Home</a>
+        
+        <h1>🤖 Bot Development Guide</h1>
+        
+        <div class="info">
+            <strong>Note:</strong> This documentation is for creating bots for our Fog of War game server. 
+            The API is compatible with generals.io but hosted on our own server.
+        </div>
+        
+        <h2>🚀 Quick Start</h2>
+        
+        <h3>1. Install Dependencies</h3>
+        <pre><code>npm install socket.io-client</code></pre>
+        
+        <h3>2. Basic Bot Template</h3>
+        <pre><code>const io = require('socket.io-client');
+
+// Connect to our game server
+const socket = io('https://fog-of-war-0f4f.onrender.com');
+
+// Set bot username and join a game
+const botName = 'MyBot';
+const gameRoom = 'test';
+
+socket.emit('set_username', `bot_${Date.now()}`, botName);
+socket.emit('join_private', gameRoom, `bot_${Date.now()}`);
+
+// Listen for game updates
+socket.on('game_update', (data) => {
+    console.log('Game update received:', data);
+    // Your bot logic here
+});
+
+// Listen for game start
+socket.on('game_start', (data) => {
+    console.log('Game started!', data);
+    // Initialize bot state
+});
+
+console.log(`Bot ${botName} connecting to game ${gameRoom}...`);</code></pre>
+        
+        <h2>📡 Socket.IO API Reference</h2>
+        
+        <div class="api-section">
+            <h3>Outgoing Events (Bot → Server)</h3>
+            
+            <h4><code>set_username</code></h4>
+            <p>Set the bot's username</p>
+            <pre><code>socket.emit('set_username', userId, username);</code></pre>
+            
+            <h4><code>join_private</code></h4>
+            <p>Join a private game room</p>
+            <pre><code>socket.emit('join_private', gameId, userId);</code></pre>
+            
+            <h4><code>attack</code></h4>
+            <p>Move armies from one tile to another</p>
+            <pre><code>socket.emit('attack', fromTileIndex, toTileIndex);</code></pre>
+        </div>
+        
+        <div class="api-section">
+            <h3>Incoming Events (Server → Bot)</h3>
+            
+            <h4><code>game_start</code></h4>
+            <p>Game has started</p>
+            <pre><code>socket.on('game_start', (data) => {
+    // data.playerIndex - your player index
+    // data.usernames - array of player names
+});</code></pre>
+            
+            <h4><code>game_update</code></h4>
+            <p>Game state update (every turn)</p>
+            <pre><code>socket.on('game_update', (data) => {
+    // data.map_diff - compressed map data
+    // Use patch() function to apply diff
+});</code></pre>
+            
+            <h4><code>game_won</code></h4>
+            <p>Game ended</p>
+            <pre><code>socket.on('game_won', (data) => {
+    // data.winner - winning player index
+});</code></pre>
+        </div>
+        
+        <h2>🗺️ Game Mechanics</h2>
+        
+        <h3>Map Data Structure</h3>
+        <p>The game map is represented as a flat array where each index represents a tile:</p>
+        
+        <table>
+            <tr>
+                <th>Array</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td><code>terrain</code></td>
+                <td>Tile ownership (-1: empty, -2: mountain, 0+: player index)</td>
+            </tr>
+            <tr>
+                <td><code>armies</code></td>
+                <td>Number of armies on each tile</td>
+            </tr>
+            <tr>
+                <td><code>generals</code></td>
+                <td>General positions (player index at general location)</td>
+            </tr>
+            <tr>
+                <td><code>cities</code></td>
+                <td>City positions (1 if city exists at index)</td>
+            </tr>
+        </table>
+        
+        <h3>Movement Rules</h3>
+        <ul>
+            <li>Can only move from tiles you own</li>
+            <li>Can only move to adjacent tiles (up, down, left, right)</li>
+            <li>Must leave at least 1 army on the source tile</li>
+            <li>Moving to enemy territory = attack</li>
+            <li>Moving to your own territory = reinforcement</li>
+        </ul>
+        
+        <h3>Victory Conditions</h3>
+        <ul>
+            <li>Capture all enemy generals</li>
+            <li>Be the last player standing</li>
+        </ul>
+        
+        <h2>🛠️ Advanced Bot Development</h2>
+        
+        <h3>Map Parsing</h3>
+        <pre><code>function parseMapData(mapData) {
+    const width = mapData[0];
+    const height = mapData[1];
+    
+    let index = 2;
+    const armies = mapData.slice(index, index + width * height);
+    index += width * height;
+    
+    const terrain = mapData.slice(index, index + width * height);
+    index += width * height;
+    
+    // Parse generals and cities arrays...
+    
+    return { width, height, armies, terrain, generals, cities };
+}</code></pre>
+        
+        <h3>Pathfinding</h3>
+        <pre><code>function getAdjacentTiles(tileIndex, width, height) {
+    const row = Math.floor(tileIndex / width);
+    const col = tileIndex % width;
+    const adjacent = [];
+    
+    // Up
+    if (row > 0) adjacent.push(tileIndex - width);
+    // Down  
+    if (row < height - 1) adjacent.push(tileIndex + width);
+    // Left
+    if (col > 0) adjacent.push(tileIndex - 1);
+    // Right
+    if (col < width - 1) adjacent.push(tileIndex + 1);
+    
+    return adjacent;
+}</code></pre>
+        
+        <h3>Strategy Tips</h3>
+        <ul>
+            <li><strong>Early Game:</strong> Expand quickly to claim territory</li>
+            <li><strong>Mid Game:</strong> Build army strength and identify enemy generals</li>
+            <li><strong>Late Game:</strong> Focus attacks on enemy generals</li>
+            <li><strong>Defense:</strong> Keep armies near your general</li>
+            <li><strong>Economy:</strong> Cities and your general generate armies over time</li>
+        </ul>
+        
+        <div class="warning">
+            <strong>Important:</strong> Bots should implement proper error handling and reconnection logic 
+            for production use. The game server may restart or experience network issues.
+        </div>
+        
+        <h2>🔗 Example Bots</h2>
+        <p>Check out our example bot implementations:</p>
+        <ul>
+            <li><strong>Simple Bot:</strong> Basic expansion and attack logic</li>
+            <li><strong>Defensive Bot:</strong> Focuses on protecting the general</li>
+            <li><strong>Aggressive Bot:</strong> Prioritizes attacking enemies</li>
+        </ul>
+        
+        <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+            <a href="/" class="back-link">← Back to Home</a>
+        </div>
+    </div>
+</body>
+</html>
