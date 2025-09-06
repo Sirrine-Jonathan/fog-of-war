@@ -9,8 +9,8 @@ export class Game {
   }
 
   private initializeGame(): GameState {
-    const width = 20;
-    const height = 15;
+    const width = 30;
+    const height = 30;
     const size = width * height;
     
     // Initialize empty map
@@ -101,8 +101,20 @@ export class Game {
 
   private findEmptyPosition(): number {
     let pos;
+    let attempts = 0;
     do {
       pos = Math.floor(Math.random() * this.state.armies.length);
+      attempts++;
+      if (attempts > 1000) {
+        console.error('Could not find empty position after 1000 attempts');
+        // Return first empty position found
+        for (let i = 0; i < this.state.terrain.length; i++) {
+          if (this.state.terrain[i] === TILE_EMPTY) {
+            return i;
+          }
+        }
+        return 0; // Fallback
+      }
     } while (this.state.terrain[pos] !== TILE_EMPTY);
     return pos;
   }

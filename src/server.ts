@@ -9,8 +9,8 @@ const server = createServer(app);
 const io = new Server(server);
 
 function parseMapData(mapData: number[]): any {
-  const width = 20; // Default width, should match game initialization
-  const height = 15; // Default height, should match game initialization
+  const width = 30; // Default width, should match game initialization
+  const height = 30; // Default height, should match game initialization
   
   const terrain: number[] = [];
   const armies: number[] = [];

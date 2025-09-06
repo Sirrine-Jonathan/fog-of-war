@@ -1,0 +1,743 @@
+const canvas = document.getElementById('gameBoard');
+const ctx = canvas.getContext('2d');
+const socket = io();
+
+let gameState = null;
+let selectedTile = null;
+let playerIndex = -1;
+let gameStarted = false;
+let gameEnded = false;
+let players = [];
+let visibleTiles = new Set();
+let playerGenerals = new Map(); // Track each player's starting position
+let lastUsername = ''; // Remember last used username
+let currentUserId = ''; // Track current user ID
+let isHost = false;
+let hostSocketId = null;
+let isEliminated = false;
+let playerSocketMap = new Map(); // playerIndex -> socketId
+
+// Get room ID from URL
+const roomId = window.location.pathname.split('/').pop();
+document.getElementById('roomId').textContent = roomId;
+
+// Persistence keys (defined after roomId)
+const STORAGE_KEY = `fog_of_war_${roomId}`;
+
+// Load persisted state
+function loadPersistedState() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+        try {
+            const state = JSON.parse(saved);
+            lastUsername = state.username || '';
+            document.getElementById('usernameInput').value = lastUsername;
+            return state;
+        } catch (e) {
+            console.warn('Failed to load persisted state:', e);
+        }
+    }
+    return null;
+}
+
+// Save state to localStorage (only for actual players)
+function saveState() {
+    if (playerIndex >= 0) { // Only save if actually joined as player
+        const state = {
+            username: lastUsername,
+            playerIndex: playerIndex,
+            isHost: isHost,
+            gameStarted: gameStarted,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+}
+
+// Clear saved state
+function clearState() {
+    localStorage.removeItem(STORAGE_KEY);
+}
+
+// Auto-rejoin if we were previously in this game (only if we were a player in an active game)
+function attemptAutoRejoin() {
+    const saved = loadPersistedState();
+    // Only auto-rejoin if we were in a started game
+    if (saved && saved.username && saved.playerIndex >= 0 && saved.gameStarted && (Date.now() - saved.timestamp < 30 * 60 * 1000)) { // 30 min timeout
+        console.log('Attempting auto-rejoin for player:', saved.username);
+        const userId = 'human_' + Date.now();
+        socket.emit('set_username', userId, saved.username);
+        socket.emit('join_private', roomId, userId);
+    }
+}
+
+// Colors for players
+const playerColors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4'];
+const emptyColor = '#f0f0f0';
+const mountainColor = '#333';
+const fogColor = '#888';
+
+// Connect as viewer initially, then try auto-rejoin
+socket.emit('set_username', 'viewer_' + Date.now(), 'Viewer');
+socket.emit('join_private', roomId, 'viewer_' + Date.now());
+
+// Load persisted state and attempt auto-rejoin
+loadPersistedState();
+setTimeout(attemptAutoRejoin, 100); // Small delay to ensure connection
+
+socket.on('game_start', (data) => {
+    console.log('Game started!', data);
+    document.getElementById('gameStarted').textContent = gameStarted ? 'Playing' : 'Started';
+    document.getElementById('gameEndNotification').style.display = 'none'; // Hide notification
+    document.getElementById('gameBoard').style.display = 'block'; // Show canvas
+    playerIndex = data.playerIndex !== undefined ? data.playerIndex : -1;
+    gameStarted = true;
+    updateButtonVisibility(); // Update button visibility
+    saveState(); // Save state when game starts
+    console.log('Player index set to:', playerIndex);
+});
+
+socket.on('game_info', (data) => {
+    document.getElementById('spectatorCount').textContent = data.spectatorCount;
+    document.getElementById('hostName').textContent = data.hostName || '-';
+    hostSocketId = data.hostSocketId;
+    
+    // Update host status based on server data
+    isHost = (data.hostSocketId === socket.id);
+    console.log('Host status update:', { mySocketId: socket.id, hostSocketId: data.hostSocketId, isHost, playerIndex });
+    
+    // Update player socket mapping
+    if (data.playerSocketMap) {
+        playerSocketMap = new Map(Object.entries(data.playerSocketMap));
+    }
+    
+    // Show/hide buttons based on status
+    updateButtonVisibility();
+    
+    // Update player list to show/hide "Make Host" buttons
+    updatePlayersList();
+});
+
+function updateButtonVisibility() {
+    const joinControls = document.getElementById('joinControls');
+    const startBtn = document.getElementById('startBtn');
+    const joinBtn = document.getElementById('joinBtn');
+    const leaveBtn = document.getElementById('leaveBtn');
+    
+    if (gameStarted) {
+        // Game is active - hide all join/leave controls
+        joinControls.style.display = 'none';
+    } else if (playerIndex >= 0) {
+        // Joined but game not started - show leave button, hide join controls
+        joinBtn.style.display = 'none';
+        leaveBtn.style.display = 'inline-block';
+        document.getElementById('usernameInput').style.display = 'none';
+    } else {
+        // Not joined and game not started - show join controls, hide leave button
+        joinControls.style.display = 'block';
+        joinBtn.style.display = 'inline-block';
+        leaveBtn.style.display = 'none';
+        document.getElementById('usernameInput').style.display = 'block';
+    }
+    
+    // Show start button only to host when game not started
+    startBtn.style.display = (isHost && !gameStarted) ? 'inline-block' : 'none';
+}
+
+socket.on('joined_as_player', (data) => {
+    console.log('Joined as player:', data);
+    playerIndex = data.playerIndex;
+    saveState(); // Save state only after successfully joining
+    updateButtonVisibility(); // Update button visibility
+});
+
+socket.on('player_joined', (data) => {
+    console.log('Player joined:', data);
+    players = data.players;
+    
+    // Check if current player is eliminated
+    if (playerIndex >= 0 && players[playerIndex]?.eliminated) {
+        isEliminated = true;
+        console.log('Player eliminated - switching to spectator view');
+        updateVisibleTiles(); // Update visibility to show full map
+        drawGame();
+    }
+    
+    updatePlayersList();
+});
+
+socket.on('disconnect', () => {
+    console.log('Disconnected from server');
+    
+    // If we were a joined player but game hasn't started, leave the game
+    if (playerIndex >= 0 && !gameStarted) {
+        console.log('Disconnected while joined but game not started - leaving game');
+        leaveGame();
+    }
+    
+    // Show reconnection message
+    const notification = document.getElementById('gameEndNotification');
+    const gameEndText = document.getElementById('gameEndText');
+    gameEndText.textContent = 'Connection lost - attempting to reconnect...';
+    gameEndText.style.color = '#ff9800';
+    notification.style.display = 'block';
+});
+
+socket.on('connect', () => {
+    console.log('Connected to server');
+    // Hide reconnection message
+    const notification = document.getElementById('gameEndNotification');
+    if (notification.style.display === 'block') {
+        notification.style.display = 'none';
+    }
+    
+    // Attempt to rejoin only if we were previously in an active game
+    if (playerIndex >= 0 && lastUsername && gameStarted) {
+        console.log('Reconnecting as player:', lastUsername);
+        const userId = 'human_' + Date.now();
+        socket.emit('set_username', userId, lastUsername);
+        socket.emit('join_private', roomId, userId);
+    }
+});
+
+socket.on('username_taken', (data) => {
+    alert(`Username "${data.username}" is already taken. Please choose a different username.`);
+    document.getElementById('usernameInput').focus();
+});
+
+socket.on('game_won', (data) => {
+    gameStarted = false;
+    const winnerName = players[data.winner]?.username || 'Unknown';
+    
+    // Reset player state for humans (bots will auto-rejoin)
+    playerIndex = -1;
+    selectedTile = null;
+    document.getElementById('gameStarted').textContent = 'Game Ended';
+    
+    // Show in-game notification instead of modal
+    const notification = document.getElementById('gameEndNotification');
+    const gameEndText = document.getElementById('gameEndText');
+    
+    // Check if current player won by comparing usernames
+    const didIWin = (winnerName === lastUsername);
+    
+    if (didIWin) {
+        gameEndText.textContent = '🎉 Victory! You won the game! 🎉';
+        gameEndText.style.color = '#4CAF50';
+    } else {
+        gameEndText.textContent = `💀 Game Over - ${winnerName} won! 💀`;
+        gameEndText.style.color = '#f44336';
+    }
+    
+    notification.style.display = 'block';
+    
+    // Pre-populate username input with last used username
+    document.getElementById('usernameInput').value = lastUsername;
+    
+    // Clear saved state when game ends
+    clearState();
+});
+
+socket.on('attack_result', (data) => {
+    if (data.success) {
+        selectedTile = data.to;
+        updateVisibleTiles();
+        drawGame();
+    } else {
+        // Keep the original tile selected on failed moves
+        // selectedTile remains unchanged
+        drawGame();
+    }
+});
+
+socket.on('game_update', (data) => {
+    console.log('Game update received:', data);
+    if (data.map_diff && data.map_diff.length > 0) {
+        const patchedMap = patch([], data.map_diff);
+        gameState = parseMapData(patchedMap);
+        
+        // Update players data if provided
+        if (data.players) {
+            gameState.players = data.players;
+        }
+        
+        // Check if current player got eliminated this turn
+        if (playerIndex >= 0 && gameState.players && gameState.players[playerIndex]?.eliminated && !isEliminated) {
+            isEliminated = true;
+            console.log('Player just got eliminated - switching to spectator view');
+        }
+        
+        // Track generals (starting positions)
+        if (gameState && gameStarted) {
+            for (let i = 0; i < gameState.terrain.length; i++) {
+                const terrain = gameState.terrain[i];
+                if (terrain >= 0 && gameState.armies[i] > 0) {
+                    // Check if this might be a starting position (high army count early in game)
+                    if (!playerGenerals.has(terrain) && gameState.armies[i] >= 10) {
+                        playerGenerals.set(terrain, i);
+                    }
+                }
+            }
+        }
+        
+        updateVisibleTiles();
+        drawGame();
+        updatePlayersList(); // Update stats display
+        saveState(); // Save state on each game update
+    }
+});
+
+socket.on('game_end', (data) => {
+    console.log('Game ended:', data);
+    gameEnded = true;
+    
+    // Show the existing end game notification
+    const notification = document.getElementById('gameEndNotification');
+    const gameEndText = document.getElementById('gameEndText');
+    
+    if (data.winner) {
+        gameEndText.textContent = `🏆 ${data.winner.username} wins!`;
+        gameEndText.style.color = '#4CAF50';
+    } else {
+        gameEndText.textContent = 'Game ended';
+        gameEndText.style.color = '#666';
+    }
+    
+    notification.style.display = 'block';
+    
+    updateVisibleTiles();
+    drawGame();
+});
+
+function updateVisibleTiles() {
+    if (!gameState) return;
+    
+    visibleTiles.clear();
+    
+    // Viewers and eliminated players see everything
+    if (playerIndex < 0 || isEliminated) {
+        for (let i = 0; i < gameState.terrain.length; i++) {
+            visibleTiles.add(i);
+        }
+        return;
+    }
+    
+    // Active players see fog of war
+    for (let i = 0; i < gameState.terrain.length; i++) {
+        if (gameState.terrain[i] === playerIndex) {
+            visibleTiles.add(i);
+            
+            // Add adjacent tiles (8-directional including diagonals)
+            const adjacent = getAdjacentTiles(i);
+            adjacent.forEach(adj => visibleTiles.add(adj));
+        }
+    }
+}
+
+function getAdjacentTiles(tileIndex) {
+    const adjacent = [];
+    const row = Math.floor(tileIndex / gameState.width);
+    const col = tileIndex % gameState.width;
+    
+    // 8-directional (including diagonals)
+    for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+            if (dr === 0 && dc === 0) continue; // Skip the tile itself
+            
+            const newRow = row + dr;
+            const newCol = col + dc;
+            
+            if (newRow >= 0 && newRow < gameState.height && 
+                newCol >= 0 && newCol < gameState.width) {
+                adjacent.push(newRow * gameState.width + newCol);
+            }
+        }
+    }
+    
+    return adjacent;
+}
+
+function patch(old, diff) {
+    const out = [];
+    let i = 0;
+    while (i < diff.length) {
+        if (diff[i]) {
+            out.push(...old.slice(out.length, out.length + diff[i]));
+        }
+        i++;
+        if (i < diff.length && diff[i]) {
+            out.push(...diff.slice(i + 1, i + 1 + diff[i]));
+            i += diff[i];
+        }
+        i++;
+    }
+    return out;
+}
+
+function parseMapData(mapData) {
+    const width = mapData[0];
+    const height = mapData[1];
+    const size = width * height;
+    const armies = mapData.slice(2, size + 2);
+    const terrain = mapData.slice(size + 2, size + 2 + size);
+    
+    return { width, height, armies, terrain, generals: [] };
+}
+
+function drawGame() {
+    if (!gameState) return;
+    
+    const tileSize = 25;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    for (let i = 0; i < gameState.terrain.length; i++) {
+        const row = Math.floor(i / gameState.width);
+        const col = i % gameState.width;
+        const x = col * tileSize;
+        const y = row * tileSize;
+        
+        // Check if tile is visible to current player (or show all if game ended)
+        const isVisible = playerIndex < 0 || visibleTiles.has(i) || gameEnded;
+        
+        if (!isVisible) {
+            // Draw fog of war
+            ctx.fillStyle = fogColor;
+            ctx.fillRect(x, y, tileSize, tileSize);
+            
+            // Add fog pattern
+            ctx.fillStyle = '#999';
+            for (let fx = 0; fx < tileSize; fx += 4) {
+                for (let fy = 0; fy < tileSize; fy += 4) {
+                    if ((fx + fy) % 8 === 0) {
+                        ctx.fillRect(x + fx, y + fy, 2, 2);
+                    }
+                }
+            }
+        } else {
+            // Draw visible tile
+            const terrain = gameState.terrain[i];
+            if (terrain === -2) { // Mountain
+                ctx.fillStyle = mountainColor;
+            } else if (terrain >= 0) { // Player owned
+                ctx.fillStyle = playerColors[terrain] || emptyColor;
+            } else { // Empty
+                ctx.fillStyle = emptyColor;
+            }
+            
+            ctx.fillRect(x, y, tileSize, tileSize);
+            
+            // Draw castle for starting positions
+            if (playerGenerals.has(terrain) && playerGenerals.get(terrain) === i) {
+                ctx.fillStyle = '#8B4513'; // Brown castle base
+                ctx.fillRect(x + 8, y + 18, 9, 7);
+                ctx.fillRect(x + 6, y + 15, 4, 10);
+                ctx.fillRect(x + 15, y + 15, 4, 10);
+                ctx.fillRect(x + 10, y + 12, 5, 13);
+                
+                // Castle flag
+                ctx.fillStyle = playerColors[terrain];
+                ctx.fillRect(x + 11, y + 8, 3, 4);
+            }
+            
+            // Draw army count
+            if (gameState.armies[i] > 0) {
+                ctx.fillStyle = terrain === -2 ? 'white' : 'black';
+                ctx.font = 'bold 10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(gameState.armies[i].toString(), x + tileSize/2, y + tileSize/2 + 3);
+            }
+        }
+        
+        // Draw border
+        ctx.strokeStyle = selectedTile === i ? '#ffd700' : '#ccc';
+        ctx.lineWidth = selectedTile === i ? 3 : 1;
+        ctx.strokeRect(x, y, tileSize, tileSize);
+        
+        // Add glow effect for selected tile
+        if (selectedTile === i) {
+            ctx.shadowColor = '#ffd700';
+            ctx.shadowBlur = 10;
+            ctx.strokeRect(x, y, tileSize, tileSize);
+            ctx.shadowBlur = 0;
+        }
+    }
+}
+
+function closeGameEndModal() {
+    document.getElementById('gameEndModal').style.display = 'none';
+}
+
+function showGameEndModal(winnerName, winnerIndex) {
+    const modal = document.getElementById('gameEndModal');
+    const winnerText = document.getElementById('winnerText');
+    const gameEndMessage = document.getElementById('gameEndMessage');
+    
+    console.log('Game end modal:', { winnerName, winnerIndex, myPlayerIndex: playerIndex, myUsername: lastUsername });
+    
+    // Check if current player won by comparing usernames instead of indices
+    const didIWin = (winnerName === lastUsername);
+    
+    if (didIWin) {
+        winnerText.textContent = '🎉 Victory! 🎉';
+        winnerText.style.color = '#4CAF50';
+        gameEndMessage.textContent = 'Congratulations! You have conquered the battlefield!';
+    } else {
+        winnerText.textContent = '💀 Defeat 💀';
+        winnerText.style.color = '#f44336';
+        gameEndMessage.textContent = `${winnerName} has conquered the battlefield. Better luck next time!`;
+    }
+    
+    modal.style.display = 'flex';
+}
+
+canvas.addEventListener('click', (e) => {
+    if (!gameState || playerIndex < 0) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const tileSize = 25;
+    
+    const col = Math.floor(x / tileSize);
+    const row = Math.floor(y / tileSize);
+    const tileIndex = row * gameState.width + col;
+    
+    // Only allow interaction with visible tiles
+    if (!visibleTiles.has(tileIndex)) return;
+    
+    if (selectedTile === null) {
+        // Select any tile owned by player (even with 1 army)
+        if (gameState.terrain[tileIndex] === playerIndex) {
+            selectedTile = tileIndex;
+            drawGame();
+        }
+    } else {
+        if (isAdjacent(selectedTile, tileIndex)) {
+            // Only attempt attack/move if we have enough armies
+            if (gameState.armies[selectedTile] > 1) {
+                socket.emit('attack', selectedTile, tileIndex);
+            } else {
+                // Can't move with only 1 army, but allow reselecting target if it's owned
+                if (gameState.terrain[tileIndex] === playerIndex) {
+                    selectedTile = tileIndex;
+                    drawGame();
+                }
+            }
+        } else {
+            // Click on non-adjacent tile - select it if owned, otherwise clear selection
+            if (gameState.terrain[tileIndex] === playerIndex) {
+                selectedTile = tileIndex;
+            } else {
+                selectedTile = null;
+            }
+            drawGame();
+        }
+    }
+});
+
+function isAdjacent(from, to) {
+    const fromRow = Math.floor(from / gameState.width);
+    const fromCol = from % gameState.width;
+    const toRow = Math.floor(to / gameState.width);
+    const toCol = to % gameState.width;
+    
+    const rowDiff = Math.abs(fromRow - toRow);
+    const colDiff = Math.abs(fromCol - toCol);
+    
+    return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+}
+
+function calculatePlayerStats() {
+    if (!gameState) return {};
+    
+    const stats = {};
+    players.forEach((player, index) => {
+        stats[index] = { tiles: 0, armies: 0 };
+    });
+    
+    for (let i = 0; i < gameState.terrain.length; i++) {
+        const owner = gameState.terrain[i];
+        if (owner >= 0 && stats[owner]) {
+            stats[owner].tiles++;
+            stats[owner].armies += gameState.armies[i];
+        }
+    }
+    
+    return stats;
+}
+
+function updatePlayersList() {
+    const playersDiv = document.getElementById('players');
+    playersDiv.innerHTML = '';
+    const stats = calculatePlayerStats();
+    
+    // Create sorted player list by performance (tiles + armies)
+    const sortedPlayers = players.map((player, index) => ({
+        ...player,
+        index,
+        stats: stats[index] || { tiles: 0, armies: 0 },
+        score: (stats[index]?.tiles || 0) + (stats[index]?.armies || 0)
+    })).sort((a, b) => b.score - a.score);
+    
+    sortedPlayers.forEach((player) => {
+        const div = document.createElement('div');
+        div.className = 'player-grid';
+        div.style.color = playerColors[player.index] || 'black';
+        
+        if (player.eliminated) {
+            div.classList.add('eliminated-player');
+        }
+        
+        if (player.index === playerIndex) {
+            div.classList.add('current-player');
+        }
+        
+        // Player name
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'player-name';
+        let displayName = player.username;
+        if (player.eliminated) {
+            displayName += ' (eliminated)';
+        } else if (player.disconnected) {
+            displayName += ' (disconnected)';
+        }
+        nameDiv.textContent = displayName;
+        
+        // Stats
+        const statsDiv = document.createElement('div');
+        statsDiv.className = 'player-stats';
+        if (gameStarted) {
+            statsDiv.textContent = `${player.stats.tiles} tiles, ${player.stats.armies} armies`;
+        }
+        
+        // Transfer button (only for host viewing non-bot human players when game not started)
+        const buttonDiv = document.createElement('div');
+        if (isHost && player.isBot === false && player.index !== playerIndex && !gameStarted) {
+            const transferBtn = document.createElement('button');
+            transferBtn.textContent = 'Make Host';
+            transferBtn.className = 'transfer-btn';
+            transferBtn.title = 'Transfer host to this player';
+            transferBtn.onclick = () => transferHost(player.index);
+            buttonDiv.appendChild(transferBtn);
+        }
+        
+        div.appendChild(nameDiv);
+        div.appendChild(statsDiv);
+        div.appendChild(buttonDiv);
+        playersDiv.appendChild(div);
+    });
+}
+
+function transferHost(targetPlayerIndex) {
+    const targetSocketId = playerSocketMap.get(targetPlayerIndex.toString());
+    console.log('Transfer host attempt:', { targetPlayerIndex, targetSocketId, playerSocketMap });
+    if (targetSocketId) {
+        socket.emit('transfer_host', roomId, targetSocketId);
+    } else {
+        console.error('No socket ID found for player index:', targetPlayerIndex);
+    }
+}
+
+// Button handlers
+document.getElementById('joinBtn').addEventListener('click', joinAsPlayer);
+document.getElementById('leaveBtn').addEventListener('click', leaveGame);
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('copyUrlBtn').addEventListener('click', copyGameUrl);
+
+function joinAsPlayer() {
+    if (playerIndex >= 0) return;
+    
+    const username = document.getElementById('usernameInput').value.trim();
+    if (!username) {
+        alert('Please enter a username');
+        document.getElementById('usernameInput').focus();
+        return;
+    }
+    
+    lastUsername = username; // Remember this username
+    currentUserId = 'human_' + Date.now();
+    socket.emit('set_username', currentUserId, username);
+    socket.emit('join_private', roomId, currentUserId);
+}
+
+function leaveGame() {
+    if (playerIndex < 0 || gameStarted) return;
+    
+    // Emit leave event to server with current user ID
+    socket.emit('leave_game', roomId, currentUserId);
+    
+    // Reset player state
+    playerIndex = -1;
+    selectedTile = null;
+    isHost = false;
+    currentUserId = '';
+    clearState(); // This clears localStorage
+    
+    updateButtonVisibility();
+}
+
+function startGame() {
+    socket.emit('set_force_start', roomId, true);
+}
+
+function copyGameUrl() {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+        const btn = document.getElementById('copyUrlBtn');
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => {
+            btn.textContent = originalText;
+        }, 2000);
+    }).catch(() => {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = window.location.href;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        const btn = document.getElementById('copyUrlBtn');
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => {
+            btn.textContent = originalText;
+        }, 2000);
+    });
+}
+
+// Arrow key controls
+document.addEventListener('keydown', (e) => {
+    if (!gameState || playerIndex < 0 || selectedTile === null) return;
+    
+    let targetTile = null;
+    const row = Math.floor(selectedTile / gameState.width);
+    const col = selectedTile % gameState.width;
+    
+    switch(e.key) {
+        case 'ArrowUp':
+            if (row > 0) targetTile = selectedTile - gameState.width;
+            break;
+        case 'ArrowDown':
+            if (row < gameState.height - 1) targetTile = selectedTile + gameState.width;
+            break;
+        case 'ArrowLeft':
+            if (col > 0) targetTile = selectedTile - 1;
+            break;
+        case 'ArrowRight':
+            if (col < gameState.width - 1) targetTile = selectedTile + 1;
+            break;
+    }
+    
+    if (targetTile !== null && visibleTiles.has(targetTile)) {
+        if (gameState.armies[selectedTile] > 1) {
+            // Have armies to move - attempt attack/move
+            socket.emit('attack', selectedTile, targetTile);
+        } else if (gameState.terrain[targetTile] === playerIndex) {
+            // Can't move but target is owned - change selection
+            selectedTile = targetTile;
+            drawGame();
+        }
+        e.preventDefault();
+    }
+});
