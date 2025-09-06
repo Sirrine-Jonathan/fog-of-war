@@ -244,16 +244,16 @@
                 <p><strong>Status:</strong> <span id="gameStarted">Waiting</span></p>
                 <p><strong>Host:</strong> <span id="hostName">-</span></p>
                 <p><strong>Spectators:</strong> <span id="spectatorCount">0</span></p>
-                <div id="gameEndNotification" style="display: none; background: #f0f8ff; border: 2px solid #4CAF50; padding: 15px; margin: 10px 0; border-radius: 5px; text-align: center;">
-                    <div id="gameEndText" style="font-weight: bold; font-size: 18px; margin-bottom: 10px;"></div>
-                    <div style="font-size: 14px; color: #666;">Game has ended. Players can rejoin for the next game.</div>
-                </div>
             </div>
         </div>
         
         <div id="info">
             <div class="players-list">
                 <h4 style="margin-top: 0; color: #333;">Players & Stats</h4>
+                <div id="gameEndNotification" style="display: none; background: #f0f8ff; border: 2px solid #4CAF50; padding: 15px; margin: 10px 0; border-radius: 5px; text-align: center;">
+                    <div id="gameEndText" style="font-weight: bold; font-size: 18px; margin-bottom: 10px;"></div>
+                    <div style="font-size: 14px; color: #666;">Game has ended. Players can rejoin for the next game.</div>
+                </div>
                 <div id="players"></div>
             </div>
         </div>
@@ -287,6 +287,7 @@
         let selectedTile = null;
         let playerIndex = -1;
         let gameStarted = false;
+        let gameEnded = false;
         let players = [];
         let visibleTiles = new Set();
         let playerGenerals = new Map(); // Track each player's starting position
@@ -567,6 +568,28 @@
             }
         });
         
+        socket.on('game_end', (data) => {
+            console.log('Game ended:', data);
+            gameEnded = true;
+            
+            // Show the existing end game notification
+            const notification = document.getElementById('gameEndNotification');
+            const gameEndText = document.getElementById('gameEndText');
+            
+            if (data.winner) {
+                gameEndText.textContent = `🏆 ${data.winner.username} wins!`;
+                gameEndText.style.color = '#4CAF50';
+            } else {
+                gameEndText.textContent = 'Game ended';
+                gameEndText.style.color = '#666';
+            }
+            
+            notification.style.display = 'block';
+            
+            updateVisibleTiles();
+            drawGame();
+        });
+        
         function updateVisibleTiles() {
             if (!gameState) return;
             
@@ -654,8 +677,8 @@
                 const x = col * tileSize;
                 const y = row * tileSize;
                 
-                // Check if tile is visible to current player
-                const isVisible = playerIndex < 0 || visibleTiles.has(i);
+                // Check if tile is visible to current player (or show all if game ended)
+                const isVisible = playerIndex < 0 || visibleTiles.has(i) || gameEnded;
                 
                 if (!isVisible) {
                     // Draw fog of war

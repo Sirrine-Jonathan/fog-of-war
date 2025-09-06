@@ -8,6 +8,26 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server);
 
+function parseMapData(mapData: number[]): any {
+  const width = 20; // Default width, should match game initialization
+  const height = 15; // Default height, should match game initialization
+  
+  const terrain: number[] = [];
+  const armies: number[] = [];
+  
+  for (let i = 0; i < mapData.length; i += 2) {
+    terrain.push(mapData[i]);
+    armies.push(mapData[i + 1] || 0);
+  }
+  
+  return {
+    width,
+    height,
+    terrain,
+    armies
+  };
+}
+
 const games = new Map<string, Game>();
 const playerRooms = new Map<string, string>();
 const gameHosts = new Map<string, string>(); // gameId -> socketId of host
@@ -211,15 +231,17 @@ io.on('connection', (socket) => {
       
       // Send initial game state immediately
       const gameState = game.getState();
-      const mapData = game.getMapData();
       
       // Notify each player individually with their own player index
       console.log(`   Broadcasting game_start to room ${gameId}`);
       const sockets = await io.in(gameId).fetchSockets();
+      const mapData = game.getMapData();
+      
       for (const playerSocket of sockets) {
         playerSocket.emit('game_start', {
           playerIndex: playerSocket.data.playerIndex ?? -1, // -1 for viewers
-          replay_id: gameId
+          replay_id: gameId,
+          gameState: parseMapData(mapData)
         });
       }
 
