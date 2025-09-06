@@ -415,6 +415,11 @@
                 const patchedMap = patch([], data.map_diff);
                 gameState = parseMapData(patchedMap);
                 
+                // Update players data if provided
+                if (data.players) {
+                    gameState.players = data.players;
+                }
+                
                 // Check if current player got eliminated this turn
                 if (playerIndex >= 0 && gameState.players && gameState.players[playerIndex]?.eliminated && !isEliminated) {
                     isEliminated = true;
