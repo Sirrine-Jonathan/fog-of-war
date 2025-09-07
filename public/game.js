@@ -1107,3 +1107,62 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
     }
 });
+
+// Chat functionality
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const sendChatBtn = document.getElementById('sendChatBtn');
+
+function sendChatMessage() {
+    const message = chatInput.value.trim();
+    if (message && roomId) {
+        socket.emit('chat_message', {
+            gameId: roomId,
+            message: message,
+            username: lastUsername || 'Anonymous'
+        });
+        chatInput.value = '';
+    }
+}
+
+sendChatBtn.addEventListener('click', sendChatMessage);
+
+chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage();
+    }
+});
+
+socket.on('chat_message', (data) => {
+    const messageDiv = document.createElement('div');
+    messageDiv.style.marginBottom = '3px';
+    messageDiv.style.fontSize = '13px';
+    
+    const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    
+    if (data.isSystem) {
+        // System message styling
+        messageDiv.innerHTML = `
+            <span style="color: #999; font-size: 11px;">[${timestamp}]</span>
+            <span style="color: #ff6600; font-weight: bold; font-style: italic;">⚡ ${data.message}</span>
+        `;
+    } else {
+        // Regular player message
+        const playerColor = data.playerIndex >= 0 ? playerColors[data.playerIndex] : '#666';
+        messageDiv.innerHTML = `
+            <span style="color: #999; font-size: 11px;">[${timestamp}]</span>
+            <span style="color: ${playerColor}; font-weight: bold;">${data.username}:</span>
+            <span>${data.message}</span>
+        `;
+    }
+    
+    const wasScrolledToBottom = chatMessages.scrollTop >= chatMessages.scrollHeight - chatMessages.clientHeight - 5;
+    
+    chatMessages.appendChild(messageDiv);
+    
+    // Auto-scroll only if user was already at bottom
+    if (wasScrolledToBottom) {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+});

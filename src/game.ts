@@ -170,7 +170,7 @@ export class Game {
   }
 
   private spawnCities(): void {
-    const cityCount = Math.max(1, Math.floor(this.state.players.length * 1.5));
+    const cityCount = Math.max(1, Math.floor(this.state.players.length * 3.0));
     console.log(`🏙️  Spawning ${cityCount} cities...`);
     
     for (let i = 0; i < cityCount; i++) {
@@ -238,15 +238,16 @@ export class Game {
     }
   }
 
-  attack(playerIndex: number, from: number, to: number): boolean {
+  attack(playerIndex: number, from: number, to: number): { success: boolean, events: string[] } {
     // Validate move
     if (!this.isValidMove(playerIndex, from, to)) {
-      return false;
+      return { success: false, events: [] };
     }
 
     const attackerArmies = this.state.armies[from];
     const defenderArmies = this.state.armies[to];
     const defenderOwner = this.state.terrain[to];
+    const events: string[] = [];
 
     // Execute attack/move
     const attackForce = attackerArmies - 1;
@@ -262,15 +263,16 @@ export class Game {
         this.state.armies[to] = attackForce - defenderArmies;
       } else {
         // Failed to capture, armies are lost
-        return false;
+        return { success: false, events };
       }
     } else if (defenderOwner === TILE_CITY) {
       // Attack city
       if (attackForce > defenderArmies) {
         this.state.terrain[to] = playerIndex;
         this.state.armies[to] = attackForce - defenderArmies;
+        events.push(`${this.state.players[playerIndex]?.username || `Player ${playerIndex}`} captured a city!`);
       } else {
-        return false;
+        return { success: false, events };
       }
     } else if (defenderOwner === TILE_LOOKOUT_TOWER) {
       // Attack lookout tower
@@ -281,10 +283,11 @@ export class Game {
         this.state.terrain[to] = playerIndex;
         this.state.armies[to] = Math.abs(remaining);
         this.state.towerDefense[to] = 0;
+        events.push(`${this.state.players[playerIndex]?.username || `Player ${playerIndex}`} captured a lookout tower!`);
       } else {
         // Tower damaged but not captured
         this.state.towerDefense[to] = remaining;
-        return false;
+        return { success: false, events };
       }
     } else if (defenderOwner >= 0 && defenderOwner !== playerIndex) {
       // Attack enemy territory
@@ -296,6 +299,7 @@ export class Game {
         // Check if general was captured
         if (this.state.generals[defenderOwner] === to) {
           this.eliminatePlayer(defenderOwner);
+          events.push(`${this.state.players[playerIndex]?.username || `Player ${playerIndex}`} eliminated ${this.state.players[defenderOwner]?.username || `Player ${defenderOwner}`}!`);
           
           // Check for victory
           const remainingPlayers = this.state.players.filter(p => !p.eliminated);
@@ -305,11 +309,11 @@ export class Game {
         }
       } else {
         this.state.armies[to] = remaining;
-        return false; // Attack failed
+        return { success: false, events };
       }
     }
 
-    return true;
+    return { success: true, events };
   }
 
   private isValidMove(playerIndex: number, from: number, to: number): boolean {

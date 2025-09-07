@@ -1,6 +1,6 @@
 body { 
-    margin: 0; 
-    padding: 20px; 
+    margin: 0;
+    padding: 0 20px;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     background: linear-gradient(135deg, #2c3e50 0%, #1a1a1a 100%);
     min-height: 100vh;
