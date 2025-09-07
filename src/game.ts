@@ -272,6 +272,8 @@ export class Game {
         this.state.armies[to] = attackForce - defenderArmies;
         events.push(`${this.state.players[playerIndex]?.username || `Player ${playerIndex}`} captured a city!`);
       } else {
+        // City damaged but not captured - reduce defense like towers
+        this.state.armies[to] = Math.max(0, defenderArmies - attackForce);
         return { success: false, events };
       }
     } else if (defenderOwner === TILE_LOOKOUT_TOWER) {

@@ -96,6 +96,79 @@ const emptyColor = '#f0f0f0';
 const mountainColor = '#333';
 const fogColor = '#888';
 
+// Mobile tab system
+function checkIsMobile() {
+    const width = window.innerWidth;
+    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isMobileWidth = width <= 768;
+    return isMobileWidth || isMobileUA;
+}
+
+const isMobile = checkIsMobile();
+let currentMobileTab = 'game';
+
+console.log('🔍 Mobile Detection:', {
+    windowWidth: window.innerWidth,
+    isMobile: isMobile,
+    hasTouch: 'ontouchstart' in window,
+    userAgent: navigator.userAgent
+});
+
+function initMobileTabs() {
+    console.log('🔍 initMobileTabs called, isMobile:', isMobile);
+    
+    if (!isMobile) {
+        console.log('🔍 Not mobile, skipping tab init');
+        return;
+    }
+    
+    console.log('🔍 Setting up mobile tabs...');
+    
+    const tabBar = document.getElementById('mobileTabBar');
+    const gameTab = document.getElementById('gameTab');
+    const controlsTab = document.getElementById('controlsTab');
+    const chatTab = document.getElementById('chatTab');
+    
+    console.log('🔍 Tab elements:', {
+        tabBar: !!tabBar,
+        gameTab: !!gameTab,
+        controlsTab: !!controlsTab,
+        chatTab: !!chatTab
+    });
+    
+    document.body.classList.add('mobile-game-active');
+    console.log('🔍 Added mobile-game-active class');
+    
+    if (gameTab) gameTab.addEventListener('click', () => switchMobileTab('game'));
+    if (controlsTab) controlsTab.addEventListener('click', () => switchMobileTab('controls'));
+    if (chatTab) chatTab.addEventListener('click', () => switchMobileTab('chat'));
+    
+    console.log('🔍 Mobile tabs initialized');
+}
+
+function switchMobileTab(tab) {
+    if (!isMobile) return;
+    
+    // Remove all active classes
+    document.body.classList.remove('mobile-game-active', 'mobile-controls-active', 'mobile-chat-active');
+    document.querySelectorAll('.mobile-tab').forEach(t => t.classList.remove('active'));
+    
+    // Add new active class
+    document.body.classList.add(`mobile-${tab}-active`);
+    document.getElementById(`${tab}Tab`).classList.add('active');
+    
+    currentMobileTab = tab;
+    
+    // Resize canvas if switching to game tab
+    if (tab === 'game') {
+        setTimeout(() => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - 120;
+            drawGame();
+        }, 100);
+    }
+}
+
 // Connect as viewer initially, then try auto-rejoin
 socket.emit('set_username', 'viewer_' + Date.now(), 'Viewer');
 socket.emit('join_private', roomId, 'viewer_' + Date.now());
@@ -103,6 +176,9 @@ socket.emit('join_private', roomId, 'viewer_' + Date.now());
 // Load persisted state and attempt auto-rejoin
 loadPersistedState();
 setTimeout(attemptAutoRejoin, 100); // Small delay to ensure connection
+
+// Initialize mobile tabs
+initMobileTabs();
 
 socket.on('game_start', (data) => {
     console.log('🎮 Game started!', data);
@@ -298,6 +374,7 @@ socket.on('attack_result', (data) => {
 
 socket.on('game_update', (data) => {
     console.log('🔄 Game update received:', data);
+    
     if (data.map_diff && data.map_diff.length > 0) {
         console.log('   Map diff length:', data.map_diff.length);
         const patchedMap = patch([], data.map_diff);
@@ -747,6 +824,39 @@ function drawGame() {
     ctx.restore();
 }
 
+function drawGameEndOverlay() {
+    const gameEndText = document.getElementById('gameEndText');
+    if (!gameEndText || !gameEndText.textContent) return;
+    
+    // Semi-transparent overlay
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Main message
+    ctx.fillStyle = gameEndText.style.color || '#fff';
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Add text shadow for better visibility
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+    
+    ctx.fillText(gameEndText.textContent, canvas.width / 2, canvas.height / 2);
+    
+    // Reset shadow
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    
+    // Subtitle
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.font = '24px Arial';
+    ctx.fillText('Click anywhere to continue viewing', canvas.width / 2, canvas.height / 2 + 60);
+}
+
 function closeGameEndModal() {
     document.getElementById('gameEndModal').style.display = 'none';
 }
@@ -801,12 +911,11 @@ canvas.addEventListener('click', (e) => {
             // Try to move/attack
             attemptMove(selectedTile, tileIndex);
         } else {
-            // Non-adjacent click - check for intent-based movement
-            if (gameState.armies[selectedTile] > 1) {
-                // Clear any existing intent first
-                activeIntent = null;
+            // Non-adjacent click - check for intent-based movement vs selection
+            if (gameState.armies[selectedTile] > 1 && !e.shiftKey) {
+                // Regular click: Start intent-based movement
+                activeIntent = null; // Clear any existing intent first
                 
-                // Start intent-based movement
                 const path = findPath(selectedTile, tileIndex);
                 if (path && path.length > 0) {
                     activeIntent = {
@@ -817,7 +926,10 @@ canvas.addEventListener('click', (e) => {
                     };
                     console.log('Intent path:', path);
                 }
-            } else if (gameState.terrain[tileIndex] === playerIndex) {
+            } else if (e.shiftKey && gameState.terrain[tileIndex] === playerIndex) {
+                // Shift+click: Change selection (pan behavior)
+                setSelectedTile(tileIndex);
+            } else if (!e.shiftKey && gameState.terrain[tileIndex] === playerIndex) {
                 // Can't move but target is owned - change selection
                 setSelectedTile(tileIndex);
             } else {
@@ -916,21 +1028,58 @@ canvas.addEventListener('wheel', (e) => {
     }
 });
 
-// Touch support for mobile pinch zoom
+// Touch support for mobile pinch zoom and panning
 let touches = [];
+let lastPanX = 0;
+let lastPanY = 0;
 
 canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
     touches = Array.from(e.touches);
+    
+    if (touches.length === 1) {
+        // Single touch - prepare for panning
+        const rect = canvas.getBoundingClientRect();
+        lastPanX = touches[0].clientX - rect.left;
+        lastPanY = touches[0].clientY - rect.top;
+    }
+    // Don't preventDefault here to allow click events
 });
 
 canvas.addEventListener('touchmove', (e) => {
-    e.preventDefault();
     if (!gameState) return;
     
     const newTouches = Array.from(e.touches);
     
-    if (touches.length === 2 && newTouches.length === 2) {
+    if (touches.length === 1 && newTouches.length === 1) {
+        // Only prevent default for panning to avoid blocking clicks
+        e.preventDefault();
+        
+        // Single touch panning
+        const rect = canvas.getBoundingClientRect();
+        const currentX = newTouches[0].clientX - rect.left;
+        const currentY = newTouches[0].clientY - rect.top;
+        
+        const deltaX = currentX - lastPanX;
+        const deltaY = currentY - lastPanY;
+        
+        camera.x -= deltaX;
+        camera.y -= deltaY;
+        camera.targetX = camera.x;
+        camera.targetY = camera.y;
+        
+        // Clamp to bounds
+        const mapWidth = gameState.width * 35 * camera.zoom;
+        const mapHeight = gameState.height * 35 * camera.zoom;
+        camera.x = Math.max(0, Math.min(camera.x, mapWidth - canvas.width));
+        camera.y = Math.max(0, Math.min(camera.y, mapHeight - canvas.height));
+        camera.targetX = camera.x;
+        camera.targetY = camera.y;
+        
+        lastPanX = currentX;
+        lastPanY = currentY;
+        drawGame();
+        
+    } else if (touches.length === 2 && newTouches.length === 2) {
         // Pinch zoom
         const oldDistance = Math.hypot(
             touches[0].clientX - touches[1].clientX,
@@ -956,8 +1105,8 @@ canvas.addEventListener('touchmove', (e) => {
 });
 
 canvas.addEventListener('touchend', (e) => {
-    e.preventDefault();
     touches = Array.from(e.touches);
+    // Don't preventDefault to allow click events
 });
 
 canvas.style.cursor = 'grab';
