@@ -57,6 +57,12 @@ h3, h4 {
     min-width: 200px;
 }
 
+.game-info p {
+    margin: 4px 0;
+    display: flex;
+    justify-content: space-between;
+}
+
 .btn {
     font-family: 'Inter', sans-serif;
     background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
@@ -70,6 +76,21 @@ h3, h4 {
     margin: 5px;
     transition: all 0.3s ease;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.transfer-btn {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+    color: white;
+    border: 2px solid #ffd700;
+    padding: 6px 12px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    margin: 5px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .btn:hover {
@@ -177,4 +198,37 @@ input[type="text"]:focus {
 .close:focus {
     color: black;
     text-decoration: none;
+}
+.players-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.players-table th {
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+    font-weight: bold;
+}
+
+.players-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+.players-table tr.current-player {
+    background-color: #e8f5e8;
+}
+
+.players-table tr.eliminated-player {
+    opacity: 0.6;
+    text-decoration: line-through;
+}
+
+.players-table .transfer-btn {
+    font-size: 11px;
+    padding: 4px 8px;
 }

@@ -905,6 +905,31 @@ function updatePlayersList() {
     playersDiv.innerHTML = '';
     const stats = calculatePlayerStats();
     
+    // Create table
+    const table = document.createElement('table');
+    table.className = 'players-table';
+    
+    // Create header
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    
+    const headers = ['Player', 'Tiles', 'Armies', 'Total'];
+    if (isHost && !gameStarted) {
+        headers.push('Actions');
+    }
+    
+    headers.forEach(headerText => {
+        const th = document.createElement('th');
+        th.textContent = headerText;
+        headerRow.appendChild(th);
+    });
+    
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+    
+    // Create body
+    const tbody = document.createElement('tbody');
+    
     // Create sorted player list by performance (tiles + armies)
     const sortedPlayers = players.map((player, index) => ({
         ...player,
@@ -914,52 +939,66 @@ function updatePlayersList() {
     })).sort((a, b) => b.score - a.score);
     
     sortedPlayers.forEach((player) => {
-        const div = document.createElement('div');
-        div.className = 'player-grid';
-        div.style.color = playerColors[player.index] || 'black';
+        const row = document.createElement('tr');
+        row.style.color = playerColors[player.index] || 'black';
         
         if (player.eliminated) {
-            div.classList.add('eliminated-player');
+            row.classList.add('eliminated-player');
         }
         
         if (player.index === playerIndex) {
-            div.classList.add('current-player');
+            row.classList.add('current-player');
         }
         
-        // Player name
-        const nameDiv = document.createElement('div');
-        nameDiv.className = 'player-name';
+        // Player name cell
+        const nameCell = document.createElement('td');
         let displayName = player.username;
         if (player.eliminated) {
             displayName += ' (eliminated)';
         } else if (player.disconnected) {
             displayName += ' (disconnected)';
         }
-        nameDiv.textContent = displayName;
+        nameCell.textContent = displayName;
+        row.appendChild(nameCell);
         
-        // Stats
-        const statsDiv = document.createElement('div');
-        statsDiv.className = 'player-stats';
-        if (gameStarted) {
-            statsDiv.textContent = `${player.stats.tiles} tiles, ${player.stats.armies} armies`;
+        // Tiles cell
+        const tilesCell = document.createElement('td');
+        tilesCell.textContent = gameStarted ? player.stats.tiles : '-';
+        tilesCell.style.textAlign = 'center';
+        row.appendChild(tilesCell);
+        
+        // Armies cell
+        const armiesCell = document.createElement('td');
+        armiesCell.textContent = gameStarted ? player.stats.armies : '-';
+        armiesCell.style.textAlign = 'center';
+        row.appendChild(armiesCell);
+        
+        // Total cell
+        const totalCell = document.createElement('td');
+        totalCell.textContent = gameStarted ? player.score : '-';
+        totalCell.style.textAlign = 'center';
+        totalCell.style.fontWeight = 'bold';
+        row.appendChild(totalCell);
+        
+        // Actions cell (only for host viewing non-bot human players when game not started)
+        if (isHost && !gameStarted) {
+            const actionsCell = document.createElement('td');
+            if (player.isBot === false && player.index !== playerIndex) {
+                const transferBtn = document.createElement('button');
+                transferBtn.textContent = 'Make Host';
+                transferBtn.className = 'transfer-btn';
+                transferBtn.title = 'Transfer host to this player';
+                transferBtn.onclick = () => transferHost(player.index);
+                actionsCell.appendChild(transferBtn);
+            }
+            row.appendChild(actionsCell);
         }
         
-        // Transfer button (only for host viewing non-bot human players when game not started)
-        const buttonDiv = document.createElement('div');
-        if (isHost && player.isBot === false && player.index !== playerIndex && !gameStarted) {
-            const transferBtn = document.createElement('button');
-            transferBtn.textContent = 'Make Host';
-            transferBtn.className = 'transfer-btn';
-            transferBtn.title = 'Transfer host to this player';
-            transferBtn.onclick = () => transferHost(player.index);
-            buttonDiv.appendChild(transferBtn);
-        }
-        
-        div.appendChild(nameDiv);
-        div.appendChild(statsDiv);
-        div.appendChild(buttonDiv);
-        playersDiv.appendChild(div);
+        tbody.appendChild(row);
     });
+    
+    table.appendChild(tbody);
+    playersDiv.appendChild(table);
 }
 
 function transferHost(targetPlayerIndex) {
