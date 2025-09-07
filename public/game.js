@@ -1114,21 +1114,14 @@ const chatInput = document.getElementById('chatInput');
 const sendChatBtn = document.getElementById('sendChatBtn');
 
 function sendChatMessage() {
-function sendChatMessage() {
     const message = chatInput.value.trim();
-    const now = Date.now();
-    if (!window.lastMessageTime || now - window.lastMessageTime >= 1000) { // 1 second cooldown
-        if (message && roomId) {
-            socket.emit('chat_message', {
-                gameId: roomId,
-                message: message,
-                username: lastUsername || 'Anonymous'
-            });
-            chatInput.value = '';
-            window.lastMessageTime = now;
-        }
-    }
-}
+    if (message && roomId) {
+        socket.emit('chat_message', {
+            gameId: roomId,
+            message: message,
+            username: lastUsername || 'Anonymous'
+        });
+        chatInput.value = '';
     }
 }
 

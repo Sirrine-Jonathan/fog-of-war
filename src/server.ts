@@ -348,26 +348,23 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
   
   // Broadcast message to all players in the game
   io.to(data.gameId).emit('chat_message', {
-    username: data.username.slice(0, 30), // Limit username length
-    message: sanitizedMessage,
+    username: data.username,
+    message: data.message,
     playerIndex: playerIndex,
     timestamp: new Date().toISOString()
   });
 });
-      timestamp: new Date().toISOString()
-    });
-  });
 
-  // Helper function to send system messages
-  function sendSystemMessage(gameId: string, message: string) {
-    io.to(gameId).emit('chat_message', {
-      username: 'System',
-      message: message,
-      playerIndex: -1,
-      timestamp: new Date().toISOString(),
-      isSystem: true
-    });
-  }
+// Helper function to send system messages
+function sendSystemMessage(gameId: string, message: string) {
+  io.to(gameId).emit('chat_message', {
+    username: 'System',
+    message: message,
+    playerIndex: -1,
+    timestamp: new Date().toISOString(),
+    isSystem: true
+  });
+}
 
   socket.on('attack', (from: number, to: number) => {
     console.log(`⚔️ Attack request: from=${from}, to=${to}, player=${socket.data.playerIndex}`);
@@ -433,6 +430,33 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
     }
   });
 
+  socket.on('attack', (from: number, to: number) => {
+    console.log(`⚔️ Attack request: from=${from}, to=${to}, player=${socket.data.playerIndex}`);
+    const roomId = playerRooms.get(socket.id);
+    const game = games.get(roomId || '');
+    
+    // Prevent viewers from attacking
+    if (socket.data.isViewer) {
+      console.log(`   Attack blocked: viewer cannot attack`);
+      return;
+    }
+    
+    if (game && socket.data.playerIndex !== undefined) {
+      const result = game.attack(socket.data.playerIndex, from, to);
+      console.log(`   Attack result: ${result.success}, events: ${result.events.length}`);
+      
+      // Send system messages for events
+      result.events.forEach(event => {
+        sendSystemMessage(roomId || '', event);
+      });
+      
+      // Send attack result back to client
+      socket.emit('attack_result', { from, to, success: result.success });
+    } else {
+      console.log(`   Attack failed: game=${!!game}, playerIndex=${socket.data.playerIndex}, roomId=${roomId}`);
+    }
+  });
+
   socket.on('disconnect', () => {
     const roomId = playerRooms.get(socket.id);
     if (roomId) {
@@ -487,6 +511,7 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
       console.log(`👑 No eligible host found for game ${gameId}`);
     }
   }
+
 });
 
 const PORT = process.env.PORT || 3001;
