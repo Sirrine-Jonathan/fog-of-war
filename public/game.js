@@ -33,6 +33,9 @@ let hostSocketId = null;
 let isEliminated = false;
 let playerSocketMap = new Map(); // playerIndex -> socketId
 
+// Intent-based movement system
+let activeIntent = null; // { fromTile, targetTile, path, currentStep }
+
 // Get room ID from URL
 const roomId = window.location.pathname.split('/').pop();
 document.getElementById('roomId').textContent = roomId;
@@ -382,6 +385,25 @@ socket.on('game_update', (data) => {
         }
         
         updateVisibleTiles();
+        
+        // Execute intent-based movement
+        if (activeIntent && activeIntent.currentStep < activeIntent.path.length) {
+            const currentTile = activeIntent.currentStep === 0 ? activeIntent.fromTile : activeIntent.path[activeIntent.currentStep - 1];
+            const nextTile = activeIntent.path[activeIntent.currentStep];
+            
+            if (gameState.armies[currentTile] > 1 && isAdjacent(currentTile, nextTile)) {
+                socket.emit('attack', currentTile, nextTile);
+                activeIntent.currentStep++;
+                
+                // Check if we've reached the target
+                if (activeIntent.currentStep >= activeIntent.path.length) {
+                    activeIntent = null; // Clear completed intent
+                }
+            } else {
+                activeIntent = null; // Clear invalid intent
+            }
+        }
+        
         drawGame();
         updatePlayersList(); // Update stats display
         saveState(); // Save state on each game update
@@ -698,6 +720,15 @@ function drawGame() {
             }
         }
         
+        // Draw intent path
+        if (activeIntent && activeIntent.path.includes(i)) {
+            ctx.strokeStyle = '#ff6b6b';
+            ctx.lineWidth = 3 * camera.zoom;
+            ctx.setLineDash([5 * camera.zoom, 5 * camera.zoom]);
+            ctx.strokeRect(x, y, tileSize, tileSize);
+            ctx.setLineDash([]);
+        }
+        
         // Draw border
         ctx.strokeStyle = selectedTile === i ? '#ffd700' : '#ccc';
         ctx.lineWidth = selectedTile === i ? 3 * camera.zoom : 1 * camera.zoom;
@@ -765,11 +796,29 @@ canvas.addEventListener('click', (e) => {
         }
     } else {
         if (isAdjacent(selectedTile, tileIndex)) {
+            // Clear any existing intent when making manual moves
+            activeIntent = null;
             // Try to move/attack
             attemptMove(selectedTile, tileIndex);
         } else {
-            // Click on non-adjacent tile - select it if owned, otherwise clear selection
-            if (gameState.terrain[tileIndex] === playerIndex) {
+            // Non-adjacent click - check for intent-based movement
+            if (gameState.armies[selectedTile] > 1) {
+                // Clear any existing intent first
+                activeIntent = null;
+                
+                // Start intent-based movement
+                const path = findPath(selectedTile, tileIndex);
+                if (path && path.length > 0) {
+                    activeIntent = {
+                        fromTile: selectedTile,
+                        targetTile: tileIndex,
+                        path: path,
+                        currentStep: 0
+                    };
+                    console.log('Intent path:', path);
+                }
+            } else if (gameState.terrain[tileIndex] === playerIndex) {
+                // Can't move but target is owned - change selection
                 setSelectedTile(tileIndex);
             } else {
                 setSelectedTile(null);
@@ -867,6 +916,50 @@ canvas.addEventListener('wheel', (e) => {
     }
 });
 
+// Touch support for mobile pinch zoom
+let touches = [];
+
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    touches = Array.from(e.touches);
+});
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!gameState) return;
+    
+    const newTouches = Array.from(e.touches);
+    
+    if (touches.length === 2 && newTouches.length === 2) {
+        // Pinch zoom
+        const oldDistance = Math.hypot(
+            touches[0].clientX - touches[1].clientX,
+            touches[0].clientY - touches[1].clientY
+        );
+        const newDistance = Math.hypot(
+            newTouches[0].clientX - newTouches[1].clientX,
+            newTouches[0].clientY - newTouches[1].clientY
+        );
+        
+        const zoomFactor = newDistance / oldDistance;
+        const mapPixelWidth = gameState.width * 35;
+        const mapPixelHeight = gameState.height * 35;
+        const minZoomX = canvas.width / mapPixelWidth;
+        const minZoomY = canvas.height / mapPixelHeight;
+        const calculatedMinZoom = Math.max(minZoomX, minZoomY);
+        
+        camera.zoom = Math.max(calculatedMinZoom, Math.min(camera.maxZoom, camera.zoom * zoomFactor));
+        drawGame();
+    }
+    
+    touches = newTouches;
+});
+
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    touches = Array.from(e.touches);
+});
+
 canvas.style.cursor = 'grab';
 
 function isAdjacent(from, to) {
@@ -879,6 +972,48 @@ function isAdjacent(from, to) {
     const colDiff = Math.abs(fromCol - toCol);
     
     return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+}
+
+// Simple pathfinding for intent-based movement
+function findPath(from, to) {
+    if (!gameState) return null;
+    
+    const queue = [{ tile: from, path: [from] }];
+    const visited = new Set([from]);
+    
+    while (queue.length > 0) {
+        const { tile, path } = queue.shift();
+        
+        if (tile === to) {
+            return path.slice(1); // Remove starting tile
+        }
+        
+        // Check all adjacent tiles
+        const row = Math.floor(tile / gameState.width);
+        const col = tile % gameState.width;
+        
+        const neighbors = [
+            { r: row - 1, c: col },     // up
+            { r: row + 1, c: col },     // down
+            { r: row, c: col - 1 },     // left
+            { r: row, c: col + 1 }      // right
+        ];
+        
+        for (const { r, c } of neighbors) {
+            if (r < 0 || r >= gameState.height || c < 0 || c >= gameState.width) continue;
+            
+            const neighborTile = r * gameState.width + c;
+            if (visited.has(neighborTile)) continue;
+            
+            // Skip mountains (terrain -2) - but allow pathfinding through fog and other terrain
+            if (visibleTiles.has(neighborTile) && gameState.terrain[neighborTile] === -2) continue;
+            
+            visited.add(neighborTile);
+            queue.push({ tile: neighborTile, path: [...path, neighborTile] });
+        }
+    }
+    
+    return null; // No path found
 }
 
 function calculatePlayerStats() {
