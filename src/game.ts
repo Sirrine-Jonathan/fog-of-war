@@ -170,7 +170,7 @@ export class Game {
   }
 
   private spawnCities(): void {
-    const cityCount = Math.max(1, Math.floor(this.state.players.length * 1.5));
+    const cityCount = Math.max(1, Math.floor(this.state.players.length * 3.0));
     console.log(`🏙️  Spawning ${cityCount} cities...`);
     
     for (let i = 0; i < cityCount; i++) {
