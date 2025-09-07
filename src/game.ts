@@ -374,7 +374,7 @@ export class Game {
     }
   }
 
-  private endGame(winner: number): void {
+  endGame(winner: number): void {
     this.state.gameEnded = true;
     this.state.winner = winner;
     if (this.gameInterval) {

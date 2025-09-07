@@ -32,6 +32,65 @@ const games = new Map<string, Game>();
 const playerRooms = new Map<string, string>();
 const gameHosts = new Map<string, string>(); // gameId -> socketId of host
 const gameHistory = new Map<string, any[]>(); // gameId -> array of completed games
+const disconnectedPlayers = new Map<string, { gameId: string, playerIndex: number, disconnectTime: number }>();
+
+// Helper function to send system messages
+function sendSystemMessage(gameId: string, message: string) {
+  io.to(gameId).emit('chat_message', {
+    username: 'System',
+    message: message,
+    playerIndex: -1,
+    timestamp: new Date().toISOString(),
+    isSystem: true
+  });
+}
+
+// Clean up disconnected players every 5 seconds
+setInterval(() => {
+  const now = Date.now();
+  const toRemove: string[] = [];
+  
+  disconnectedPlayers.forEach((data, socketId) => {
+    if (now - data.disconnectTime > 30000) { // 30 seconds
+      const game = games.get(data.gameId);
+      if (game && game.isStarted()) {
+        console.log(`🧹 Removing disconnected player ${data.playerIndex} from game ${data.gameId}`);
+        
+        // Mark player as eliminated
+        const player = game.getState().players[data.playerIndex];
+        if (player && !player.eliminated) {
+          player.eliminated = true;
+          sendSystemMessage(data.gameId, `${player.username} was eliminated due to disconnection`);
+          
+          // Check for victory condition
+          const remainingPlayers = game.getState().players.filter(p => !p.eliminated);
+          console.log(`   Remaining players after elimination: ${remainingPlayers.length}`);
+          
+          if (remainingPlayers.length === 1) {
+            const winner = remainingPlayers[0];
+            sendSystemMessage(data.gameId, `🎉 ${winner.username} wins the game!`);
+            
+            // End the game after a short delay
+            setTimeout(() => {
+              console.log(`   Ending game ${data.gameId} - winner: ${winner.username}`);
+              game.endGame(winner.index || 0);
+            }, 2000);
+          } else if (remainingPlayers.length === 0) {
+            // No players left - end game with no winner
+            sendSystemMessage(data.gameId, `Game ended - no players remaining`);
+            setTimeout(() => {
+              console.log(`   Ending game ${data.gameId} - no players remaining`);
+              game.endGame(-1);
+            }, 2000);
+          }
+        }
+      }
+      toRemove.push(socketId);
+    }
+  });
+  
+  toRemove.forEach(socketId => disconnectedPlayers.delete(socketId));
+}, 5000);
 
 // Serve static files
 app.use(express.static(path.join(__dirname, '../public')));
@@ -101,19 +160,12 @@ io.on('connection', (socket) => {
     // Check if this is a viewer (username contains "Viewer" or game is actively running)
     const isViewer = username.includes('Viewer') || (game.isStarted() && !game.isEnded());
     
-    // Assign host if this is the first non-bot client
-    if (!gameHosts.has(gameId) && !isBot) {
-      gameHosts.set(gameId, socket.id);
-      socket.data.isHost = true;
-      console.log(`👑 ${username} assigned as host for game ${gameId}`);
-    } else {
-      // Check if this socket is already the host (preserve host status when joining as player)
-      socket.data.isHost = (gameHosts.get(gameId) === socket.id);
-    }
-    
     if (isViewer) {
       console.log(`👁️ Viewer ${userId} (${username}) joined game ${gameId} [Game State: Started=${game.isStarted()}, Ended=${game.isEnded()}]`);
       socket.data.isViewer = true;
+      
+      // Viewers cannot be hosts - check if this socket was previously a host
+      socket.data.isHost = (gameHosts.get(gameId) === socket.id);
       
       // Send current players list to viewer
       const gameState = game.getState();
@@ -141,6 +193,23 @@ io.on('connection', (socket) => {
         return;
       }
       
+      // This is a player - try to join the game
+      const playerIndex = game.addPlayer(userId, username, isBot);
+      if (playerIndex >= 0) {
+        socket.data.playerIndex = playerIndex;
+        socket.data.isViewer = false;
+        
+        // Assign host if no host exists and this is a real player (not bot)
+        if (!gameHosts.has(gameId) && !isBot) {
+          gameHosts.set(gameId, socket.id);
+          socket.data.isHost = true;
+          console.log(`👑 ${username} assigned as host for game ${gameId}`);
+        } else {
+          // Check if this socket is already the host
+          socket.data.isHost = (gameHosts.get(gameId) === socket.id);
+        }
+      }
+      
       // Check for duplicate username (but allow same user to rejoin)
       const currentGameState = game.getState();
       const existingPlayer = currentGameState.players.find(p => p.username === username);
@@ -150,8 +219,6 @@ io.on('connection', (socket) => {
         socket.emit('username_taken', { username });
         return;
       }
-      
-      const playerIndex = game.addPlayer(userId, username, isBot);
       
       if (playerIndex === -1) {
         console.log(`❌ Cannot join game ${gameId} - game already started`);
@@ -178,6 +245,18 @@ io.on('connection', (socket) => {
       
       // Send updated game info to ensure host status is correct
       await sendGameInfo(gameId);
+    }
+    
+    // Always check and assign host if none exists and this is a non-bot, non-viewer
+    console.log(`🔍 Host check: gameId=${gameId}, hasHost=${gameHosts.has(gameId)}, isBot=${isBot}, username=${username}`);
+    if (!gameHosts.has(gameId) && !isBot && !username.includes('Viewer')) {
+      gameHosts.set(gameId, socket.id);
+      socket.data.isHost = true;
+      console.log(`👑 ${username} assigned as host for game ${gameId} (no existing host)`);
+      await sendGameInfo(gameId);
+    } else {
+      socket.data.isHost = (gameHosts.get(gameId) === socket.id);
+      console.log(`🔍 Host not assigned: hasHost=${gameHosts.has(gameId)}, currentHost=${gameHosts.get(gameId)}, socketId=${socket.id}`);
     }
   });
 
@@ -233,6 +312,15 @@ io.on('connection', (socket) => {
     console.log(`🚀 Force start request: gameId=${gameId}, force=${force}`);
     const game = games.get(gameId);
     if (game && force) {
+      const playerCount = game.getState().players.length;
+      
+      // Require at least 2 players
+      if (playerCount < 2) {
+        console.log(`   ❌ Cannot start game with only ${playerCount} player(s). Need at least 2 players.`);
+        socket.emit('game_start_error', 'Need at least 2 players to start the game');
+        return;
+      }
+      
       console.log(`   Starting game: ${gameId}`);
       game.startGame();
       
@@ -306,6 +394,10 @@ io.on('connection', (socket) => {
           game.reset();
           console.log(`   🔄 Game state reset - players list cleared`);
           
+          // Clear host when game resets
+          gameHosts.delete(gameId);
+          console.log(`   👑 Host cleared for game ${gameId}`);
+          
           // Send updated player list (should be empty now)
           io.to(gameId).emit('player_joined', { players: [] });
           await sendGameInfo(gameId);
@@ -354,17 +446,6 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
     timestamp: new Date().toISOString()
   });
 });
-
-// Helper function to send system messages
-function sendSystemMessage(gameId: string, message: string) {
-  io.to(gameId).emit('chat_message', {
-    username: 'System',
-    message: message,
-    playerIndex: -1,
-    timestamp: new Date().toISOString(),
-    isSystem: true
-  });
-}
 
   socket.on('attack', (from: number, to: number) => {
     console.log(`⚔️ Attack request: from=${from}, to=${to}, player=${socket.data.playerIndex}`);
@@ -462,10 +543,10 @@ function sendSystemMessage(gameId: string, message: string) {
     if (roomId) {
       console.log(`🚪 Player ${socket.id} disconnected from room ${roomId}`);
       
-      // If player was joined but game hasn't started, remove them from the game
-      if (socket.data.playerIndex >= 0 && games.has(roomId)) {
-        const game = games.get(roomId)!;
+      const game = games.get(roomId);
+      if (game && socket.data.playerIndex >= 0) {
         if (!game.isStarted()) {
+          // Game hasn't started - remove player immediately
           const userId = socket.data.userId;
           console.log(`🚪 Removing disconnected player ${userId} from game ${roomId}`);
           game.removePlayer(userId);
@@ -479,6 +560,20 @@ function sendSystemMessage(gameId: string, message: string) {
               eliminated: p.eliminated
             }))
           });
+        } else {
+          // Game is started - track disconnection for cleanup
+          console.log(`⏰ Tracking disconnected player ${socket.data.playerIndex} for cleanup`);
+          disconnectedPlayers.set(socket.id, {
+            gameId: roomId,
+            playerIndex: socket.data.playerIndex,
+            disconnectTime: Date.now()
+          });
+          
+          // Don't remove from game immediately - let cleanup timer handle it
+          playerRooms.delete(socket.id);
+          socket.leave(roomId);
+          sendGameInfo(roomId);
+          return;
         }
       }
       
@@ -500,7 +595,15 @@ function sendSystemMessage(gameId: string, message: string) {
   // Helper to transfer host when current host disconnects
   async function transferHostToNextPlayer(gameId: string) {
     const sockets = await io.in(gameId).fetchSockets();
-    const nextHost = sockets.find(s => s.id !== socket.id && !s.data.username?.includes('Bot'));
+    // Only consider connected players (not viewers, not bots) as potential hosts
+    const nextHost = sockets.find(s => 
+      s.id !== socket.id && 
+      !s.data.username?.includes('Bot') && 
+      !s.data.username?.includes('Viewer') &&
+      !s.data.isViewer &&
+      s.data.playerIndex !== undefined &&
+      s.data.playerIndex >= 0
+    );
     
     if (nextHost) {
       gameHosts.set(gameId, nextHost.id);
@@ -508,10 +611,27 @@ function sendSystemMessage(gameId: string, message: string) {
       console.log(`👑 Host auto-transferred to ${nextHost.data.username}`);
     } else {
       gameHosts.delete(gameId);
-      console.log(`👑 No eligible host found for game ${gameId}`);
+      console.log(`👑 No eligible host found for game ${gameId} - game may be abandoned`);
+      
+      // Check if game should be cleaned up (no connected players)
+      const connectedPlayers = sockets.filter(s => 
+        !s.data.isViewer && 
+        s.data.playerIndex !== undefined && 
+        s.data.playerIndex >= 0
+      );
+      
+      if (connectedPlayers.length === 0) {
+        console.log(`🧹 Game ${gameId} has no connected players - cleaning up`);
+        const game = games.get(gameId);
+        if (game && game.isStarted()) {
+          sendSystemMessage(gameId, 'Game abandoned - no players remaining');
+          setTimeout(() => {
+            game.endGame(-1);
+          }, 1000);
+        }
+      }
     }
   }
-
 });
 
 const PORT = process.env.PORT || 3001;
