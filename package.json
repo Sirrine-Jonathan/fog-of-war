@@ -1,7 +1,7 @@
 {
-  "name": "generals-game-server",
+  "name": "fog-of-war",
   "version": "1.0.0",
-  "description": "Generals.io compatible game server",
+  "description": "Real time strategy io game",
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
