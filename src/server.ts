@@ -328,23 +328,32 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('chat_message', (data: { gameId: string, message: string, username: string }) => {
-    console.log(`💬 Chat message in game ${data.gameId}: ${data.username}: ${data.message}`);
-    
-    const game = games.get(data.gameId);
-    if (!game) return;
-    
-    // Find player index for color coding
-    let playerIndex = -1;
-    if (socket.data.playerIndex !== undefined) {
-      playerIndex = socket.data.playerIndex;
-    }
-    
-    // Broadcast message to all players in the game
-    io.to(data.gameId).emit('chat_message', {
-      username: data.username,
-      message: data.message,
-      playerIndex: playerIndex,
+socket.on('chat_message', (data: { gameId: string, message: string, username: string }) => {
+  // Validate and sanitize input
+  const sanitizedMessage = data.message
+    .trim()
+    .slice(0, 500) // Limit message length
+    .replace(/[<>]/g, ''); // Basic XSS prevention
+
+  if (!sanitizedMessage) return;
+  
+  const game = games.get(data.gameId);
+  if (!game) return;
+  
+  // Find player index for color coding
+  let playerIndex = -1;
+  if (socket.data.playerIndex !== undefined) {
+    playerIndex = socket.data.playerIndex;
+  }
+  
+  // Broadcast message to all players in the game
+  io.to(data.gameId).emit('chat_message', {
+    username: data.username.slice(0, 30), // Limit username length
+    message: sanitizedMessage,
+    playerIndex: playerIndex,
+    timestamp: new Date().toISOString()
+  });
+});
       timestamp: new Date().toISOString()
     });
   });
