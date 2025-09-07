@@ -13,6 +13,8 @@ export interface GameState {
   terrain: number[];
   generals: number[];
   cities: number[];
+  lookoutTowers: number[];
+  towerDefense: number[];
   turn: number;
   players: Player[];
   gameStarted: boolean;
@@ -24,3 +26,5 @@ export const TILE_EMPTY = -1;
 export const TILE_MOUNTAIN = -2;
 export const TILE_FOG = -3;
 export const TILE_FOG_OBSTACLE = -4;
+export const TILE_LOOKOUT_TOWER = -5;
+export const TILE_CITY = -6;

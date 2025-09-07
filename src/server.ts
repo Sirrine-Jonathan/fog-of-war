@@ -152,6 +152,13 @@ io.on('connection', (socket) => {
       }
       
       const playerIndex = game.addPlayer(userId, username, isBot);
+      
+      if (playerIndex === -1) {
+        console.log(`❌ Cannot join game ${gameId} - game already started`);
+        socket.emit('game_already_started');
+        return;
+      }
+      
       socket.data.playerIndex = playerIndex;
       socket.data.userId = userId;
       socket.data.isViewer = false;
@@ -241,7 +248,7 @@ io.on('connection', (socket) => {
         playerSocket.emit('game_start', {
           playerIndex: playerSocket.data.playerIndex ?? -1, // -1 for viewers
           replay_id: gameId,
-          gameState: parseMapData(mapData)
+          mapData: mapData
         });
       }
 
@@ -310,6 +317,7 @@ io.on('connection', (socket) => {
         const mapData = game.getMapData();
         io.to(gameId).emit('game_update', {
           cities_diff: [0, gameState.cities.length, ...gameState.cities],
+          lookoutTowers_diff: [0, gameState.lookoutTowers.length, ...gameState.lookoutTowers],
           map_diff: [0, mapData.length, ...mapData],
           generals: gameState.generals,
           players: gameState.players

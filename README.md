@@ -4,7 +4,7 @@ A Socket.IO-based game server, featuring both bot and human player support.
 
 ## Features
 
-- **Bot Compatible**: Works with existing generals.io bot implementations
+implementations
 - **Human Players**: Interactive web interface for human players
 - **Real-time Viewer**: Watch games in progress
 - **Room-based**: Multiple games can run simultaneously

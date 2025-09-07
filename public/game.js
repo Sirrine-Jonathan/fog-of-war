@@ -2,6 +2,22 @@ const canvas = document.getElementById('gameBoard');
 const ctx = canvas.getContext('2d');
 const socket = io();
 
+// Camera system
+let camera = {
+    x: 0,
+    y: 0,
+    zoom: 1,
+    minZoom: 0.5, // Will be calculated dynamically
+    maxZoom: 2,
+    targetX: 0,
+    targetY: 0,
+    smoothing: 0.1
+};
+
+let isDragging = false;
+let lastMouseX = 0;
+let lastMouseY = 0;
+
 let gameState = null;
 let selectedTile = null;
 let playerIndex = -1;
@@ -86,7 +102,29 @@ loadPersistedState();
 setTimeout(attemptAutoRejoin, 100); // Small delay to ensure connection
 
 socket.on('game_start', (data) => {
-    console.log('Game started!', data);
+    console.log('🎮 Game started!', data);
+    console.log('   Player index:', data.playerIndex);
+    console.log('   Map data length:', data.mapData?.length);
+    
+    if (data.mapData) {
+        gameState = parseMapData(data.mapData);
+        console.log('   Parsed initial game state:', {
+            width: gameState.width,
+            height: gameState.height,
+            armiesLength: gameState.armies?.length,
+            terrainLength: gameState.terrain?.length,
+            towerDefenseLength: gameState.towerDefense?.length
+        });
+        
+        // Log all player positions
+        console.log('   Initial player positions:');
+        gameState.terrain.forEach((terrain, index) => {
+            if (terrain >= 0) {
+                console.log(`     Position ${index}: player=${terrain}, armies=${gameState.armies[index]}`);
+            }
+        });
+    }
+    
     document.getElementById('gameStarted').textContent = gameStarted ? 'Playing' : 'Started';
     document.getElementById('gameEndNotification').style.display = 'none'; // Hide notification
     document.getElementById('gameBoard').style.display = 'block'; // Show canvas
@@ -94,7 +132,7 @@ socket.on('game_start', (data) => {
     gameStarted = true;
     updateButtonVisibility(); // Update button visibility
     saveState(); // Save state when game starts
-    console.log('Player index set to:', playerIndex);
+    console.log('   Player index set to:', playerIndex);
 });
 
 socket.on('game_info', (data) => {
@@ -205,6 +243,12 @@ socket.on('username_taken', (data) => {
     document.getElementById('usernameInput').focus();
 });
 
+socket.on('game_already_started', () => {
+    alert('Cannot join - game has already started. You can spectate instead.');
+    // Switch to viewer mode
+    socket.emit('join_as_viewer', { gameId: currentGameId });
+});
+
 socket.on('game_won', (data) => {
     gameStarted = false;
     const winnerName = players[data.winner]?.username || 'Unknown';
@@ -240,9 +284,8 @@ socket.on('game_won', (data) => {
 
 socket.on('attack_result', (data) => {
     if (data.success) {
-        selectedTile = data.to;
+        setSelectedTile(data.to);
         updateVisibleTiles();
-        drawGame();
     } else {
         // Keep the original tile selected on failed moves
         // selectedTile remains unchanged
@@ -251,14 +294,71 @@ socket.on('attack_result', (data) => {
 });
 
 socket.on('game_update', (data) => {
-    console.log('Game update received:', data);
+    console.log('🔄 Game update received:', data);
     if (data.map_diff && data.map_diff.length > 0) {
+        console.log('   Map diff length:', data.map_diff.length);
         const patchedMap = patch([], data.map_diff);
+        console.log('   Patched map length:', patchedMap.length);
+        
         gameState = parseMapData(patchedMap);
+        console.log('   Parsed game state:', {
+            width: gameState.width,
+            height: gameState.height,
+            armiesLength: gameState.armies?.length,
+            terrainLength: gameState.terrain?.length,
+            towerDefenseLength: gameState.towerDefense?.length
+        });
+        
+        // Log all player positions
+        console.log('   Player positions:');
+        gameState.terrain.forEach((terrain, index) => {
+            if (terrain >= 0) {
+                console.log(`     Position ${index}: player=${terrain}, armies=${gameState.armies[index]}`);
+            }
+        });
         
         // Update players data if provided
         if (data.players) {
             gameState.players = data.players;
+            console.log('   Players updated:', gameState.players);
+        }
+        
+        // Update cities and lookout towers if provided
+        if (data.cities_diff) {
+            gameState.cities = patch(gameState.cities || [], data.cities_diff);
+            console.log('   Cities updated:', gameState.cities);
+        }
+        if (data.lookoutTowers_diff) {
+            gameState.lookoutTowers = patch(gameState.lookoutTowers || [], data.lookoutTowers_diff);
+            console.log('   Lookout towers updated:', gameState.lookoutTowers);
+        }
+        
+        // Auto-select player's general on first update if no tile selected
+        if (selectedTile === null && playerIndex >= 0 && data.generals) {
+            const generalPos = data.generals[playerIndex];
+            if (generalPos !== undefined) {
+                setSelectedTile(generalPos);
+                console.log(`🎯 Auto-selected general at position ${generalPos}`);
+                
+                // Center camera on general immediately (override smooth following)
+                const row = Math.floor(generalPos / gameState.width);
+                const col = generalPos % gameState.width;
+                const tileWorldX = (col * 35 + 17.5) * camera.zoom;
+                const tileWorldY = (row * 35 + 17.5) * camera.zoom;
+                
+                camera.x = tileWorldX - canvas.width / 2;
+                camera.y = tileWorldY - canvas.height / 2;
+                camera.targetX = camera.x;
+                camera.targetY = camera.y;
+                
+                // Clamp to bounds
+                const mapWidth = gameState.width * 35 * camera.zoom;
+                const mapHeight = gameState.height * 35 * camera.zoom;
+                camera.x = Math.max(0, Math.min(camera.x, mapWidth - canvas.width));
+                camera.y = Math.max(0, Math.min(camera.y, mapHeight - canvas.height));
+                camera.targetX = camera.x;
+                camera.targetY = camera.y;
+            }
         }
         
         // Check if current player got eliminated this turn
@@ -272,9 +372,10 @@ socket.on('game_update', (data) => {
             for (let i = 0; i < gameState.terrain.length; i++) {
                 const terrain = gameState.terrain[i];
                 if (terrain >= 0 && gameState.armies[i] > 0) {
-                    // Check if this might be a starting position (high army count early in game)
-                    if (!playerGenerals.has(terrain) && gameState.armies[i] >= 10) {
+                    // Check if this might be a starting position (any army count for generals)
+                    if (!playerGenerals.has(terrain)) {
                         playerGenerals.set(terrain, i);
+                        console.log(`🎯 Detected general for player ${terrain} at position ${i}`);
                     }
                 }
             }
@@ -327,9 +428,16 @@ function updateVisibleTiles() {
         if (gameState.terrain[i] === playerIndex) {
             visibleTiles.add(i);
             
-            // Add adjacent tiles (8-directional including diagonals)
-            const adjacent = getAdjacentTiles(i);
-            adjacent.forEach(adj => visibleTiles.add(adj));
+            // Check if this is a lookout tower for extended vision
+            if (gameState.lookoutTowers && gameState.lookoutTowers.includes(i)) {
+                // Lookout towers provide 5-tile radius vision
+                const towerVision = getTilesInRadius(i, 5);
+                towerVision.forEach(tile => visibleTiles.add(tile));
+            } else {
+                // Regular tiles provide adjacent vision
+                const adjacent = getAdjacentTiles(i);
+                adjacent.forEach(adj => visibleTiles.add(adj));
+            }
         }
     }
 }
@@ -357,6 +465,26 @@ function getAdjacentTiles(tileIndex) {
     return adjacent;
 }
 
+function getTilesInRadius(tileIndex, radius) {
+    const tiles = [];
+    const row = Math.floor(tileIndex / gameState.width);
+    const col = tileIndex % gameState.width;
+    
+    for (let dr = -radius; dr <= radius; dr++) {
+        for (let dc = -radius; dc <= radius; dc++) {
+            const newRow = row + dr;
+            const newCol = col + dc;
+            
+            if (newRow >= 0 && newRow < gameState.height && 
+                newCol >= 0 && newCol < gameState.width) {
+                tiles.push(newRow * gameState.width + newCol);
+            }
+        }
+    }
+    
+    return tiles;
+}
+
 function patch(old, diff) {
     const out = [];
     let i = 0;
@@ -380,21 +508,109 @@ function parseMapData(mapData) {
     const size = width * height;
     const armies = mapData.slice(2, size + 2);
     const terrain = mapData.slice(size + 2, size + 2 + size);
+    const towerDefense = mapData.slice(size + 2 + size, size + 2 + size + size);
     
-    return { width, height, armies, terrain, generals: [] };
+    return { width, height, armies, terrain, towerDefense, generals: [] };
+}
+
+function setSelectedTile(tileIndex) {
+    selectedTile = tileIndex;
+    if (tileIndex !== null) {
+        updateCamera();
+    }
+    drawGame();
+}
+
+function attemptMove(fromTile, toTile) {
+    if (!gameState || !visibleTiles.has(toTile)) return false;
+    
+    if (gameState.armies[fromTile] > 1) {
+        // Have armies to move - attempt attack/move
+        socket.emit('attack', fromTile, toTile);
+        return true;
+    } else if (gameState.terrain[toTile] === playerIndex) {
+        // Can't move but target is owned - change selection
+        setSelectedTile(toTile);
+        return true;
+    }
+    return false;
+}
+
+function updateCamera() {
+    if (!gameState || selectedTile === null) return;
+    
+    const tileSize = 35 * camera.zoom;
+    const row = Math.floor(selectedTile / gameState.width);
+    const col = selectedTile % gameState.width;
+    
+    // World position of selected tile center
+    const tileWorldX = (col * 35 + 17.5) * camera.zoom;
+    const tileWorldY = (row * 35 + 17.5) * camera.zoom;
+    
+    // Screen position of tile if camera doesn't move
+    const tileScreenX = tileWorldX - camera.x;
+    const tileScreenY = tileWorldY - camera.y;
+    
+    // Define edge margins (how close to edge before camera starts following)
+    const marginX = canvas.width * 0.25; // 25% from edge
+    const marginY = canvas.height * 0.25;
+    
+    // Calculate target camera position to center tile
+    const targetCameraX = tileWorldX - canvas.width / 2;
+    const targetCameraY = tileWorldY - canvas.height / 2;
+    
+    // Only update target if tile is near screen edges
+    if (tileScreenX < marginX || tileScreenX > canvas.width - marginX) {
+        camera.targetX = targetCameraX;
+    }
+    if (tileScreenY < marginY || tileScreenY > canvas.height - marginY) {
+        camera.targetY = targetCameraY;
+    }
+    
+    // Clamp target to map bounds
+    const mapWidth = gameState.width * 35 * camera.zoom;
+    const mapHeight = gameState.height * 35 * camera.zoom;
+    
+    camera.targetX = Math.max(0, Math.min(camera.targetX, mapWidth - canvas.width));
+    camera.targetY = Math.max(0, Math.min(camera.targetY, mapHeight - canvas.height));
+    
+    // Smooth interpolation toward target
+    const deltaX = camera.targetX - camera.x;
+    const deltaY = camera.targetY - camera.y;
+    
+    if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
+        camera.x += deltaX * camera.smoothing;
+        camera.y += deltaY * camera.smoothing;
+        
+        // Redraw if camera moved significantly
+        drawGame();
+        requestAnimationFrame(updateCamera);
+    }
 }
 
 function drawGame() {
     if (!gameState) return;
     
-    const tileSize = 25;
+    console.log('🎨 Drawing game - terrain length:', gameState.terrain?.length);
+    
+    const tileSize = 35 * camera.zoom;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Save context for camera transform
+    ctx.save();
+    ctx.translate(-camera.x, -camera.y);
     
     for (let i = 0; i < gameState.terrain.length; i++) {
         const row = Math.floor(i / gameState.width);
         const col = i % gameState.width;
         const x = col * tileSize;
         const y = row * tileSize;
+        
+        // Skip tiles outside viewport
+        if (x + tileSize < camera.x || x > camera.x + canvas.width ||
+            y + tileSize < camera.y || y > camera.y + canvas.height) {
+            continue;
+        }
         
         // Check if tile is visible to current player (or show all if game ended)
         const isVisible = playerIndex < 0 || visibleTiles.has(i) || gameEnded;
@@ -418,6 +634,10 @@ function drawGame() {
             const terrain = gameState.terrain[i];
             if (terrain === -2) { // Mountain
                 ctx.fillStyle = mountainColor;
+            } else if (terrain === -6) { // City
+                ctx.fillStyle = '#D2691E'; // Saddle brown for cities
+            } else if (terrain === -5) { // Lookout Tower
+                ctx.fillStyle = '#696969'; // Dim gray for towers
             } else if (terrain >= 0) { // Player owned
                 ctx.fillStyle = playerColors[terrain] || emptyColor;
             } else { // Empty
@@ -426,41 +646,74 @@ function drawGame() {
             
             ctx.fillRect(x, y, tileSize, tileSize);
             
+            // Draw city buildings
+            if (terrain === -6 || (terrain >= 0 && gameState.cities && gameState.cities.includes(i))) {
+                ctx.fillStyle = '#8B4513'; // Brown buildings
+                const scale = camera.zoom;
+                ctx.fillRect(x + 4*scale, y + 12*scale, 6*scale, 12*scale);
+                ctx.fillRect(x + 12*scale, y + 8*scale, 6*scale, 16*scale);
+                ctx.fillRect(x + 20*scale, y + 15*scale, 4*scale, 9*scale);
+            }
+            
+            // Draw lookout tower
+            if (terrain === -5 || (terrain >= 0 && gameState.lookoutTowers && gameState.lookoutTowers.includes(i))) {
+                ctx.fillStyle = '#654321'; // Dark brown tower
+                const scale = camera.zoom;
+                ctx.fillRect(x + 10*scale, y + 6*scale, 6*scale, 18*scale);
+                ctx.fillRect(x + 8*scale, y + 4*scale, 10*scale, 4*scale);
+                // Tower flag
+                if (terrain >= 0) {
+                    ctx.fillStyle = playerColors[terrain];
+                    ctx.fillRect(x + 16*scale, y + 4*scale, 4*scale, 3*scale);
+                }
+            }
+            
             // Draw castle for starting positions
             if (playerGenerals.has(terrain) && playerGenerals.get(terrain) === i) {
+                console.log(`🏰 Drawing castle for player ${terrain} at position ${i}`);
                 ctx.fillStyle = '#8B4513'; // Brown castle base
-                ctx.fillRect(x + 8, y + 18, 9, 7);
-                ctx.fillRect(x + 6, y + 15, 4, 10);
-                ctx.fillRect(x + 15, y + 15, 4, 10);
-                ctx.fillRect(x + 10, y + 12, 5, 13);
+                const scale = camera.zoom;
+                ctx.fillRect(x + 8*scale, y + 18*scale, 9*scale, 7*scale);
+                ctx.fillRect(x + 6*scale, y + 15*scale, 4*scale, 10*scale);
+                ctx.fillRect(x + 15*scale, y + 15*scale, 4*scale, 10*scale);
+                ctx.fillRect(x + 10*scale, y + 12*scale, 5*scale, 13*scale);
                 
                 // Castle flag
                 ctx.fillStyle = playerColors[terrain];
-                ctx.fillRect(x + 11, y + 8, 3, 4);
+                ctx.fillRect(x + 11*scale, y + 8*scale, 3*scale, 4*scale);
             }
             
-            // Draw army count
+            // Draw army count or tower defense
             if (gameState.armies[i] > 0) {
                 ctx.fillStyle = terrain === -2 ? 'white' : 'black';
-                ctx.font = 'bold 10px Arial';
+                ctx.font = `bold ${Math.max(8, 10 * camera.zoom)}px Arial`;
                 ctx.textAlign = 'center';
-                ctx.fillText(gameState.armies[i].toString(), x + tileSize/2, y + tileSize/2 + 3);
+                ctx.fillText(gameState.armies[i].toString(), x + tileSize/2, y + tileSize/2 + 3*camera.zoom);
+            } else if (terrain === -5 && gameState.towerDefense && gameState.towerDefense[i] > 0) {
+                // Show tower defense for neutral towers
+                ctx.fillStyle = 'white';
+                ctx.font = `bold ${Math.max(8, 10 * camera.zoom)}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText(gameState.towerDefense[i].toString(), x + tileSize/2, y + tileSize/2 + 3*camera.zoom);
             }
         }
         
         // Draw border
         ctx.strokeStyle = selectedTile === i ? '#ffd700' : '#ccc';
-        ctx.lineWidth = selectedTile === i ? 3 : 1;
+        ctx.lineWidth = selectedTile === i ? 3 * camera.zoom : 1 * camera.zoom;
         ctx.strokeRect(x, y, tileSize, tileSize);
         
         // Add glow effect for selected tile
         if (selectedTile === i) {
             ctx.shadowColor = '#ffd700';
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 10 * camera.zoom;
             ctx.strokeRect(x, y, tileSize, tileSize);
             ctx.shadowBlur = 0;
         }
     }
+    
+    // Restore context
+    ctx.restore();
 }
 
 function closeGameEndModal() {
@@ -491,12 +744,12 @@ function showGameEndModal(winnerName, winnerIndex) {
 }
 
 canvas.addEventListener('click', (e) => {
-    if (!gameState || playerIndex < 0) return;
+    if (!gameState || playerIndex < 0 || isDragging) return;
     
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const tileSize = 25;
+    const x = e.clientX - rect.left + camera.x;
+    const y = e.clientY - rect.top + camera.y;
+    const tileSize = 35 * camera.zoom;
     
     const col = Math.floor(x / tileSize);
     const row = Math.floor(y / tileSize);
@@ -508,32 +761,113 @@ canvas.addEventListener('click', (e) => {
     if (selectedTile === null) {
         // Select any tile owned by player (even with 1 army)
         if (gameState.terrain[tileIndex] === playerIndex) {
-            selectedTile = tileIndex;
-            drawGame();
+            setSelectedTile(tileIndex);
         }
     } else {
         if (isAdjacent(selectedTile, tileIndex)) {
-            // Only attempt attack/move if we have enough armies
-            if (gameState.armies[selectedTile] > 1) {
-                socket.emit('attack', selectedTile, tileIndex);
-            } else {
-                // Can't move with only 1 army, but allow reselecting target if it's owned
-                if (gameState.terrain[tileIndex] === playerIndex) {
-                    selectedTile = tileIndex;
-                    drawGame();
-                }
-            }
+            // Try to move/attack
+            attemptMove(selectedTile, tileIndex);
         } else {
             // Click on non-adjacent tile - select it if owned, otherwise clear selection
             if (gameState.terrain[tileIndex] === playerIndex) {
-                selectedTile = tileIndex;
+                setSelectedTile(tileIndex);
             } else {
-                selectedTile = null;
+                setSelectedTile(null);
             }
-            drawGame();
         }
     }
 });
+
+// Camera controls
+canvas.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+    canvas.style.cursor = 'grabbing';
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    if (isDragging) {
+        const deltaX = e.clientX - lastMouseX;
+        const deltaY = e.clientY - lastMouseY;
+        
+        camera.x -= deltaX;
+        camera.y -= deltaY;
+        
+        // Update target to current position when manually dragging
+        camera.targetX = camera.x;
+        camera.targetY = camera.y;
+        
+        // Clamp camera to map bounds
+        const mapWidth = gameState ? gameState.width * 35 * camera.zoom : 1050;
+        const mapHeight = gameState ? gameState.height * 35 * camera.zoom : 1050;
+        
+        camera.x = Math.max(0, Math.min(camera.x, mapWidth - canvas.width));
+        camera.y = Math.max(0, Math.min(camera.y, mapHeight - canvas.height));
+        camera.targetX = camera.x;
+        camera.targetY = camera.y;
+        
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        
+        drawGame();
+    }
+});
+
+canvas.addEventListener('mouseup', () => {
+    isDragging = false;
+    canvas.style.cursor = 'grab';
+});
+
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    
+    if (!gameState) return;
+    
+    // Calculate minimum zoom to fit entire map
+    const mapPixelWidth = gameState.width * 35;
+    const mapPixelHeight = gameState.height * 35;
+    const minZoomX = canvas.width / mapPixelWidth;
+    const minZoomY = canvas.height / mapPixelHeight;
+    const calculatedMinZoom = Math.max(minZoomX, minZoomY);
+    
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    // World coordinates before zoom (accounting for current camera position)
+    const worldX = (mouseX + camera.x) / camera.zoom;
+    const worldY = (mouseY + camera.y) / camera.zoom;
+    
+    // Reduced sensitivity: smaller zoom steps
+    const zoomFactor = e.deltaY > 0 ? 0.95 : 1.05;
+    const newZoom = Math.max(calculatedMinZoom, Math.min(camera.maxZoom, camera.zoom * zoomFactor));
+    
+    if (newZoom !== camera.zoom) {
+        camera.zoom = newZoom;
+        
+        // Adjust camera to keep mouse position fixed
+        camera.x = worldX * camera.zoom - mouseX;
+        camera.y = worldY * camera.zoom - mouseY;
+        
+        // Update targets to current position
+        camera.targetX = camera.x;
+        camera.targetY = camera.y;
+        
+        // Clamp camera to map bounds
+        const mapWidth = gameState.width * 35 * camera.zoom;
+        const mapHeight = gameState.height * 35 * camera.zoom;
+        
+        camera.x = Math.max(0, Math.min(camera.x, mapWidth - canvas.width));
+        camera.y = Math.max(0, Math.min(camera.y, mapHeight - canvas.height));
+        camera.targetX = camera.x;
+        camera.targetY = camera.y;
+        
+        drawGame();
+    }
+});
+
+canvas.style.cursor = 'grab';
 
 function isAdjacent(from, to) {
     const fromRow = Math.floor(from / gameState.width);
@@ -730,14 +1064,7 @@ document.addEventListener('keydown', (e) => {
     }
     
     if (targetTile !== null && visibleTiles.has(targetTile)) {
-        if (gameState.armies[selectedTile] > 1) {
-            // Have armies to move - attempt attack/move
-            socket.emit('attack', selectedTile, targetTile);
-        } else if (gameState.terrain[targetTile] === playerIndex) {
-            // Can't move but target is owned - change selection
-            selectedTile = targetTile;
-            drawGame();
-        }
+        attemptMove(selectedTile, targetTile);
         e.preventDefault();
     }
 });
