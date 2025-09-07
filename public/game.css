@@ -232,3 +232,204 @@ input[type="text"]:focus {
     font-size: 11px;
     padding: 4px 8px;
 }
+
+/* Mobile Tab Navigation */
+.mobile-tab-bar {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 0;
+    z-index: 9999;
+    height: 65px;
+    box-sizing: border-box;
+}
+
+.mobile-tab {
+    flex: 1;
+    padding: 0 12px;
+    background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+    color: white;
+    border: 2px solid #ffd700;
+    border-bottom: none; /* Remove bottom border to be flush */
+    border-radius: 8px 8px 0 0; /* Only top corners rounded */
+    margin: 0 5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    height: 100%; /* Fill the full 65px height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto; /* Ensure buttons are clickable */
+}
+
+/* First and last buttons extend to edges */
+.mobile-tab:first-child {
+    margin-left: 0;
+    border-left: none; /* Remove left border */
+    border-radius: 0 8px 0 0; /* Only top-right corner */
+}
+
+.mobile-tab:last-child {
+    margin-right: 0;
+    border-right: none; /* Remove right border */
+    border-radius: 8px 0 0 0; /* Only top-left corner */
+}
+
+.mobile-tab.active {
+    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+    color: #2c3e50;
+}
+
+/* Force mobile styles when mobile classes are present */
+body.mobile-game-active .mobile-tab-bar,
+body.mobile-controls-active .mobile-tab-bar,
+body.mobile-chat-active .mobile-tab-bar {
+    display: flex !important;
+}
+
+/* Override parent containers for mobile */
+body.mobile-game-active,
+body.mobile-controls-active,
+body.mobile-chat-active {
+    padding: 0 !important; /* Remove body padding */
+}
+
+body.mobile-game-active .fullDisplay,
+body.mobile-controls-active .fullDisplay,
+body.mobile-chat-active .fullDisplay {
+    padding: 0 !important; /* Remove fullDisplay padding */
+    padding-bottom: 80px; /* Only keep space for tab bar */
+    margin: 0 !important;
+}
+
+body.mobile-game-active .mainRow,
+body.mobile-controls-active .mainRow,
+body.mobile-chat-active .mainRow {
+    flex-direction: column;
+    gap: 0 !important; /* Remove gap */
+    margin: 0 !important;
+}
+
+/* Game Tab - Show only game */
+body.mobile-game-active #gameCanvas {
+    width: 100vw;
+    margin: 0;
+    height: calc(100vh - 112px);
+}
+
+body.mobile-game-active #gameBoard {
+    width: 100vw;
+    height: calc(100vh - 112px);
+    box-sizing: border-box;
+}
+
+body.mobile-game-active #gameControls {
+    display: none !important;
+}
+
+body.mobile-game-active #chatSection {
+    display: none !important;
+}
+
+/* Controls Tab - Show only controls */
+body.mobile-controls-active #gameCanvas {
+    display: none !important;
+}
+
+body.mobile-controls-active #gameControls {
+    display: flex !important;
+    margin: 0;
+    padding: 20px;
+    width: 100vw;
+    box-sizing: border-box;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 112px);
+}
+
+body.mobile-controls-active #chatSection {
+    display: none !important;
+}
+
+/* Chat Tab - Show only chat */
+body.mobile-chat-active #gameCanvas {
+    display: none !important;
+}
+
+body.mobile-chat-active #gameControls {
+    display: none !important;
+}
+
+body.mobile-chat-active #chatSection {
+    display: flex !important;
+    flex-direction: column;
+    margin: 0;
+    padding: 10px 10px 90px 10px; /* Extra bottom padding to avoid tab bar */
+    width: 100vw;
+    box-sizing: border-box;
+    height: calc(100vh - 80px);
+}
+
+/* Override the chat input parent container */
+body.mobile-chat-active #chatSection > div:last-child {
+    width: 100% !important;
+}
+
+body.mobile-chat-active #chatMessages {
+    flex: 1 !important;
+    height: auto !important;
+    margin-bottom: 15px;
+    width: calc(100% - 16px) !important; /* Account for 8px padding on each side */
+}
+
+body.mobile-chat-active #chatInput {
+    width: 100% !important;
+    height: 80px !important;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+}
+
+body.mobile-chat-active #sendChatBtn {
+    width: calc(100% - 8px) !important;
+    height: 50px !important;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+}
+
+/* Legacy media query for fallback */
+@media (max-width: 768px) {
+    .mobile-tab-bar {
+        display: flex;
+    }
+    
+    .fullDisplay {
+        padding-bottom: 80px;
+    }
+    
+    .mainRow {
+        flex-direction: column;
+    }
+    
+    #gameCanvas {
+        width: 100vw;
+        margin: 0 -20px;
+    }
+    
+    #gameBoard {
+        width: 100vw;
+        height: 60vh;
+    }
+    
+    #gameControls {
+        display: none;
+        margin-top: 20px;
+    }
+    
+    #chatSection {
+        display: none;
+        margin-top: 20px;
+    }
+}

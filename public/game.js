@@ -33,6 +33,9 @@ let hostSocketId = null;
 let isEliminated = false;
 let playerSocketMap = new Map(); // playerIndex -> socketId
 
+// Intent-based movement system
+let activeIntent = null; // { fromTile, targetTile, path, currentStep }
+
 // Get room ID from URL
 const roomId = window.location.pathname.split('/').pop();
 document.getElementById('roomId').textContent = roomId;
@@ -93,6 +96,79 @@ const emptyColor = '#f0f0f0';
 const mountainColor = '#333';
 const fogColor = '#888';
 
+// Mobile tab system
+function checkIsMobile() {
+    const width = window.innerWidth;
+    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isMobileWidth = width <= 768;
+    return isMobileWidth || isMobileUA;
+}
+
+const isMobile = checkIsMobile();
+let currentMobileTab = 'game';
+
+console.log('🔍 Mobile Detection:', {
+    windowWidth: window.innerWidth,
+    isMobile: isMobile,
+    hasTouch: 'ontouchstart' in window,
+    userAgent: navigator.userAgent
+});
+
+function initMobileTabs() {
+    console.log('🔍 initMobileTabs called, isMobile:', isMobile);
+    
+    if (!isMobile) {
+        console.log('🔍 Not mobile, skipping tab init');
+        return;
+    }
+    
+    console.log('🔍 Setting up mobile tabs...');
+    
+    const tabBar = document.getElementById('mobileTabBar');
+    const gameTab = document.getElementById('gameTab');
+    const controlsTab = document.getElementById('controlsTab');
+    const chatTab = document.getElementById('chatTab');
+    
+    console.log('🔍 Tab elements:', {
+        tabBar: !!tabBar,
+        gameTab: !!gameTab,
+        controlsTab: !!controlsTab,
+        chatTab: !!chatTab
+    });
+    
+    document.body.classList.add('mobile-game-active');
+    console.log('🔍 Added mobile-game-active class');
+    
+    if (gameTab) gameTab.addEventListener('click', () => switchMobileTab('game'));
+    if (controlsTab) controlsTab.addEventListener('click', () => switchMobileTab('controls'));
+    if (chatTab) chatTab.addEventListener('click', () => switchMobileTab('chat'));
+    
+    console.log('🔍 Mobile tabs initialized');
+}
+
+function switchMobileTab(tab) {
+    if (!isMobile) return;
+    
+    // Remove all active classes
+    document.body.classList.remove('mobile-game-active', 'mobile-controls-active', 'mobile-chat-active');
+    document.querySelectorAll('.mobile-tab').forEach(t => t.classList.remove('active'));
+    
+    // Add new active class
+    document.body.classList.add(`mobile-${tab}-active`);
+    document.getElementById(`${tab}Tab`).classList.add('active');
+    
+    currentMobileTab = tab;
+    
+    // Resize canvas if switching to game tab
+    if (tab === 'game') {
+        setTimeout(() => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - 120;
+            drawGame();
+        }, 100);
+    }
+}
+
 // Connect as viewer initially, then try auto-rejoin
 socket.emit('set_username', 'viewer_' + Date.now(), 'Viewer');
 socket.emit('join_private', roomId, 'viewer_' + Date.now());
@@ -100,6 +176,9 @@ socket.emit('join_private', roomId, 'viewer_' + Date.now());
 // Load persisted state and attempt auto-rejoin
 loadPersistedState();
 setTimeout(attemptAutoRejoin, 100); // Small delay to ensure connection
+
+// Initialize mobile tabs
+initMobileTabs();
 
 socket.on('game_start', (data) => {
     console.log('🎮 Game started!', data);
@@ -295,6 +374,7 @@ socket.on('attack_result', (data) => {
 
 socket.on('game_update', (data) => {
     console.log('🔄 Game update received:', data);
+    
     if (data.map_diff && data.map_diff.length > 0) {
         console.log('   Map diff length:', data.map_diff.length);
         const patchedMap = patch([], data.map_diff);
@@ -382,6 +462,25 @@ socket.on('game_update', (data) => {
         }
         
         updateVisibleTiles();
+        
+        // Execute intent-based movement
+        if (activeIntent && activeIntent.currentStep < activeIntent.path.length) {
+            const currentTile = activeIntent.currentStep === 0 ? activeIntent.fromTile : activeIntent.path[activeIntent.currentStep - 1];
+            const nextTile = activeIntent.path[activeIntent.currentStep];
+            
+            if (gameState.armies[currentTile] > 1 && isAdjacent(currentTile, nextTile)) {
+                socket.emit('attack', currentTile, nextTile);
+                activeIntent.currentStep++;
+                
+                // Check if we've reached the target
+                if (activeIntent.currentStep >= activeIntent.path.length) {
+                    activeIntent = null; // Clear completed intent
+                }
+            } else {
+                activeIntent = null; // Clear invalid intent
+            }
+        }
+        
         drawGame();
         updatePlayersList(); // Update stats display
         saveState(); // Save state on each game update
@@ -698,6 +797,15 @@ function drawGame() {
             }
         }
         
+        // Draw intent path
+        if (activeIntent && activeIntent.path.includes(i)) {
+            ctx.strokeStyle = '#ff6b6b';
+            ctx.lineWidth = 3 * camera.zoom;
+            ctx.setLineDash([5 * camera.zoom, 5 * camera.zoom]);
+            ctx.strokeRect(x, y, tileSize, tileSize);
+            ctx.setLineDash([]);
+        }
+        
         // Draw border
         ctx.strokeStyle = selectedTile === i ? '#ffd700' : '#ccc';
         ctx.lineWidth = selectedTile === i ? 3 * camera.zoom : 1 * camera.zoom;
@@ -714,6 +822,39 @@ function drawGame() {
     
     // Restore context
     ctx.restore();
+}
+
+function drawGameEndOverlay() {
+    const gameEndText = document.getElementById('gameEndText');
+    if (!gameEndText || !gameEndText.textContent) return;
+    
+    // Semi-transparent overlay
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Main message
+    ctx.fillStyle = gameEndText.style.color || '#fff';
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Add text shadow for better visibility
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+    
+    ctx.fillText(gameEndText.textContent, canvas.width / 2, canvas.height / 2);
+    
+    // Reset shadow
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    
+    // Subtitle
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.font = '24px Arial';
+    ctx.fillText('Click anywhere to continue viewing', canvas.width / 2, canvas.height / 2 + 60);
 }
 
 function closeGameEndModal() {
@@ -765,11 +906,31 @@ canvas.addEventListener('click', (e) => {
         }
     } else {
         if (isAdjacent(selectedTile, tileIndex)) {
+            // Clear any existing intent when making manual moves
+            activeIntent = null;
             // Try to move/attack
             attemptMove(selectedTile, tileIndex);
         } else {
-            // Click on non-adjacent tile - select it if owned, otherwise clear selection
-            if (gameState.terrain[tileIndex] === playerIndex) {
+            // Non-adjacent click - check for intent-based movement vs selection
+            if (gameState.armies[selectedTile] > 1 && !e.shiftKey) {
+                // Regular click: Start intent-based movement
+                activeIntent = null; // Clear any existing intent first
+                
+                const path = findPath(selectedTile, tileIndex);
+                if (path && path.length > 0) {
+                    activeIntent = {
+                        fromTile: selectedTile,
+                        targetTile: tileIndex,
+                        path: path,
+                        currentStep: 0
+                    };
+                    console.log('Intent path:', path);
+                }
+            } else if (e.shiftKey && gameState.terrain[tileIndex] === playerIndex) {
+                // Shift+click: Change selection (pan behavior)
+                setSelectedTile(tileIndex);
+            } else if (!e.shiftKey && gameState.terrain[tileIndex] === playerIndex) {
+                // Can't move but target is owned - change selection
                 setSelectedTile(tileIndex);
             } else {
                 setSelectedTile(null);
@@ -867,6 +1028,87 @@ canvas.addEventListener('wheel', (e) => {
     }
 });
 
+// Touch support for mobile pinch zoom and panning
+let touches = [];
+let lastPanX = 0;
+let lastPanY = 0;
+
+canvas.addEventListener('touchstart', (e) => {
+    touches = Array.from(e.touches);
+    
+    if (touches.length === 1) {
+        // Single touch - prepare for panning
+        const rect = canvas.getBoundingClientRect();
+        lastPanX = touches[0].clientX - rect.left;
+        lastPanY = touches[0].clientY - rect.top;
+    }
+    // Don't preventDefault here to allow click events
+});
+
+canvas.addEventListener('touchmove', (e) => {
+    if (!gameState) return;
+    
+    const newTouches = Array.from(e.touches);
+    
+    if (touches.length === 1 && newTouches.length === 1) {
+        // Only prevent default for panning to avoid blocking clicks
+        e.preventDefault();
+        
+        // Single touch panning
+        const rect = canvas.getBoundingClientRect();
+        const currentX = newTouches[0].clientX - rect.left;
+        const currentY = newTouches[0].clientY - rect.top;
+        
+        const deltaX = currentX - lastPanX;
+        const deltaY = currentY - lastPanY;
+        
+        camera.x -= deltaX;
+        camera.y -= deltaY;
+        camera.targetX = camera.x;
+        camera.targetY = camera.y;
+        
+        // Clamp to bounds
+        const mapWidth = gameState.width * 35 * camera.zoom;
+        const mapHeight = gameState.height * 35 * camera.zoom;
+        camera.x = Math.max(0, Math.min(camera.x, mapWidth - canvas.width));
+        camera.y = Math.max(0, Math.min(camera.y, mapHeight - canvas.height));
+        camera.targetX = camera.x;
+        camera.targetY = camera.y;
+        
+        lastPanX = currentX;
+        lastPanY = currentY;
+        drawGame();
+        
+    } else if (touches.length === 2 && newTouches.length === 2) {
+        // Pinch zoom
+        const oldDistance = Math.hypot(
+            touches[0].clientX - touches[1].clientX,
+            touches[0].clientY - touches[1].clientY
+        );
+        const newDistance = Math.hypot(
+            newTouches[0].clientX - newTouches[1].clientX,
+            newTouches[0].clientY - newTouches[1].clientY
+        );
+        
+        const zoomFactor = newDistance / oldDistance;
+        const mapPixelWidth = gameState.width * 35;
+        const mapPixelHeight = gameState.height * 35;
+        const minZoomX = canvas.width / mapPixelWidth;
+        const minZoomY = canvas.height / mapPixelHeight;
+        const calculatedMinZoom = Math.max(minZoomX, minZoomY);
+        
+        camera.zoom = Math.max(calculatedMinZoom, Math.min(camera.maxZoom, camera.zoom * zoomFactor));
+        drawGame();
+    }
+    
+    touches = newTouches;
+});
+
+canvas.addEventListener('touchend', (e) => {
+    touches = Array.from(e.touches);
+    // Don't preventDefault to allow click events
+});
+
 canvas.style.cursor = 'grab';
 
 function isAdjacent(from, to) {
@@ -879,6 +1121,48 @@ function isAdjacent(from, to) {
     const colDiff = Math.abs(fromCol - toCol);
     
     return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+}
+
+// Simple pathfinding for intent-based movement
+function findPath(from, to) {
+    if (!gameState) return null;
+    
+    const queue = [{ tile: from, path: [from] }];
+    const visited = new Set([from]);
+    
+    while (queue.length > 0) {
+        const { tile, path } = queue.shift();
+        
+        if (tile === to) {
+            return path.slice(1); // Remove starting tile
+        }
+        
+        // Check all adjacent tiles
+        const row = Math.floor(tile / gameState.width);
+        const col = tile % gameState.width;
+        
+        const neighbors = [
+            { r: row - 1, c: col },     // up
+            { r: row + 1, c: col },     // down
+            { r: row, c: col - 1 },     // left
+            { r: row, c: col + 1 }      // right
+        ];
+        
+        for (const { r, c } of neighbors) {
+            if (r < 0 || r >= gameState.height || c < 0 || c >= gameState.width) continue;
+            
+            const neighborTile = r * gameState.width + c;
+            if (visited.has(neighborTile)) continue;
+            
+            // Skip mountains (terrain -2) - but allow pathfinding through fog and other terrain
+            if (visibleTiles.has(neighborTile) && gameState.terrain[neighborTile] === -2) continue;
+            
+            visited.add(neighborTile);
+            queue.push({ tile: neighborTile, path: [...path, neighborTile] });
+        }
+    }
+    
+    return null; // No path found
 }
 
 function calculatePlayerStats() {
