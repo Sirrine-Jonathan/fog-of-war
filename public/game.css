@@ -32,13 +32,21 @@ h3, h4 {
     padding-bottom: 5px;
 }
 
+.header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin: 5px 0;
+    padding: 0 12px;
+}
+
 #gameControls { 
     display: flex;
     flex-direction: column;
     gap: 20px; 
     background: rgba(255,255,255,0.95);
     padding: 20px;
-    border-radius: 15px;
+    border-radius: 8px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     backdrop-filter: blur(10px);
     max-width: 800px;
@@ -52,8 +60,7 @@ h3, h4 {
     box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
 }
 
-#info { 
-    flex: 1;
+.info {
     min-width: 200px;
 }
 
@@ -313,6 +320,10 @@ body.mobile-chat-active .mainRow {
     margin: 0 !important;
 }
 
+#gameCanvas > div {
+    display: flex;
+}
+
 /* Game Tab - Show only game */
 body.mobile-game-active #gameCanvas {
     width: 100vw;
@@ -330,6 +341,13 @@ body.mobile-game-active #gameControls {
     display: none !important;
 }
 
+#chatSection {
+    margin: 15px 0 0 0;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
 body.mobile-game-active #chatSection {
     display: none !important;
 }
@@ -345,13 +363,59 @@ body.mobile-controls-active #gameControls {
     padding: 20px;
     width: 100vw;
     box-sizing: border-box;
-    justify-content: center;
+    justify-content: start;
     align-items: center;
     min-height: calc(100vh - 112px);
+    border: 2px solid #ffd700;
+    border-radius: 8px;
+}
+
+body.mobile-controls-active #gameControls .info {
+    width: 100%;
 }
 
 body.mobile-controls-active #chatSection {
     display: none !important;
+}
+
+#gameCanvas #mobileStartBtn {
+    display: none;
+}
+
+#gameCanvas #gameOverOverlay {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    font-family: 'Orbitron', monospace;
+}
+
+#gameCanvas #gameOverOverlay .game-over-text {
+    font-size: 36px;
+    font-weight: 900;
+    margin-bottom: 15px;
+}
+
+#gameCanvas #gameOverOverlay .winner-text {
+    font-size: 20px;
+    font-weight: 400;
+}
+
+body.mobile-game-active #gameCanvas #mobileStartBtn {
+    display: block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
 }
 
 /* Chat Tab - Show only chat */
@@ -367,10 +431,10 @@ body.mobile-chat-active #chatSection {
     display: flex !important;
     flex-direction: column;
     margin: 0;
-    padding: 10px 10px 90px 10px; /* Extra bottom padding to avoid tab bar */
+    padding: 10px 10px 0;
     width: 100vw;
     box-sizing: border-box;
-    height: calc(100vh - 80px);
+    height: calc(100vh - 112px);
 }
 
 /* Override the chat input parent container */

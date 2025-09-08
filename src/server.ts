@@ -34,6 +34,11 @@ const gameHosts = new Map<string, string>(); // gameId -> socketId of host
 const gameHistory = new Map<string, any[]>(); // gameId -> array of completed games
 const disconnectedPlayers = new Map<string, { gameId: string, playerIndex: number, disconnectTime: number }>();
 
+// Game event tracking
+const gameFirstBlood = new Map<string, boolean>(); // gameId -> has first blood occurred
+const playerTerritoryHistory = new Map<string, Map<number, number[]>>(); // gameId -> playerIndex -> territory counts over time
+const playerComebackCooldown = new Map<string, Map<number, number>>(); // gameId -> playerIndex -> last comeback timestamp
+
 // Helper function to send system messages
 function sendSystemMessage(gameId: string, message: string) {
   io.to(gameId).emit('chat_message', {
@@ -42,6 +47,75 @@ function sendSystemMessage(gameId: string, message: string) {
     playerIndex: -1,
     timestamp: new Date().toISOString(),
     isSystem: true
+  });
+}
+
+// Helper function to calculate territory and check for milestones
+function checkTerritoryMilestones(gameId: string, game: Game) {
+  const gameState = game.getState();
+  const totalTiles = gameState.terrain.length;
+  const playerCounts = new Map<number, number>();
+  
+  // Count territory for each player
+  gameState.terrain.forEach(owner => {
+    if (owner >= 0) {
+      playerCounts.set(owner, (playerCounts.get(owner) || 0) + 1);
+    }
+  });
+  
+  // Initialize history if needed
+  if (!playerTerritoryHistory.has(gameId)) {
+    playerTerritoryHistory.set(gameId, new Map());
+  }
+  const gameHistory = playerTerritoryHistory.get(gameId)!;
+  
+  // Check each player for milestones and comebacks
+  playerCounts.forEach((count, playerIndex) => {
+    const player = gameState.players[playerIndex];
+    if (!player || player.eliminated) return;
+    
+    const percentage = Math.floor((count / totalTiles) * 100);
+    
+    // Initialize player history if needed
+    if (!gameHistory.has(playerIndex)) {
+      gameHistory.set(playerIndex, []);
+    }
+    const playerHistory = gameHistory.get(playerIndex)!;
+    playerHistory.push(count);
+    
+    // Check for territory milestones (25%, 50%, 75%)
+    const milestones = [25, 50, 75];
+    milestones.forEach(milestone => {
+      if (percentage >= milestone) {
+        const prevCount = playerHistory.length > 1 ? playerHistory[playerHistory.length - 2] : 0;
+        const prevPercentage = Math.floor((prevCount / totalTiles) * 100);
+        
+        if (prevPercentage < milestone) {
+          sendSystemMessage(gameId, `🏆 ${player.username} controls ${milestone}% of the map!`);
+        }
+      }
+    });
+    
+    // Check for comeback (territory tripled from lowest point in last 15 moves, with cooldown)
+    if (playerHistory.length >= 15) {
+      const recentHistory = playerHistory.slice(-15);
+      const minRecent = Math.min(...recentHistory.slice(0, -1));
+      const current = count;
+      
+      // Initialize cooldown map if needed
+      if (!playerComebackCooldown.has(gameId)) {
+        playerComebackCooldown.set(gameId, new Map());
+      }
+      const comebackMap = playerComebackCooldown.get(gameId)!;
+      const lastComeback = comebackMap.get(playerIndex) || 0;
+      const now = Date.now();
+      
+      // Require 3x growth from low point, 60 second cooldown, and must have been under 10% control
+      if (minRecent > 0 && current >= minRecent * 3 && minRecent < totalTiles * 0.1 && (now - lastComeback) > 60000) {
+        sendSystemMessage(gameId, `🔥 ${player.username} is making a comeback!`);
+        comebackMap.set(playerIndex, now);
+      }
+    }
   });
 }
 
@@ -125,6 +199,8 @@ io.on('connection', (socket) => {
   console.log('🔌 Player connected:', socket.id);
   console.log('   User-Agent:', socket.handshake.headers['user-agent']);
   console.log('   Remote Address:', socket.handshake.address);
+  
+  // System message for client connection (will be sent when they join a game)
 
   socket.on('set_username', (userId: string, username: string) => {
     socket.data.userId = userId;
@@ -220,8 +296,58 @@ io.on('connection', (socket) => {
         return;
       }
       
-      if (playerIndex === -1) {
+      // Check if this is a reconnection attempt to an active game
+      if (playerIndex === -1 && game.isStarted()) {
+        // Check if this user was previously in this game
+        const gameState = game.getState();
+        const existingPlayerIndex = gameState.players.findIndex(p => p.id === userId);
+        
+        if (existingPlayerIndex >= 0) {
+          // This is a reconnection to an active game
+          const wasDisconnected = Array.from(disconnectedPlayers.entries()).find(([socketId, data]) => 
+            data.gameId === gameId && data.playerIndex === existingPlayerIndex
+          );
+          
+          if (wasDisconnected) {
+            // Allow reconnection by setting up socket data
+            socket.data.playerIndex = existingPlayerIndex;
+            socket.data.userId = userId;
+            socket.data.isViewer = false;
+            
+            // Remove from disconnected players
+            disconnectedPlayers.delete(wasDisconnected[0]);
+            sendSystemMessage(gameId, `${username} reconnected`);
+            console.log(`🔄 Player ${username} reconnected to active game ${gameId} as player ${existingPlayerIndex}`);
+            
+            // Send current game state to reconnected player
+            const mapData = game.getMapData();
+            socket.emit('game_start', {
+              playerIndex: existingPlayerIndex,
+              replay_id: gameId,
+              ...mapData
+            });
+            
+            // Send confirmation and continue with normal flow
+            socket.emit('joined_as_player', { playerIndex: existingPlayerIndex });
+            
+            // Notify all players
+            io.to(gameId).emit('player_joined', {
+              players: gameState.players,
+              newPlayerIndex: existingPlayerIndex
+            });
+            
+            return;
+          }
+        }
+        
         console.log(`❌ Cannot join game ${gameId} - game already started`);
+        socket.emit('game_already_started');
+        return;
+      }
+      
+      if (playerIndex === -1) {
+        // This case is now handled above for active games
+        console.log(`❌ Cannot join game ${gameId} - unknown error`);
         socket.emit('game_already_started');
         return;
       }
@@ -231,6 +357,21 @@ io.on('connection', (socket) => {
       socket.data.isViewer = false;
 
       console.log(`✅ Player ${userId} (${username}) ${isBot ? 'Bot' : 'Human'} joined game ${gameId} as player ${playerIndex} [Game State: Started=${game.isStarted()}, Ended=${game.isEnded()}]`);
+      
+      // Check if this is a reconnection
+      const wasDisconnected = Array.from(disconnectedPlayers.entries()).find(([socketId, data]) => 
+        data.gameId === gameId && data.playerIndex === playerIndex
+      );
+      
+      if (wasDisconnected) {
+        // Remove from disconnected players and send reconnection message
+        disconnectedPlayers.delete(wasDisconnected[0]);
+        sendSystemMessage(gameId, `${username} reconnected`);
+        console.log(`🔄 Player ${username} reconnected to game ${gameId}`);
+      } else {
+        // Send system message for new player join
+        sendSystemMessage(gameId, `${username} joined the game`);
+      }
       
       // Send confirmation to the joining player
       socket.emit('joined_as_player', { playerIndex });
@@ -323,6 +464,13 @@ io.on('connection', (socket) => {
       
       console.log(`   Starting game: ${gameId}`);
       game.startGame();
+      
+      // Send system message for game start
+      sendSystemMessage(gameId, `🎮 Game has started! Good luck to all players!`);
+      
+      // Initialize game tracking
+      gameFirstBlood.set(gameId, false);
+      playerTerritoryHistory.set(gameId, new Map());
       
       // Send initial game state immediately
       const gameState = game.getState();
@@ -467,6 +615,23 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
         sendSystemMessage(roomId || '', event);
       });
       
+      // Check for first blood (only on player vs player attacks)
+      if (result.success && !gameFirstBlood.get(roomId || '')) {
+        const gameState = game.getState();
+        const defenderOwner = gameState.terrain[to];
+        
+        // Only trigger first blood on attacks against other players
+        if (defenderOwner >= 0 && defenderOwner !== socket.data.playerIndex) {
+          gameFirstBlood.set(roomId || '', true);
+          sendSystemMessage(roomId || '', '⚔️ First blood! The battle has begun!');
+        }
+      }
+      
+      // Check territory milestones and comebacks
+      if (result.success) {
+        checkTerritoryMilestones(roomId || '', game);
+      }
+      
       // Send attack result back to client
       socket.emit('attack_result', { from, to, success: result.success });
     } else {
@@ -483,10 +648,14 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
     }
     
     const game = games.get(gameId)!;
+    const player = game.getPlayers().find(p => p.id === userId);
     const removed = game.removePlayer(userId);
     
-    if (removed) {
+    if (removed && player) {
       console.log(`✅ Player ${userId} removed from game ${gameId}`);
+      
+      // Send system message for player leave
+      sendSystemMessage(gameId, `${player.username} left the game`);
       
       // Reset player data
       socket.data.playerIndex = -1;
@@ -511,33 +680,6 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
     }
   });
 
-  socket.on('attack', (from: number, to: number) => {
-    console.log(`⚔️ Attack request: from=${from}, to=${to}, player=${socket.data.playerIndex}`);
-    const roomId = playerRooms.get(socket.id);
-    const game = games.get(roomId || '');
-    
-    // Prevent viewers from attacking
-    if (socket.data.isViewer) {
-      console.log(`   Attack blocked: viewer cannot attack`);
-      return;
-    }
-    
-    if (game && socket.data.playerIndex !== undefined) {
-      const result = game.attack(socket.data.playerIndex, from, to);
-      console.log(`   Attack result: ${result.success}, events: ${result.events.length}`);
-      
-      // Send system messages for events
-      result.events.forEach(event => {
-        sendSystemMessage(roomId || '', event);
-      });
-      
-      // Send attack result back to client
-      socket.emit('attack_result', { from, to, success: result.success });
-    } else {
-      console.log(`   Attack failed: game=${!!game}, playerIndex=${socket.data.playerIndex}, roomId=${roomId}`);
-    }
-  });
-
   socket.on('disconnect', () => {
     const roomId = playerRooms.get(socket.id);
     if (roomId) {
@@ -548,7 +690,14 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
         if (!game.isStarted()) {
           // Game hasn't started - remove player immediately
           const userId = socket.data.userId;
+          const username = socket.data.username;
           console.log(`🚪 Removing disconnected player ${userId} from game ${roomId}`);
+          
+          // Send system message for disconnect
+          if (username) {
+            sendSystemMessage(roomId, `${username} disconnected`);
+          }
+          
           game.removePlayer(userId);
           
           // Broadcast updated player list
@@ -609,6 +758,9 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
       gameHosts.set(gameId, nextHost.id);
       nextHost.data.isHost = true;
       console.log(`👑 Host auto-transferred to ${nextHost.data.username}`);
+      
+      // Send system message for host transfer
+      sendSystemMessage(gameId, `👑 ${nextHost.data.username} is now the host`);
     } else {
       gameHosts.delete(gameId);
       console.log(`👑 No eligible host found for game ${gameId} - game may be abandoned`);

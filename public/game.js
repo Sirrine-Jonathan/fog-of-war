@@ -238,6 +238,7 @@ socket.on('game_info', (data) => {
 function updateButtonVisibility() {
     const joinControls = document.getElementById('joinControls');
     const startBtn = document.getElementById('startBtn');
+    const mobileStartBtn = document.getElementById('mobileStartBtn');
     const joinBtn = document.getElementById('joinBtn');
     const leaveBtn = document.getElementById('leaveBtn');
     
@@ -259,6 +260,7 @@ function updateButtonVisibility() {
     
     // Show start button only to host when game not started
     startBtn.style.display = (isHost && !gameStarted) ? 'inline-block' : 'none';
+    mobileStartBtn.style.display = (isHost && !gameStarted) ? 'inline-block' : 'none';
 }
 
 socket.on('joined_as_player', (data) => {
@@ -331,6 +333,9 @@ socket.on('game_already_started', () => {
 socket.on('game_won', (data) => {
     gameStarted = false;
     const winnerName = players[data.winner]?.username || 'Unknown';
+    
+    // Show game over overlay
+    showGameOverOverlay(winnerName);
     
     // Reset player state for humans (bots will auto-rejoin)
     playerIndex = -1;
@@ -861,6 +866,19 @@ function closeGameEndModal() {
     document.getElementById('gameEndModal').style.display = 'none';
 }
 
+function showGameOverOverlay(winnerName) {
+    const overlay = document.getElementById('gameOverOverlay');
+    const winnerText = document.getElementById('overlayWinnerText');
+    
+    winnerText.textContent = `The winner is ${winnerName}`;
+    overlay.style.display = 'flex';
+    
+    // Hide after 5 seconds
+    setTimeout(() => {
+        overlay.style.display = 'none';
+    }, 5000);
+}
+
 function showGameEndModal(winnerName, winnerIndex) {
     const modal = document.getElementById('gameEndModal');
     const winnerText = document.getElementById('winnerText');
@@ -1299,6 +1317,7 @@ function transferHost(targetPlayerIndex) {
 document.getElementById('joinBtn').addEventListener('click', joinAsPlayer);
 document.getElementById('leaveBtn').addEventListener('click', leaveGame);
 document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('mobileStartBtn').addEventListener('click', startGame);
 document.getElementById('copyUrlBtn').addEventListener('click', copyGameUrl);
 
 function joinAsPlayer() {
