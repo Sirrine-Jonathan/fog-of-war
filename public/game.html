@@ -3,6 +3,8 @@
 <head>
     <title>Fog of War</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#fbbf24">
+    <link rel="manifest" href="/manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/game.css">
 </head>
@@ -11,7 +13,10 @@
     <div class="fullDisplay">
         <div class="header">
             <h1 style="margin: 0; font-size: 24px;">Fog of War</h1>
-            <button id="copyUrlBtn" class="btn" style="font-size: 10px; padding: 4px 8px;">Copy URL</button>
+            <div>
+                <button id="copyUrlBtn" class="btn" style="font-size: 10px; padding: 4px 8px;">Copy URL</button>
+                <button id="installBtn" class="btn" style="display: none; font-size: 10px; padding: 4px 8px; margin-left: 8px;">Install App</button>
+            </div>
         </div>
         <div class="mainRow">
             <div id="gameCanvas">
@@ -88,5 +93,33 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="/game.js"></script>
+    <script>
+        let deferredPrompt;
+        
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
+        
+        // Handle install prompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Only show prompt if game not started and not already prompted for any game
+            if (!gameStarted && !localStorage.getItem('pwa-install-prompted')) {
+                document.getElementById('installBtn').style.display = 'inline-block';
+            }
+        });
+        
+        document.getElementById('installBtn').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const result = await deferredPrompt.userChoice;
+                localStorage.setItem('pwa-install-prompted', 'true');
+                document.getElementById('installBtn').style.display = 'none';
+                deferredPrompt = null;
+            }
+        });
+    </script>
 </body>
 </html>
