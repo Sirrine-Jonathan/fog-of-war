@@ -382,6 +382,12 @@ body.mobile-controls-active #chatSection {
     display: none;
 }
 
+#headerActions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
 #gameCanvas #gameOverOverlay {
     display: none;
     flex-direction: column;

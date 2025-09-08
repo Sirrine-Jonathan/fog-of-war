@@ -27,11 +27,70 @@
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
         }
         
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .install-btn {
+            background: #fbbf24;
+            color: #1e293b;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .install-btn:hover {
+            background: #f59e0b;
+        }
+        
         h1 {
             color: #4a5568;
-            text-align: center;
-            margin-bottom: 30px;
+            margin: 0;
             font-size: 2.5em;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                margin-top: 20px;
+                padding: 15px;
+                border-radius: 10px;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .game-link {
+                display: block;
+                margin: 10px 0;
+                text-align: center;
+            }
+            
+            input[type="text"] {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            button {
+                width: 100%;
+                margin: 5px 0;
+            }
         }
         
         h2 {
@@ -127,7 +186,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>🎮 Fog of War</h1>
+        <div class="header">
+            <h1>🎮 Fog of War</h1>
+            <button id="installBtn" class="install-btn" style="display: none;">Install App</button>
+        </div>
         <p style="text-align: center; font-size: 1.2em; color: #666;">
             A real-time strategy game.
         </p>
@@ -204,17 +266,18 @@
             e.preventDefault();
             deferredPrompt = e;
             
-            // Show prompt immediately on home page if not already prompted
-            if (!localStorage.getItem('pwa-install-prompted')) {
-                setTimeout(() => {
-                    if (deferredPrompt) {
-                        deferredPrompt.prompt();
-                        deferredPrompt.userChoice.then(() => {
-                            localStorage.setItem('pwa-install-prompted', 'true');
-                            deferredPrompt = null;
-                        });
-                    }
-                }, 2000);
+            // Always show install button when available
+            document.getElementById('installBtn').style.display = 'block';
+        });
+        
+        document.getElementById('installBtn').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const result = await deferredPrompt.userChoice;
+                if (result.outcome === 'accepted') {
+                    document.getElementById('installBtn').style.display = 'none';
+                }
+                deferredPrompt = null;
             }
         });
     </script>
