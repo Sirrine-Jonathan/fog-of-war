@@ -90,8 +90,19 @@ function attemptAutoRejoin() {
     }
 }
 
-// Colors for players
-const playerColors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4'];
+// Colors for players (supports up to 10 players)
+const playerColors = [
+    '#ff6b6b', // Red
+    '#4ecdc4', // Teal
+    '#45b7d1', // Blue
+    '#96ceb4', // Green
+    '#feca57', // Yellow
+    '#ff9ff3', // Pink
+    '#54a0ff', // Light Blue
+    '#5f27cd', // Purple
+    '#00d2d3', // Cyan
+    '#ff9f43'  // Orange
+];
 const emptyColor = '#f0f0f0';
 const mountainColor = '#333';
 const fogColor = '#888';
@@ -272,6 +283,7 @@ socket.on('joined_as_player', (data) => {
 
 socket.on('player_joined', (data) => {
     console.log('Player joined:', data);
+    console.log('Players received:', data.players.map(p => ({ username: p.username, isBot: p.isBot })));
     players = data.players;
     
     // Check if current player is eliminated
@@ -811,9 +823,20 @@ function drawGame() {
             ctx.setLineDash([]);
         }
         
-        // Draw border
-        ctx.strokeStyle = selectedTile === i ? '#ffd700' : '#ccc';
-        ctx.lineWidth = selectedTile === i ? 3 * camera.zoom : 1 * camera.zoom;
+        // Draw border - generals get persistent borders
+        const tileTerrain = gameState.terrain[i];
+        const isGeneral = playerGenerals.has(tileTerrain) && playerGenerals.get(tileTerrain) === i;
+        const isSelected = selectedTile === i;
+        
+        if (isGeneral) {
+            // Generals always have a border
+            ctx.strokeStyle = isSelected ? '#ffd700' : '#9e8600ff';
+            ctx.lineWidth = isSelected ? 3 * camera.zoom : 2 * camera.zoom;
+        } else {
+            // Regular tiles only get border when selected
+            ctx.strokeStyle = isSelected ? '#ffd700' : '#ccc';
+            ctx.lineWidth = isSelected ? 3 * camera.zoom : 1 * camera.zoom;
+        }
         ctx.strokeRect(x, y, tileSize, tileSize);
         
         // Add glow effect for selected tile
@@ -1254,13 +1277,21 @@ function updatePlayersList() {
         
         // Player name cell
         const nameCell = document.createElement('td');
-        let displayName = player.username;
-        if (player.eliminated) {
-            displayName += ' (eliminated)';
-        } else if (player.disconnected) {
-            displayName += ' (disconnected)';
+        nameCell.textContent = player.username;
+        
+        if (player.isBot) {
+            const botTag = document.createElement('span');
+            botTag.textContent = ' [BOT]';
+            botTag.className = 'bot-tag';
+            nameCell.appendChild(botTag);
         }
-        nameCell.textContent = displayName;
+        
+        if (player.eliminated) {
+            nameCell.textContent += ' (eliminated)';
+        } else if (player.disconnected) {
+            nameCell.textContent += ' (disconnected)';
+        }
+        
         row.appendChild(nameCell);
         
         // Tiles cell
