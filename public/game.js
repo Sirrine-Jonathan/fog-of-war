@@ -238,6 +238,7 @@ socket.on('game_info', (data) => {
 function updateButtonVisibility() {
     const joinControls = document.getElementById('joinControls');
     const startBtn = document.getElementById('startBtn');
+    const mobileStartBtn = document.getElementById('mobileStartBtn');
     const joinBtn = document.getElementById('joinBtn');
     const leaveBtn = document.getElementById('leaveBtn');
     
@@ -259,6 +260,7 @@ function updateButtonVisibility() {
     
     // Show start button only to host when game not started
     startBtn.style.display = (isHost && !gameStarted) ? 'inline-block' : 'none';
+    mobileStartBtn.style.display = (isHost && !gameStarted) ? 'inline-block' : 'none';
 }
 
 socket.on('joined_as_player', (data) => {
@@ -1299,6 +1301,7 @@ function transferHost(targetPlayerIndex) {
 document.getElementById('joinBtn').addEventListener('click', joinAsPlayer);
 document.getElementById('leaveBtn').addEventListener('click', leaveGame);
 document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('mobileStartBtn').addEventListener('click', startGame);
 document.getElementById('copyUrlBtn').addEventListener('click', copyGameUrl);
 
 function joinAsPlayer() {
