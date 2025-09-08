@@ -334,6 +334,9 @@ socket.on('game_won', (data) => {
     gameStarted = false;
     const winnerName = players[data.winner]?.username || 'Unknown';
     
+    // Show game over overlay
+    showGameOverOverlay(winnerName);
+    
     // Reset player state for humans (bots will auto-rejoin)
     playerIndex = -1;
     selectedTile = null;
@@ -861,6 +864,19 @@ function drawGameEndOverlay() {
 
 function closeGameEndModal() {
     document.getElementById('gameEndModal').style.display = 'none';
+}
+
+function showGameOverOverlay(winnerName) {
+    const overlay = document.getElementById('gameOverOverlay');
+    const winnerText = document.getElementById('overlayWinnerText');
+    
+    winnerText.textContent = `The winner is ${winnerName}`;
+    overlay.style.display = 'flex';
+    
+    // Hide after 5 seconds
+    setTimeout(() => {
+        overlay.style.display = 'none';
+    }, 5000);
 }
 
 function showGameEndModal(winnerName, winnerIndex) {

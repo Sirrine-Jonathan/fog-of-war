@@ -382,6 +382,33 @@ body.mobile-controls-active #chatSection {
     display: none;
 }
 
+#gameCanvas #gameOverOverlay {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    font-family: 'Orbitron', monospace;
+}
+
+#gameCanvas #gameOverOverlay .game-over-text {
+    font-size: 36px;
+    font-weight: 900;
+    margin-bottom: 15px;
+}
+
+#gameCanvas #gameOverOverlay .winner-text {
+    font-size: 20px;
+    font-weight: 400;
+}
+
 body.mobile-game-active #gameCanvas #mobileStartBtn {
     display: block;
     position: absolute;
