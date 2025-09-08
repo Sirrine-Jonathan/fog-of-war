@@ -44,7 +44,7 @@ export class Game {
       generals: [],
       cities: [],
       lookoutTowers: [],
-      towerDefense: [],
+      towerDefense: new Array(size).fill(0),
       turn: 0,
       players: [],
       gameStarted: false,
@@ -197,7 +197,7 @@ export class Game {
         const pos = this.findEmptyPosition();
         this.state.lookoutTowers.push(pos);
         this.state.terrain[pos] = TILE_LOOKOUT_TOWER;
-        this.state.towerDefense[pos] = 30;
+        this.state.towerDefense[pos] = 10;
         this.state.armies[pos] = 0;
         console.log(`   Tower ${i} placed at position ${pos}`);
       } catch (error) {
