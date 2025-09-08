@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#fbbf24">
+    <link rel="manifest" href="/manifest.json">
     <title>Fog of War</title>
     <style>
         body {
@@ -189,6 +191,32 @@
                 window.location.href = `/game/${lobbyName}`;
             }
         })
+    </script>
+    <script>
+        let deferredPrompt;
+        
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
+        
+        // Handle install prompt on home page
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show prompt immediately on home page if not already prompted
+            if (!localStorage.getItem('pwa-install-prompted')) {
+                setTimeout(() => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        deferredPrompt.userChoice.then(() => {
+                            localStorage.setItem('pwa-install-prompted', 'true');
+                            deferredPrompt = null;
+                        });
+                    }
+                }, 2000);
+            }
+        });
     </script>
 </body>
 </html>

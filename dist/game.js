@@ -7,13 +7,13 @@ class Game {
         this.state = this.initializeGame();
     }
     initializeGame() {
-        const width = 20;
-        const height = 15;
+        const width = 30;
+        const height = 30;
         const size = width * height;
         // Initialize empty map
         const armies = new Array(size).fill(0);
         const terrain = new Array(size).fill(types_1.TILE_EMPTY);
-        // Add strategic mountains (avoid blocking paths)
+        // Add strategic mountains (avoid blocking paths) - do this FIRST
         const mountainCount = Math.floor(size * 0.1); // 10% mountains
         for (let i = 0; i < mountainCount; i++) {
             let pos;
@@ -36,6 +36,8 @@ class Game {
             terrain,
             generals: [],
             cities: [],
+            lookoutTowers: [],
+            towerDefense: [],
             turn: 0,
             players: [],
             gameStarted: false,
@@ -43,27 +45,146 @@ class Game {
         };
     }
     addPlayer(id, username, isBot = false) {
+        console.log(`🎮 addPlayer called: id=${id}, username=${username}, isBot=${isBot}`);
+        console.log(`   Current game state: started=${this.state.gameStarted}, players=${this.state.players.length}`);
+        if (this.state.gameStarted) {
+            console.log(`❌ Cannot add player - game already started`);
+            return -1;
+        }
         const playerIndex = this.state.players.length;
+        console.log(`   Assigning player index: ${playerIndex}`);
         this.state.players.push({ id, username, index: playerIndex, isBot });
-        // Place general
+        console.log(`   Player added to array, new length: ${this.state.players.length}`);
+        // Place general - this should always succeed with proper map size
+        console.log(`   Finding position for general...`);
         const generalPos = this.findEmptyPosition();
+        console.log(`   General position found: ${generalPos}`);
         this.state.generals[playerIndex] = generalPos;
         this.state.terrain[generalPos] = playerIndex;
         this.state.armies[generalPos] = 1;
+        console.log(`   General placed: generals[${playerIndex}]=${generalPos}, terrain[${generalPos}]=${playerIndex}, armies[${generalPos}]=1`);
+        console.log(`   Final state: ${this.state.players.length} players, ${this.state.generals.length} generals`);
         return playerIndex;
+    }
+    removePlayer(playerId) {
+        if (this.state.gameStarted)
+            return false; // Can't remove players after game starts
+        const playerIndex = this.state.players.findIndex(p => p.id === playerId);
+        if (playerIndex === -1)
+            return false;
+        // Remove player's general from map
+        const generalPos = this.state.generals[playerIndex];
+        if (generalPos !== undefined) {
+            this.state.terrain[generalPos] = types_1.TILE_EMPTY;
+            this.state.armies[generalPos] = 0;
+        }
+        // Remove player and reindex
+        this.state.players.splice(playerIndex, 1);
+        this.state.generals.splice(playerIndex, 1);
+        // Reindex remaining players and their territories
+        this.state.players.forEach((player, newIndex) => {
+            player.index = newIndex;
+        });
+        // Update terrain indices
+        for (let i = 0; i < this.state.terrain.length; i++) {
+            if (this.state.terrain[i] > playerIndex) {
+                this.state.terrain[i]--;
+            }
+        }
+        return true;
+    }
+    getPlayers() {
+        return this.state.players;
     }
     findEmptyPosition() {
         let pos;
+        let attempts = 0;
         do {
             pos = Math.floor(Math.random() * this.state.armies.length);
+            attempts++;
+            if (attempts > 1000) {
+                console.error('Could not find empty position after 1000 attempts');
+                console.log(`   Map stats: ${this.state.armies.length} total tiles`);
+                // Count terrain types
+                const terrainCounts = {};
+                this.state.terrain.forEach(t => {
+                    terrainCounts[t] = (terrainCounts[t] || 0) + 1;
+                });
+                console.log(`   Terrain distribution:`, terrainCounts);
+                // Return first empty position found
+                for (let i = 0; i < this.state.terrain.length; i++) {
+                    if (this.state.terrain[i] === types_1.TILE_EMPTY) {
+                        console.log(`   Found empty position at ${i} after exhaustive search`);
+                        return i;
+                    }
+                }
+                throw new Error('No empty positions available on map!');
+            }
         } while (this.state.terrain[pos] !== types_1.TILE_EMPTY);
         return pos;
     }
     startGame() {
+        console.log(`🚀 startGame called`);
+        console.log(`   Players before start: ${this.state.players.length}`);
+        console.log(`   Generals before start: ${this.state.generals.length}`);
+        // Log all current generals
+        this.state.generals.forEach((pos, index) => {
+            console.log(`   General ${index}: position=${pos}, terrain[${pos}]=${this.state.terrain[pos]}, armies[${pos}]=${this.state.armies[pos]}`);
+        });
+        this.spawnCities();
+        this.spawnLookoutTowers();
         this.state.gameStarted = true;
+        console.log(`   Game started with ${this.state.players.length} players`);
         this.gameInterval = setInterval(() => {
             this.processTurn();
         }, 500); // 2 moves per second
+    }
+    spawnCities() {
+        const cityCount = Math.max(1, Math.floor(this.state.players.length * 3.0));
+        console.log(`🏙️  Spawning ${cityCount} cities...`);
+        for (let i = 0; i < cityCount; i++) {
+            try {
+                const pos = this.findEmptyPosition();
+                this.state.cities.push(pos);
+                this.state.terrain[pos] = types_1.TILE_CITY;
+                this.state.armies[pos] = 40;
+                console.log(`   City ${i} placed at position ${pos}`);
+            }
+            catch (error) {
+                console.warn(`   Could not place city ${i}, map may be full`);
+                break;
+            }
+        }
+        console.log(`   Cities spawned: ${this.state.cities.length}`);
+    }
+    spawnLookoutTowers() {
+        const towerCount = Math.max(2, this.state.players.length * 2);
+        console.log(`🗼 Spawning ${towerCount} lookout towers...`);
+        for (let i = 0; i < towerCount; i++) {
+            try {
+                const pos = this.findEmptyPosition();
+                this.state.lookoutTowers.push(pos);
+                this.state.terrain[pos] = types_1.TILE_LOOKOUT_TOWER;
+                this.state.towerDefense[pos] = 30;
+                this.state.armies[pos] = 0;
+                console.log(`   Tower ${i} placed at position ${pos}`);
+            }
+            catch (error) {
+                console.warn(`   Could not place lookout tower ${i}, map may be full`);
+                break;
+            }
+        }
+        console.log(`   Towers spawned: ${this.state.lookoutTowers.length}`);
+        // Final verification - check all generals are still intact
+        console.log(`🔍 Post-spawn verification:`);
+        this.state.generals.forEach((pos, index) => {
+            if (pos >= 0) {
+                console.log(`   General ${index}: position=${pos}, terrain[${pos}]=${this.state.terrain[pos]}, armies[${pos}]=${this.state.armies[pos]}`);
+                if (this.state.terrain[pos] !== index) {
+                    console.error(`❌ GENERAL ${index} OVERWRITTEN! Expected terrain=${index}, got=${this.state.terrain[pos]}`);
+                }
+            }
+        });
     }
     processTurn() {
         this.state.turn++;
@@ -85,11 +206,12 @@ class Game {
     attack(playerIndex, from, to) {
         // Validate move
         if (!this.isValidMove(playerIndex, from, to)) {
-            return false;
+            return { success: false, events: [] };
         }
         const attackerArmies = this.state.armies[from];
         const defenderArmies = this.state.armies[to];
         const defenderOwner = this.state.terrain[to];
+        const events = [];
         // Execute attack/move
         const attackForce = attackerArmies - 1;
         this.state.armies[from] = 1;
@@ -105,7 +227,37 @@ class Game {
             }
             else {
                 // Failed to capture, armies are lost
-                return false;
+                return { success: false, events };
+            }
+        }
+        else if (defenderOwner === types_1.TILE_CITY) {
+            // Attack city
+            if (attackForce > defenderArmies) {
+                this.state.terrain[to] = playerIndex;
+                this.state.armies[to] = attackForce - defenderArmies;
+                events.push(`${this.state.players[playerIndex]?.username || `Player ${playerIndex}`} captured a city!`);
+            }
+            else {
+                // City damaged but not captured - reduce defense like towers
+                this.state.armies[to] = Math.max(0, defenderArmies - attackForce);
+                return { success: false, events };
+            }
+        }
+        else if (defenderOwner === types_1.TILE_LOOKOUT_TOWER) {
+            // Attack lookout tower
+            const towerDefense = this.state.towerDefense[to] || 0;
+            const remaining = towerDefense - attackForce;
+            if (remaining <= 0) {
+                // Tower captured
+                this.state.terrain[to] = playerIndex;
+                this.state.armies[to] = Math.abs(remaining);
+                this.state.towerDefense[to] = 0;
+                events.push(`${this.state.players[playerIndex]?.username || `Player ${playerIndex}`} captured a lookout tower!`);
+            }
+            else {
+                // Tower damaged but not captured
+                this.state.towerDefense[to] = remaining;
+                return { success: false, events };
             }
         }
         else if (defenderOwner >= 0 && defenderOwner !== playerIndex) {
@@ -117,6 +269,7 @@ class Game {
                 // Check if general was captured
                 if (this.state.generals[defenderOwner] === to) {
                     this.eliminatePlayer(defenderOwner);
+                    events.push(`${this.state.players[playerIndex]?.username || `Player ${playerIndex}`} eliminated ${this.state.players[defenderOwner]?.username || `Player ${defenderOwner}`}!`);
                     // Check for victory
                     const remainingPlayers = this.state.players.filter(p => !p.eliminated);
                     if (remainingPlayers.length === 1) {
@@ -126,10 +279,10 @@ class Game {
             }
             else {
                 this.state.armies[to] = remaining;
-                return false; // Attack failed
+                return { success: false, events };
             }
         }
-        return true;
+        return { success: true, events };
     }
     isValidMove(playerIndex, from, to) {
         // Check ownership
@@ -147,7 +300,7 @@ class Game {
             console.log(`   Invalid: not adjacent, ${from} -> ${to}`);
             return false;
         }
-        // Can't attack mountains
+        // Can't attack mountains or neutral villages
         if (this.state.terrain[to] === types_1.TILE_MOUNTAIN) {
             console.log(`   Invalid: target is mountain, terrain[${to}] = ${this.state.terrain[to]}`);
             return false;
@@ -191,7 +344,8 @@ class Game {
             this.state.width,
             this.state.height,
             ...this.state.armies,
-            ...this.state.terrain
+            ...this.state.terrain,
+            ...this.state.towerDefense
         ];
     }
     getState() {
