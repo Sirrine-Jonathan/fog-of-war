@@ -981,14 +981,17 @@ canvas.addEventListener('click', (e) => {
 
 // Camera controls
 canvas.addEventListener('mousedown', (e) => {
-    isDragging = true;
-    lastMouseX = e.clientX;
-    lastMouseY = e.clientY;
-    canvas.style.cursor = 'grabbing';
+    // Only allow panning when Shift is pressed
+    if (e.shiftKey) {
+        isDragging = true;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        canvas.style.cursor = 'grabbing';
+    }
 });
 
 canvas.addEventListener('mousemove', (e) => {
-    if (isDragging) {
+    if (isDragging && e.shiftKey) {
         const deltaX = e.clientX - lastMouseX;
         const deltaY = e.clientY - lastMouseY;
         
@@ -1012,6 +1015,10 @@ canvas.addEventListener('mousemove', (e) => {
         lastMouseY = e.clientY;
         
         drawGame();
+    } else if (isDragging && !e.shiftKey) {
+        // Stop dragging if shift is released
+        isDragging = false;
+        canvas.style.cursor = 'grab';
     }
 });
 
