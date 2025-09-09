@@ -790,8 +790,8 @@ function drawGame() {
                 }
             }
             
-            // Draw castle for starting positions
-            if (playerGenerals.has(terrain) && playerGenerals.get(terrain) === i) {
+            // Draw castle only for current player's general
+            if (playerGenerals.has(playerIndex) && playerGenerals.get(playerIndex) === i) {
                 console.log(`🏰 Drawing castle for player ${terrain} at position ${i}`);
                 ctx.fillStyle = '#8B4513'; // Brown castle base
                 const scale = camera.zoom;
@@ -829,17 +829,17 @@ function drawGame() {
             ctx.setLineDash([]);
         }
         
-        // Draw border - generals get persistent borders
+        // Draw border - only current player's general gets persistent border
         const tileTerrain = gameState.terrain[i];
-        const isGeneral = playerGenerals.has(tileTerrain) && playerGenerals.get(tileTerrain) === i;
+        const isPlayerGeneral = playerGenerals.has(playerIndex) && playerGenerals.get(playerIndex) === i;
         const isSelected = selectedTile === i;
         
-        if (isGeneral) {
-            // Generals always have a border
+        if (isPlayerGeneral) {
+            // Only current player's general gets special border
             ctx.strokeStyle = isSelected ? '#ffd700' : '#9e8600ff';
             ctx.lineWidth = isSelected ? 3 * camera.zoom : 2 * camera.zoom;
         } else {
-            // Regular tiles only get border when selected
+            // Regular tiles (including enemy generals) only get border when selected
             ctx.strokeStyle = isSelected ? '#ffd700' : '#ccc';
             ctx.lineWidth = isSelected ? 3 * camera.zoom : 1 * camera.zoom;
         }
