@@ -941,19 +941,26 @@ canvas.addEventListener('click', (e) => {
     if (!visibleTiles.has(tileIndex)) return;
     
     if (selectedTile === null) {
-        // Select any tile owned by player (even with 1 army)
+        // No active tile: clicking owned tile makes it active, otherwise no action
         if (gameState.terrain[tileIndex] === playerIndex) {
             setSelectedTile(tileIndex);
         }
     } else {
-        if (isAdjacent(selectedTile, tileIndex)) {
-            // Clear any existing intent when making manual moves
-            activeIntent = null;
-            // Try to move/attack
+        // There is an active tile
+        if (e.ctrlKey || e.metaKey) {
+            // Ctrl+click: only activate clicked tile (no launched intent)
+            if (gameState.terrain[tileIndex] === playerIndex) {
+                setSelectedTile(tileIndex);
+            } else {
+                setSelectedTile(null);
+            }
+        } else if (isAdjacent(selectedTile, tileIndex)) {
+            // Adjacent click: launch intent (move/attack)
+            activeIntent = null; // Clear any existing intent
             attemptMove(selectedTile, tileIndex);
         } else {
-            // Non-adjacent click - check for intent-based movement vs selection
-            if (gameState.armies[selectedTile] > 1 && !e.shiftKey) {
+            // Non-adjacent click: launch intent if visible, otherwise no action
+            if (gameState.armies[selectedTile] > 1) {
                 // Regular click: Start intent-based movement
                 activeIntent = null; // Clear any existing intent first
                 
@@ -967,14 +974,6 @@ canvas.addEventListener('click', (e) => {
                     };
                     console.log('Intent path:', path);
                 }
-            } else if (e.shiftKey && gameState.terrain[tileIndex] === playerIndex) {
-                // Shift+click: Change selection (pan behavior)
-                setSelectedTile(tileIndex);
-            } else if (!e.shiftKey && gameState.terrain[tileIndex] === playerIndex) {
-                // Can't move but target is owned - change selection
-                setSelectedTile(tileIndex);
-            } else {
-                setSelectedTile(null);
             }
         }
     }
@@ -1415,7 +1414,20 @@ function copyGameUrl() {
 
 // Arrow key controls
 document.addEventListener('keydown', (e) => {
-    if (!gameState || playerIndex < 0 || selectedTile === null) return;
+    if (!gameState || playerIndex < 0) return;
+    
+    // Spacebar: Make general the active tile
+    if (e.key === ' ' || e.key === 'Spacebar') {
+        const generalPos = gameState.generals[playerIndex];
+        if (generalPos >= 0) {
+            setSelectedTile(generalPos);
+            e.preventDefault();
+        }
+        return;
+    }
+    
+    // Arrow keys: require active tile
+    if (selectedTile === null) return;
     
     let targetTile = null;
     const row = Math.floor(selectedTile / gameState.width);
@@ -1437,7 +1449,8 @@ document.addEventListener('keydown', (e) => {
     }
     
     if (targetTile !== null && visibleTiles.has(targetTile)) {
-        attemptMove(selectedTile, targetTile);
+        const moveSuccessful = attemptMove(selectedTile, targetTile);
+        // Keep active tile on failed attacks (don't change selectedTile)
         e.preventDefault();
     }
 });
