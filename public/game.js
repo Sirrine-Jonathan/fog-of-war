@@ -1097,21 +1097,57 @@ canvas.addEventListener('wheel', (e) => {
     }
 });
 
-// Touch support for mobile pinch zoom and panning
+// Enhanced mobile touch handling
 let touches = [];
 let lastPanX = 0;
 let lastPanY = 0;
+let touchStartTime = 0;
+let touchStartPos = null;
+let longPressTimer = null;
+let isLongPress = false;
+let isPanning = false;
+let isZooming = false;
+
+const LONG_PRESS_DURATION = 500; // ms
+const TOUCH_MOVE_THRESHOLD = 10; // pixels
 
 canvas.addEventListener('touchstart', (e) => {
     touches = Array.from(e.touches);
+    touchStartTime = Date.now();
+    isLongPress = false;
+    isPanning = false;
+    isZooming = false;
     
     if (touches.length === 1) {
-        // Single touch - prepare for panning
+        // Single touch - prepare for potential tap, long press, or pan
         const rect = canvas.getBoundingClientRect();
-        lastPanX = touches[0].clientX - rect.left;
-        lastPanY = touches[0].clientY - rect.top;
+        const touch = touches[0];
+        touchStartPos = {
+            x: touch.clientX - rect.left,
+            y: touch.clientY - rect.top
+        };
+        lastPanX = touchStartPos.x;
+        lastPanY = touchStartPos.y;
+        
+        // Start long press timer
+        longPressTimer = setTimeout(() => {
+            if (!isPanning && !isZooming && touches.length === 1) {
+                isLongPress = true;
+                // Provide haptic feedback if available
+                if (navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
+                console.log('Long press detected');
+            }
+        }, LONG_PRESS_DURATION);
+        
+    } else if (touches.length === 2) {
+        // Two touches - prepare for pinch zoom
+        clearTimeout(longPressTimer);
+        isZooming = true;
     }
-    // Don't preventDefault here to allow click events
+    
+    // Don't preventDefault to allow click events for short taps
 });
 
 canvas.addEventListener('touchmove', (e) => {
@@ -1120,36 +1156,48 @@ canvas.addEventListener('touchmove', (e) => {
     const newTouches = Array.from(e.touches);
     
     if (touches.length === 1 && newTouches.length === 1) {
-        // Only prevent default for panning to avoid blocking clicks
-        e.preventDefault();
-        
-        // Single touch panning
         const rect = canvas.getBoundingClientRect();
         const currentX = newTouches[0].clientX - rect.left;
         const currentY = newTouches[0].clientY - rect.top;
         
-        const deltaX = currentX - lastPanX;
-        const deltaY = currentY - lastPanY;
+        // Check if we've moved enough to start panning
+        const moveDistance = Math.hypot(
+            currentX - touchStartPos.x,
+            currentY - touchStartPos.y
+        );
         
-        camera.x -= deltaX;
-        camera.y -= deltaY;
-        camera.targetX = camera.x;
-        camera.targetY = camera.y;
-        
-        // Clamp to bounds
-        const mapWidth = gameState.width * 35 * camera.zoom;
-        const mapHeight = gameState.height * 35 * camera.zoom;
-        camera.x = Math.max(0, Math.min(camera.x, mapWidth - canvas.width));
-        camera.y = Math.max(0, Math.min(camera.y, mapHeight - canvas.height));
-        camera.targetX = camera.x;
-        camera.targetY = camera.y;
-        
-        lastPanX = currentX;
-        lastPanY = currentY;
-        drawGame();
+        if (moveDistance > TOUCH_MOVE_THRESHOLD) {
+            isPanning = true;
+            clearTimeout(longPressTimer);
+            e.preventDefault(); // Prevent scrolling and other default behaviors
+            
+            const deltaX = currentX - lastPanX;
+            const deltaY = currentY - lastPanY;
+            
+            camera.x -= deltaX;
+            camera.y -= deltaY;
+            camera.targetX = camera.x;
+            camera.targetY = camera.y;
+            
+            // Clamp to bounds
+            const mapWidth = gameState.width * 35 * camera.zoom;
+            const mapHeight = gameState.height * 35 * camera.zoom;
+            camera.x = Math.max(0, Math.min(camera.x, mapWidth - canvas.width));
+            camera.y = Math.max(0, Math.min(camera.y, mapHeight - canvas.height));
+            camera.targetX = camera.x;
+            camera.targetY = camera.y;
+            
+            lastPanX = currentX;
+            lastPanY = currentY;
+            drawGame();
+        }
         
     } else if (touches.length === 2 && newTouches.length === 2) {
         // Pinch zoom
+        e.preventDefault();
+        isZooming = true;
+        clearTimeout(longPressTimer);
+        
         const oldDistance = Math.hypot(
             touches[0].clientX - touches[1].clientX,
             touches[0].clientY - touches[1].clientY
@@ -1174,9 +1222,86 @@ canvas.addEventListener('touchmove', (e) => {
 });
 
 canvas.addEventListener('touchend', (e) => {
+    const touchEndTime = Date.now();
+    const touchDuration = touchEndTime - touchStartTime;
+    
+    clearTimeout(longPressTimer);
+    
+    // If it was a short tap (not panning, not zooming, not long press)
+    if (!isPanning && !isZooming && touchDuration < LONG_PRESS_DURATION && touchStartPos) {
+        // Simulate a click event with better touch handling
+        handleTouchTap(touchStartPos.x, touchStartPos.y, false);
+    } else if (isLongPress && touchStartPos) {
+        // Handle long press as activation-only (like Alt/Shift+click)
+        handleTouchTap(touchStartPos.x, touchStartPos.y, true);
+    }
+    
     touches = Array.from(e.touches);
-    // Don't preventDefault to allow click events
+    
+    // Reset state
+    if (touches.length === 0) {
+        isPanning = false;
+        isZooming = false;
+        isLongPress = false;
+        touchStartPos = null;
+    }
 });
+
+function handleTouchTap(x, y, isActivationOnly) {
+    if (!gameState || playerIndex < 0) return;
+    
+    // Convert touch coordinates to game coordinates
+    const gameX = x + camera.x;
+    const gameY = y + camera.y;
+    const tileSize = 35 * camera.zoom;
+    
+    const col = Math.floor(gameX / tileSize);
+    const row = Math.floor(gameY / tileSize);
+    const tileIndex = row * gameState.width + col;
+    
+    // Only allow interaction with visible tiles
+    if (!visibleTiles.has(tileIndex)) return;
+    
+    console.log(`Touch tap: tile ${tileIndex}, activation-only: ${isActivationOnly}`);
+    
+    if (selectedTile === null) {
+        // No active tile: clicking owned tile makes it active, otherwise no action
+        if (gameState.terrain[tileIndex] === playerIndex) {
+            setSelectedTile(tileIndex);
+        }
+    } else {
+        // There is an active tile
+        if (isActivationOnly) {
+            // Long press: only activate clicked tile (no launched intent)
+            if (gameState.terrain[tileIndex] === playerIndex) {
+                setSelectedTile(tileIndex);
+            } else {
+                setSelectedTile(null);
+            }
+        } else if (isAdjacent(selectedTile, tileIndex)) {
+            // Adjacent tap: launch intent (move/attack)
+            activeIntent = null; // Clear any existing intent
+            attemptMove(selectedTile, tileIndex);
+        } else {
+            // Non-adjacent tap: launch intent if visible, otherwise no action
+            if (gameState.armies[selectedTile] > 1) {
+                // Regular tap: Start intent-based movement
+                activeIntent = null; // Clear any existing intent first
+                
+                const path = findPath(selectedTile, tileIndex);
+                if (path && path.length > 0) {
+                    activeIntent = {
+                        fromTile: selectedTile,
+                        targetTile: tileIndex,
+                        path: path,
+                        currentStep: 0
+                    };
+                    console.log('Intent path:', path);
+                }
+            }
+        }
+    }
+}
 
 canvas.style.cursor = 'grab';
 
