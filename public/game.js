@@ -430,6 +430,12 @@ socket.on('game_update', (data) => {
             console.log('   Lookout towers updated:', gameState.lookoutTowers);
         }
         
+        // Update generals if provided
+        if (data.generals) {
+            gameState.generals = data.generals;
+            console.log('   Generals updated:', gameState.generals);
+        }
+        
         // Auto-select player's general on first update if no tile selected
         if (selectedTile === null && playerIndex >= 0 && data.generals) {
             const generalPos = data.generals[playerIndex];
@@ -941,19 +947,26 @@ canvas.addEventListener('click', (e) => {
     if (!visibleTiles.has(tileIndex)) return;
     
     if (selectedTile === null) {
-        // Select any tile owned by player (even with 1 army)
+        // No active tile: clicking owned tile makes it active, otherwise no action
         if (gameState.terrain[tileIndex] === playerIndex) {
             setSelectedTile(tileIndex);
         }
     } else {
-        if (isAdjacent(selectedTile, tileIndex)) {
-            // Clear any existing intent when making manual moves
-            activeIntent = null;
-            // Try to move/attack
+        // There is an active tile
+        if (e.altKey || e.shiftKey) {
+            // Alt+click OR Shift+click: only activate clicked tile (no launched intent)
+            if (gameState.terrain[tileIndex] === playerIndex) {
+                setSelectedTile(tileIndex);
+            } else {
+                setSelectedTile(null);
+            }
+        } else if (isAdjacent(selectedTile, tileIndex)) {
+            // Adjacent click: launch intent (move/attack)
+            activeIntent = null; // Clear any existing intent
             attemptMove(selectedTile, tileIndex);
         } else {
-            // Non-adjacent click - check for intent-based movement vs selection
-            if (gameState.armies[selectedTile] > 1 && !e.shiftKey) {
+            // Non-adjacent click: launch intent if visible, otherwise no action
+            if (gameState.armies[selectedTile] > 1) {
                 // Regular click: Start intent-based movement
                 activeIntent = null; // Clear any existing intent first
                 
@@ -967,14 +980,6 @@ canvas.addEventListener('click', (e) => {
                     };
                     console.log('Intent path:', path);
                 }
-            } else if (e.shiftKey && gameState.terrain[tileIndex] === playerIndex) {
-                // Shift+click: Change selection (pan behavior)
-                setSelectedTile(tileIndex);
-            } else if (!e.shiftKey && gameState.terrain[tileIndex] === playerIndex) {
-                // Can't move but target is owned - change selection
-                setSelectedTile(tileIndex);
-            } else {
-                setSelectedTile(null);
             }
         }
     }
@@ -982,14 +987,26 @@ canvas.addEventListener('click', (e) => {
 
 // Camera controls
 canvas.addEventListener('mousedown', (e) => {
-    isDragging = true;
-    lastMouseX = e.clientX;
-    lastMouseY = e.clientY;
-    canvas.style.cursor = 'grabbing';
+    // Only allow panning when Shift is pressed
+    if (e.shiftKey) {
+        isDragging = true;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        canvas.style.cursor = 'grabbing';
+        e.preventDefault(); // Prevent any default behavior
+    }
 });
 
 canvas.addEventListener('mousemove', (e) => {
-    if (isDragging) {
+    // Update cursor based on shift key state
+    if (e.shiftKey && !isDragging) {
+        canvas.style.cursor = 'grab';
+    } else if (!e.shiftKey && !isDragging) {
+        canvas.style.cursor = 'default';
+    }
+    
+    // Only pan if we're dragging AND shift is still held
+    if (isDragging && e.shiftKey) {
         const deltaX = e.clientX - lastMouseX;
         const deltaY = e.clientY - lastMouseY;
         
@@ -1013,12 +1030,23 @@ canvas.addEventListener('mousemove', (e) => {
         lastMouseY = e.clientY;
         
         drawGame();
+    } else if (isDragging && !e.shiftKey) {
+        // Stop dragging if shift is released
+        isDragging = false;
+        canvas.style.cursor = 'default';
     }
 });
 
 canvas.addEventListener('mouseup', () => {
     isDragging = false;
-    canvas.style.cursor = 'grab';
+    // Reset cursor based on current shift state
+    canvas.style.cursor = 'default';
+});
+
+document.addEventListener('keyup', (e) => {
+    if (e.key === 'Shift' && !isDragging) {
+        canvas.style.cursor = 'default';
+    }
 });
 
 canvas.addEventListener('wheel', (e) => {
@@ -1413,9 +1441,31 @@ function copyGameUrl() {
     });
 }
 
-// Arrow key controls
+// Keyboard controls
 document.addEventListener('keydown', (e) => {
-    if (!gameState || playerIndex < 0 || selectedTile === null) return;
+    // Shift key cursor feedback
+    if (e.key === 'Shift' && !isDragging) {
+        canvas.style.cursor = 'grab';
+    }
+    
+    // Spacebar: Make general the active tile (handle this first, always)
+    if (e.key === ' ' || e.key === 'Spacebar') {
+        if (gameState && playerIndex >= 0) {
+            const generalPos = gameState.generals[playerIndex];
+            if (generalPos >= 0) {
+                setSelectedTile(generalPos);
+            }
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+    }
+    
+    // Game controls (only if game is active)
+    if (!gameState || playerIndex < 0) return;
+    
+    // Arrow keys: require active tile
+    if (selectedTile === null) return;
     
     let targetTile = null;
     const row = Math.floor(selectedTile / gameState.width);
@@ -1437,7 +1487,8 @@ document.addEventListener('keydown', (e) => {
     }
     
     if (targetTile !== null && visibleTiles.has(targetTile)) {
-        attemptMove(selectedTile, targetTile);
+        const moveSuccessful = attemptMove(selectedTile, targetTile);
+        // Keep active tile on failed attacks (don't change selectedTile)
         e.preventDefault();
     }
 });

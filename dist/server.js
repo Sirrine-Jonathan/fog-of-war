@@ -46,6 +46,36 @@ function sendSystemMessage(gameId, message) {
         isSystem: true
     });
 }
+// Enhanced bot detection function
+function isBot(socket, userId, username) {
+    const userAgent = socket.handshake.headers['user-agent'] || '';
+    const referer = socket.handshake.headers['referer'] || '';
+    // Strong bot indicators (high confidence)
+    const hasNodeUserAgent = userAgent.includes('node') || userAgent.includes('Node');
+    const hasSocketIOClient = userAgent.includes('socket.io-client');
+    const explicitBotName = username.toLowerCase().includes('bot') && (userId.toLowerCase().includes('bot') || userAgent.includes('node'));
+    // Only flag as bot if we have strong evidence
+    const result = hasNodeUserAgent || hasSocketIOClient || explicitBotName;
+    console.log(`🤖 Bot detection for ${username}:`, {
+        userAgent: userAgent.substring(0, 50) + (userAgent.length > 50 ? '...' : ''),
+        referer: referer.substring(0, 30) + (referer.length > 30 ? '...' : ''),
+        hasNodeUserAgent,
+        hasSocketIOClient,
+        explicitBotName,
+        isBot: result
+    });
+    return result;
+}
+// Helper function to find next eligible host (non-bot, non-viewer)
+async function findEligibleHost(gameId, excludeSocketId) {
+    const sockets = await io.in(gameId).fetchSockets();
+    return sockets.find(s => s.id !== excludeSocketId &&
+        !s.data.isViewer &&
+        s.data.playerIndex !== undefined &&
+        s.data.playerIndex >= 0 &&
+        !isBot(s, s.data.userId || '', s.data.username || '') &&
+        !s.data.username?.includes('Viewer'));
+}
 // Helper function to calculate territory and check for milestones
 function checkTerritoryMilestones(gameId, game) {
     const gameState = game.getState();
@@ -146,8 +176,15 @@ setInterval(() => {
     });
     toRemove.forEach(socketId => disconnectedPlayers.delete(socketId));
 }, 5000);
-// Serve static files
-app.use(express_1.default.static(path_1.default.join(__dirname, '../public')));
+// Serve static files with no-cache headers for development
+app.use(express_1.default.static(path_1.default.join(__dirname, '../public'), {
+    setHeaders: (res, path) => {
+        // Disable caching for all static files in development
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+    }
+}));
 // Root route - serve welcome page
 app.get('/', (req, res) => {
     res.sendFile(path_1.default.join(__dirname, '../public/index.html'));
@@ -199,7 +236,7 @@ io.on('connection', (socket) => {
         }
         const game = games.get(gameId);
         const username = socket.data.username || 'Player';
-        const isBot = username.includes('Bot') || userId.includes('bot') || socket.handshake.headers['user-agent']?.includes('node');
+        const botDetected = isBot(socket, userId, username);
         // Check if this is a viewer (username contains "Viewer" or game is actively running)
         const isViewer = username.includes('Viewer') || (game.isStarted() && !game.isEnded());
         if (isViewer) {
@@ -231,33 +268,8 @@ io.on('connection', (socket) => {
                 console.log(`❌ Socket ${socket.id} already joined as player ${socket.data.playerIndex}`);
                 return;
             }
-            // This is a player - try to join the game
-            const playerIndex = game.addPlayer(userId, username, isBot);
-            if (playerIndex >= 0) {
-                socket.data.playerIndex = playerIndex;
-                socket.data.isViewer = false;
-                // Assign host if no host exists and this is a real player (not bot)
-                if (!gameHosts.has(gameId) && !isBot) {
-                    gameHosts.set(gameId, socket.id);
-                    socket.data.isHost = true;
-                    console.log(`👑 ${username} assigned as host for game ${gameId}`);
-                }
-                else {
-                    // Check if this socket is already the host
-                    socket.data.isHost = (gameHosts.get(gameId) === socket.id);
-                }
-            }
-            // Check for duplicate username (but allow same user to rejoin)
-            const currentGameState = game.getState();
-            const existingPlayer = currentGameState.players.find(p => p.username === username);
-            if (existingPlayer && socket.data.userId !== existingPlayer.id) {
-                console.log(`❌ Username "${username}" already taken in game ${gameId}`);
-                socket.emit('username_taken', { username });
-                return;
-            }
-            // Check if this is a reconnection attempt to an active game
-            if (playerIndex === -1 && game.isStarted()) {
-                // Check if this user was previously in this game
+            // Check for reconnection FIRST, before adding as new player
+            if (game.isStarted()) {
                 const gameState = game.getState();
                 const existingPlayerIndex = gameState.players.findIndex(p => p.id === userId);
                 if (existingPlayerIndex >= 0) {
@@ -293,33 +305,45 @@ io.on('connection', (socket) => {
                 socket.emit('game_already_started');
                 return;
             }
-            if (playerIndex === -1) {
-                // This case is now handled above for active games
-                console.log(`❌ Cannot join game ${gameId} - unknown error`);
+            // Check for duplicate username (but allow same user to rejoin)
+            const currentGameState = game.getState();
+            const existingPlayer = currentGameState.players.find(p => p.username === username);
+            if (existingPlayer && socket.data.userId !== existingPlayer.id) {
+                console.log(`❌ Username "${username}" already taken in game ${gameId}`);
+                socket.emit('username_taken', { username });
+                return;
+            }
+            // This is a new player - try to join the game
+            const playerIndex = game.addPlayer(userId, username, botDetected);
+            if (playerIndex >= 0) {
+                socket.data.playerIndex = playerIndex;
+                socket.data.userId = userId;
+                socket.data.isViewer = false;
+                // Assign host if no host exists and this is a real player (not bot)
+                if (!gameHosts.has(gameId) && !botDetected) {
+                    gameHosts.set(gameId, socket.id);
+                    socket.data.isHost = true;
+                    console.log(`👑 ${username} assigned as host for game ${gameId}`);
+                }
+                else {
+                    // Check if this socket is already the host
+                    socket.data.isHost = (gameHosts.get(gameId) === socket.id);
+                }
+            }
+            else {
+                console.log(`❌ Cannot join game ${gameId} - failed to add player`);
                 socket.emit('game_already_started');
                 return;
             }
-            socket.data.playerIndex = playerIndex;
-            socket.data.userId = userId;
-            socket.data.isViewer = false;
-            console.log(`✅ Player ${userId} (${username}) ${isBot ? 'Bot' : 'Human'} joined game ${gameId} as player ${playerIndex} [Game State: Started=${game.isStarted()}, Ended=${game.isEnded()}]`);
-            // Check if this is a reconnection
-            const wasDisconnected = Array.from(disconnectedPlayers.entries()).find(([socketId, data]) => data.gameId === gameId && data.playerIndex === playerIndex);
-            if (wasDisconnected) {
-                // Remove from disconnected players and send reconnection message
-                disconnectedPlayers.delete(wasDisconnected[0]);
-                sendSystemMessage(gameId, `${username} reconnected`);
-                console.log(`🔄 Player ${username} reconnected to game ${gameId}`);
-            }
-            else {
-                // Send system message for new player join
-                sendSystemMessage(gameId, `${username} joined the game`);
-            }
+            console.log(`✅ Player ${userId} (${username}) ${botDetected ? 'Bot' : 'Human'} joined game ${gameId} as player ${playerIndex} [Game State: Started=${game.isStarted()}, Ended=${game.isEnded()}]`);
+            // Send system message for new player join
+            sendSystemMessage(gameId, `${username} joined the game`);
             // Send confirmation to the joining player
             socket.emit('joined_as_player', { playerIndex });
             // Notify all players in room about updated player list
             const gameState = game.getState();
             console.log(`   Broadcasting player_joined to room ${gameId}`);
+            console.log(`   Players data:`, gameState.players.map(p => ({ username: p.username, isBot: p.isBot })));
             io.to(gameId).emit('player_joined', {
                 players: gameState.players,
                 newPlayerIndex: playerIndex
@@ -328,8 +352,8 @@ io.on('connection', (socket) => {
             await sendGameInfo(gameId);
         }
         // Always check and assign host if none exists and this is a non-bot, non-viewer
-        console.log(`🔍 Host check: gameId=${gameId}, hasHost=${gameHosts.has(gameId)}, isBot=${isBot}, username=${username}`);
-        if (!gameHosts.has(gameId) && !isBot && !username.includes('Viewer')) {
+        console.log(`🔍 Host check: gameId=${gameId}, hasHost=${gameHosts.has(gameId)}, isBot=${botDetected}, username=${username}`);
+        if (!gameHosts.has(gameId) && !botDetected && !username.includes('Viewer')) {
             gameHosts.set(gameId, socket.id);
             socket.data.isHost = true;
             console.log(`👑 ${username} assigned as host for game ${gameId} (no existing host)`);
@@ -344,7 +368,7 @@ io.on('connection', (socket) => {
     socket.on('transfer_host', async (gameId, targetSocketId) => {
         if (socket.data.isHost && gameHosts.get(gameId) === socket.id) {
             const targetSocket = (await io.in(gameId).fetchSockets()).find(s => s.id === targetSocketId);
-            if (targetSocket && !targetSocket.data.username?.includes('Bot') && !targetSocket.data.userId?.includes('bot')) {
+            if (targetSocket && !isBot(targetSocket, targetSocket.data.userId || '', targetSocket.data.username || '')) {
                 gameHosts.set(gameId, targetSocketId);
                 socket.data.isHost = false;
                 targetSocket.data.isHost = true;
@@ -352,7 +376,7 @@ io.on('connection', (socket) => {
                 await sendGameInfo(gameId);
             }
             else {
-                console.log(`❌ Invalid host transfer target: ${targetSocket?.data.username || 'unknown'}`);
+                console.log(`❌ Invalid host transfer target: ${targetSocket?.data.username || 'unknown'} (bot detected)`);
             }
         }
     });
@@ -634,14 +658,7 @@ io.on('connection', (socket) => {
     });
     // Helper to transfer host when current host disconnects
     async function transferHostToNextPlayer(gameId) {
-        const sockets = await io.in(gameId).fetchSockets();
-        // Only consider connected players (not viewers, not bots) as potential hosts
-        const nextHost = sockets.find(s => s.id !== socket.id &&
-            !s.data.username?.includes('Bot') &&
-            !s.data.username?.includes('Viewer') &&
-            !s.data.isViewer &&
-            s.data.playerIndex !== undefined &&
-            s.data.playerIndex >= 0);
+        const nextHost = await findEligibleHost(gameId, socket.id);
         if (nextHost) {
             gameHosts.set(gameId, nextHost.id);
             nextHost.data.isHost = true;
@@ -651,16 +668,18 @@ io.on('connection', (socket) => {
         }
         else {
             gameHosts.delete(gameId);
-            console.log(`👑 No eligible host found for game ${gameId} - game may be abandoned`);
-            // Check if game should be cleaned up (no connected players)
-            const connectedPlayers = sockets.filter(s => !s.data.isViewer &&
+            console.log(`👑 No eligible human host found for game ${gameId} - game may be abandoned`);
+            // Check if game should be cleaned up (no connected human players)
+            const sockets = await io.in(gameId).fetchSockets();
+            const connectedHumans = sockets.filter(s => !s.data.isViewer &&
                 s.data.playerIndex !== undefined &&
-                s.data.playerIndex >= 0);
-            if (connectedPlayers.length === 0) {
-                console.log(`🧹 Game ${gameId} has no connected players - cleaning up`);
+                s.data.playerIndex >= 0 &&
+                !isBot(s, s.data.userId || '', s.data.username || ''));
+            if (connectedHumans.length === 0) {
+                console.log(`🧹 Game ${gameId} has no connected human players - cleaning up`);
                 const game = games.get(gameId);
                 if (game && game.isStarted()) {
-                    sendSystemMessage(gameId, 'Game abandoned - no players remaining');
+                    sendSystemMessage(gameId, 'Game abandoned - no human players remaining');
                     setTimeout(() => {
                         game.endGame(-1);
                     }, 1000);
