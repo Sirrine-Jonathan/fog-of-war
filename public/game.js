@@ -947,8 +947,8 @@ canvas.addEventListener('click', (e) => {
         }
     } else {
         // There is an active tile
-        if (e.ctrlKey || e.metaKey) {
-            // Ctrl+click: only activate clicked tile (no launched intent)
+        if (e.altKey) {
+            // Alt+click: only activate clicked tile (no launched intent)
             if (gameState.terrain[tileIndex] === playerIndex) {
                 setSelectedTile(tileIndex);
             } else {
@@ -987,10 +987,19 @@ canvas.addEventListener('mousedown', (e) => {
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
         canvas.style.cursor = 'grabbing';
+        e.preventDefault(); // Prevent any default behavior
     }
 });
 
 canvas.addEventListener('mousemove', (e) => {
+    // Update cursor based on shift key state
+    if (e.shiftKey && !isDragging) {
+        canvas.style.cursor = 'grab';
+    } else if (!e.shiftKey && !isDragging) {
+        canvas.style.cursor = 'default';
+    }
+    
+    // Only pan if we're dragging AND shift is still held
     if (isDragging && e.shiftKey) {
         const deltaX = e.clientX - lastMouseX;
         const deltaY = e.clientY - lastMouseY;
@@ -1018,13 +1027,27 @@ canvas.addEventListener('mousemove', (e) => {
     } else if (isDragging && !e.shiftKey) {
         // Stop dragging if shift is released
         isDragging = false;
-        canvas.style.cursor = 'grab';
+        canvas.style.cursor = 'default';
     }
 });
 
 canvas.addEventListener('mouseup', () => {
     isDragging = false;
-    canvas.style.cursor = 'grab';
+    // Reset cursor based on current shift state
+    canvas.style.cursor = 'default';
+});
+
+// Add keydown/keyup listeners for shift state changes
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Shift' && !isDragging) {
+        canvas.style.cursor = 'grab';
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    if (e.key === 'Shift' && !isDragging) {
+        canvas.style.cursor = 'default';
+    }
 });
 
 canvas.addEventListener('wheel', (e) => {
