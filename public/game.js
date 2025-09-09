@@ -430,6 +430,12 @@ socket.on('game_update', (data) => {
             console.log('   Lookout towers updated:', gameState.lookoutTowers);
         }
         
+        // Update generals if provided
+        if (data.generals) {
+            gameState.generals = data.generals;
+            console.log('   Generals updated:', gameState.generals);
+        }
+        
         // Auto-select player's general on first update if no tile selected
         if (selectedTile === null && playerIndex >= 0 && data.generals) {
             const generalPos = data.generals[playerIndex];
@@ -1442,18 +1448,21 @@ document.addEventListener('keydown', (e) => {
         canvas.style.cursor = 'grab';
     }
     
-    // Game controls (only if game is active)
-    if (!gameState || playerIndex < 0) return;
-    
-    // Spacebar: Make general the active tile
+    // Spacebar: Make general the active tile (handle this first, always)
     if (e.key === ' ' || e.key === 'Spacebar') {
-        const generalPos = gameState.generals[playerIndex];
-        if (generalPos >= 0) {
-            setSelectedTile(generalPos);
-            e.preventDefault();
+        if (gameState && playerIndex >= 0) {
+            const generalPos = gameState.generals[playerIndex];
+            if (generalPos >= 0) {
+                setSelectedTile(generalPos);
+            }
         }
+        e.preventDefault();
+        e.stopPropagation();
         return;
     }
+    
+    // Game controls (only if game is active)
+    if (!gameState || playerIndex < 0) return;
     
     // Arrow keys: require active tile
     if (selectedTile === null) return;
