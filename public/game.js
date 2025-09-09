@@ -947,8 +947,8 @@ canvas.addEventListener('click', (e) => {
         }
     } else {
         // There is an active tile
-        if (e.altKey) {
-            // Alt+click: only activate clicked tile (no launched intent)
+        if (e.altKey || e.shiftKey) {
+            // Alt+click OR Shift+click: only activate clicked tile (no launched intent)
             if (gameState.terrain[tileIndex] === playerIndex) {
                 setSelectedTile(tileIndex);
             } else {
@@ -1035,13 +1035,6 @@ canvas.addEventListener('mouseup', () => {
     isDragging = false;
     // Reset cursor based on current shift state
     canvas.style.cursor = 'default';
-});
-
-// Add keydown/keyup listeners for shift state changes
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Shift' && !isDragging) {
-        canvas.style.cursor = 'grab';
-    }
 });
 
 document.addEventListener('keyup', (e) => {
@@ -1442,8 +1435,14 @@ function copyGameUrl() {
     });
 }
 
-// Arrow key controls
+// Keyboard controls
 document.addEventListener('keydown', (e) => {
+    // Shift key cursor feedback
+    if (e.key === 'Shift' && !isDragging) {
+        canvas.style.cursor = 'grab';
+    }
+    
+    // Game controls (only if game is active)
     if (!gameState || playerIndex < 0) return;
     
     // Spacebar: Make general the active tile
