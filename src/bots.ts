@@ -188,37 +188,38 @@ abstract class BaseBot {
 export class BlobBot extends BaseBot {
   private generationSources: Set<number> = new Set();
   private frontlineTiles: Set<number> = new Set();
+  private pathCache: Map<string, number[]> = new Map();
   
   makeMove() {
     const { armies, terrain } = this.gameState;
     
-    // DIVIDE AND CONQUER: Own every tile, move armies from sources to frontlines
+    // DIVIDE AND CONQUER: Lightning fast expansion with robust pathfinding
     this.updateSources();
     this.updateFrontlines();
     
     // Strategy 1: Attack enemy territory (priority)
-    const enemyAttack = this.attackEnemies();
+    const enemyAttack = this.attackEnemiesStrategic();
     if (enemyAttack) {
       this.attack(enemyAttack.from, enemyAttack.to);
       return;
     }
     
-    // Strategy 2: Expand to own every tile
-    const expansion = this.expandTerritory();
+    // Strategy 2: Lightning fast expansion
+    const expansion = this.expandLightningFast();
     if (expansion) {
       this.attack(expansion.from, expansion.to);
       return;
     }
     
-    // Strategy 3: Flow armies from sources to frontlines
-    const armyFlow = this.flowArmiesToFrontlines();
+    // Strategy 3: Robust army flow from sources to frontlines
+    const armyFlow = this.flowArmiesRobust();
     if (armyFlow) {
       this.attack(armyFlow.from, armyFlow.to);
     }
   }
   
   private updateSources() {
-    const { terrain } = this.gameState;
+    const { terrain, armies } = this.gameState;
     this.generationSources.clear();
     
     // Add our general
@@ -227,11 +228,18 @@ export class BlobBot extends BaseBot {
       this.generationSources.add(ourGeneral);
     }
     
-    // Add cities we control (simplified detection)
+    // Add cities we control
+    for (let i = 0; i < this.gameState.cities.length; i++) {
+      const city = this.gameState.cities[i];
+      if (terrain[city] === this.gameState.playerIndex) {
+        this.generationSources.add(city);
+      }
+    }
+    
+    // Add high-army tiles as potential sources
     for (let i = 0; i < terrain.length; i++) {
-      if (terrain[i] === this.gameState.playerIndex) {
-        // Cities generate more armies - look for tiles that might be cities
-        this.generationSources.add(i); // For now, treat all our tiles as potential sources
+      if (terrain[i] === this.gameState.playerIndex && armies[i] > 5) {
+        this.generationSources.add(i);
       }
     }
   }
@@ -255,11 +263,9 @@ export class BlobBot extends BaseBot {
     }
   }
   
-  private attackEnemies(): { from: number; to: number } | null {
+  private attackEnemiesStrategic(): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
-    
-    let bestAttack = null;
-    let bestScore = -1;
+    const attacks = [];
     
     for (let i = 0; i < terrain.length; i++) {
       if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
@@ -267,34 +273,45 @@ export class BlobBot extends BaseBot {
         
         for (const adj of adjacent) {
           if (terrain[adj] >= 0 && terrain[adj] !== this.gameState.playerIndex) {
-            if (armies[i] > armies[adj] && !this.wouldCreateLoop(i, adj)) {
-              const score = armies[i] + armies[adj];
-              if (score > bestScore) {
-                bestScore = score;
-                bestAttack = { from: i, to: adj };
-              }
+            if (armies[i] > armies[adj] + 1 && !this.wouldCreateLoop(i, adj)) {
+              attacks.push({
+                from: i,
+                to: adj,
+                armyAdvantage: armies[i] - armies[adj],
+                isGeneral: this.gameState.generals.includes(adj),
+                isCity: this.gameState.cities.includes(adj)
+              });
             }
           }
         }
       }
     }
     
-    return bestAttack;
+    if (attacks.length > 0) {
+      // Prioritize: generals > cities > highest advantage
+      attacks.sort((a, b) => {
+        if (a.isGeneral !== b.isGeneral) return a.isGeneral ? -1 : 1;
+        if (a.isCity !== b.isCity) return a.isCity ? -1 : 1;
+        return b.armyAdvantage - a.armyAdvantage;
+      });
+      return { from: attacks[0].from, to: attacks[0].to };
+    }
+    
+    return null;
   }
   
-  private expandTerritory(): { from: number; to: number } | null {
+  private expandLightningFast(): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
+    const expansions = [];
     
-    // Expand from frontline tiles
-    const expansionMoves = [];
-    
+    // Prioritize expansion from frontlines with most armies, but be more selective
     for (const frontTile of this.frontlineTiles) {
-      if (armies[frontTile] > 1) {
+      if (armies[frontTile] > 2) { // Require more armies before expanding
         const adjacent = this.getAdjacentTiles(frontTile);
         
         for (const adj of adjacent) {
           if ((terrain[adj] === -1 || terrain[adj] === -3) && !this.wouldCreateLoop(frontTile, adj)) {
-            expansionMoves.push({
+            expansions.push({
               from: frontTile,
               to: adj,
               armies: armies[frontTile],
@@ -305,67 +322,80 @@ export class BlobBot extends BaseBot {
       }
     }
     
-    if (expansionMoves.length > 0) {
-      // Sort by priority then by army strength
-      expansionMoves.sort((a, b) => b.priority - a.priority || b.armies - a.armies);
-      return { from: expansionMoves[0].from, to: expansionMoves[0].to };
+    if (expansions.length > 0) {
+      // Sort by priority, then by army strength, but limit to top 3 options for more strategic play
+      expansions.sort((a, b) => b.priority - a.priority || b.armies - a.armies);
+      const topExpansions = expansions.slice(0, 3);
+      return { from: topExpansions[0].from, to: topExpansions[0].to };
     }
     
     return null;
   }
   
-  private flowArmiesToFrontlines(): { from: number; to: number } | null {
+  private flowArmiesRobust(): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
     
     // Find sources with excess armies
-    const sources = [];
-    for (const source of this.generationSources) {
-      if (armies[source] > 3) {
-        sources.push({ tile: source, armies: armies[source] });
-      }
-    }
-    
-    sources.sort((a, b) => b.armies - a.armies);
+    const sources = Array.from(this.generationSources)
+      .filter(source => armies[source] > 3)
+      .sort((a, b) => armies[b] - armies[a]);
     
     for (const source of sources) {
-      const pathToFrontline = this.findPathToFrontline(source.tile);
-      if (pathToFrontline) {
-        return pathToFrontline;
+      const pathMove = this.findPathToFrontlineRobust(source);
+      if (pathMove) {
+        return pathMove;
       }
     }
     
     return null;
   }
   
-  private findPathToFrontline(from: number): { from: number; to: number } | null {
+  private findPathToFrontlineRobust(from: number): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
+    
+    // Use BFS to find path to nearest frontline
+    const visited = new Set<number>();
+    const queue = [{ tile: from, path: [from] }];
+    visited.add(from);
+    
+    while (queue.length > 0) {
+      const { tile, path } = queue.shift()!;
+      
+      // If we reached a frontline, trace back the path
+      if (this.frontlineTiles.has(tile) && tile !== from) {
+        // Return the first move in the path
+        if (path.length > 1) {
+          const nextTile = path[1];
+          if (armies[from] > armies[nextTile] + 1 && !this.wouldCreateLoop(from, nextTile)) {
+            return { from, to: nextTile };
+          }
+        }
+      }
+      
+      // Explore adjacent tiles
+      const adjacent = this.getAdjacentTiles(tile);
+      for (const adj of adjacent) {
+        if (!visited.has(adj) && terrain[adj] === this.gameState.playerIndex) {
+          visited.add(adj);
+          queue.push({ tile: adj, path: [...path, adj] });
+        }
+      }
+      
+      // Limit search depth to prevent infinite loops
+      if (path.length > 10) break;
+    }
+    
+    // Fallback: move to adjacent tile with fewer armies
     const adjacent = this.getAdjacentTiles(from);
-    
-    let bestMove = null;
-    let bestScore = -1;
-    
     for (const adj of adjacent) {
       if (terrain[adj] === this.gameState.playerIndex && 
           armies[adj] < armies[from] &&
           !this.wouldCreateLoop(from, adj)) {
-        
-        // Score based on how close this tile is to frontlines
-        let score = 0;
-        if (this.frontlineTiles.has(adj)) {
-          score = 100; // Direct to frontline
-        } else {
-          // Score based on distance to nearest frontline
-          score = this.getDistanceToNearestFrontline(adj);
-        }
-        
-        if (score > bestScore) {
-          bestScore = score;
-          bestMove = { from, to: adj };
-        }
+        return { from, to: adj };
       }
     }
     
-    return bestMove;
+    return null;
   }
   
   private getExpansionPriority(position: number): number {
@@ -409,43 +439,53 @@ export class BlobBot extends BaseBot {
 }
 
 export class ArrowBot extends BaseBot {
+  private explorationTargets: number[] = [];
+  private currentTarget: number = -1;
+  private failedTargets: Set<number> = new Set();
+  
   makeMove() {
-    const { armies, terrain } = this.gameState;
+    // SEARCH AND DESTROY: Robust pathfinding with imagination
     
-    // SEARCH AND DESTROY: Simple but reliable exploration
+    // Strategy 1: Counter-attack if under attack
+    const counterAttack = this.findCounterAttack();
+    if (counterAttack) {
+      this.attack(counterAttack.from, counterAttack.to);
+      return;
+    }
     
-    // Strategy 1: Attack any enemy territory
-    const enemyAttack = this.findEnemyAttack();
+    // Strategy 2: Attack enemy territory with concentrated force
+    const enemyAttack = this.findStrategicEnemyAttack();
     if (enemyAttack) {
       this.attack(enemyAttack.from, enemyAttack.to);
       return;
     }
     
-    // Strategy 2: Expand to any neutral territory
-    const expansion = this.findExpansion();
-    if (expansion) {
-      this.attack(expansion.from, expansion.to);
+    // Strategy 3: Systematic exploration with robust pathfinding
+    const exploration = this.findSystematicExploration();
+    if (exploration) {
+      this.attack(exploration.from, exploration.to);
       return;
     }
     
-    // Strategy 3: Move armies toward unexplored areas
-    const exploration = this.findExploration();
-    if (exploration) {
-      this.attack(exploration.from, exploration.to);
+    // Strategy 4: Fallback - any valid expansion
+    const fallback = this.findAnyValidMove();
+    if (fallback) {
+      this.attack(fallback.from, fallback.to);
     }
   }
   
-  private findEnemyAttack(): { from: number; to: number } | null {
+  private findCounterAttack(): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
     
+    // Find enemy tiles adjacent to our territory that we can attack
     for (let i = 0; i < terrain.length; i++) {
-      if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
+      if (terrain[i] >= 0 && terrain[i] !== this.gameState.playerIndex) {
         const adjacent = this.getAdjacentTiles(i);
         
         for (const adj of adjacent) {
-          if (terrain[adj] >= 0 && terrain[adj] !== this.gameState.playerIndex) {
-            if (armies[i] > armies[adj] && !this.wouldCreateLoop(i, adj)) {
-              return { from: i, to: adj };
+          if (terrain[adj] === this.gameState.playerIndex && armies[adj] > armies[i] + 1) {
+            if (!this.wouldCreateLoop(adj, i)) {
+              return { from: adj, to: i };
             }
           }
         }
@@ -454,28 +494,127 @@ export class ArrowBot extends BaseBot {
     return null;
   }
   
-  private findExpansion(): { from: number; to: number } | null {
+  private findStrategicEnemyAttack(): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
+    const attacks = [];
     
-    // Find any tile that can expand to neutral territory
     for (let i = 0; i < terrain.length; i++) {
-      if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
+      if (terrain[i] === this.gameState.playerIndex && armies[i] > 2) {
         const adjacent = this.getAdjacentTiles(i);
         
         for (const adj of adjacent) {
-          if (terrain[adj] === -1 && !this.wouldCreateLoop(i, adj)) {
-            return { from: i, to: adj };
+          if (terrain[adj] >= 0 && terrain[adj] !== this.gameState.playerIndex) {
+            if (armies[i] > armies[adj] + 1 && !this.wouldCreateLoop(i, adj)) {
+              attacks.push({
+                from: i,
+                to: adj,
+                armyAdvantage: armies[i] - armies[adj],
+                isGeneral: this.gameState.generals.includes(adj),
+                totalArmies: armies[i]
+              });
+            }
           }
         }
       }
     }
+    
+    if (attacks.length > 0) {
+      // Prioritize generals, then attacks with most total armies (concentrated force)
+      attacks.sort((a, b) => {
+        if (a.isGeneral !== b.isGeneral) return a.isGeneral ? -1 : 1;
+        return b.totalArmies - a.totalArmies;
+      });
+      return { from: attacks[0].from, to: attacks[0].to };
+    }
+    
     return null;
   }
   
-  private findExploration(): { from: number; to: number } | null {
+  private findSystematicExploration(): { from: number; to: number } | null {
+    // Update exploration targets - imagine directions to explore
+    this.updateExplorationTargets();
+    
+    // Try current target first
+    if (this.currentTarget !== -1 && !this.failedTargets.has(this.currentTarget)) {
+      const pathMove = this.findPathToTarget(this.currentTarget);
+      if (pathMove) {
+        return pathMove;
+      } else {
+        // Mark target as failed and try next
+        this.failedTargets.add(this.currentTarget);
+        this.currentTarget = -1;
+      }
+    }
+    
+    // Pick new exploration target
+    for (const target of this.explorationTargets) {
+      if (!this.failedTargets.has(target)) {
+        this.currentTarget = target;
+        const pathMove = this.findPathToTarget(target);
+        if (pathMove) {
+          return pathMove;
+        } else {
+          this.failedTargets.add(target);
+        }
+      }
+    }
+    
+    // If all targets failed, expand to any fog of war
+    return this.expandToFog();
+  }
+  
+  private updateExplorationTargets() {
+    const { terrain, width, height } = this.gameState;
+    this.explorationTargets = [];
+    
+    // Find all fog of war tiles (-3) and prioritize by strategic value
+    const fogTiles = [];
+    for (let i = 0; i < terrain.length; i++) {
+      if (terrain[i] === -3) {
+        fogTiles.push({
+          position: i,
+          priority: this.calculateExplorationPriority(i)
+        });
+      }
+    }
+    
+    // Sort by priority and take top targets
+    fogTiles.sort((a, b) => b.priority - a.priority);
+    this.explorationTargets = fogTiles.slice(0, 10).map(t => t.position);
+    
+    // If no fog tiles, target map edges
+    if (this.explorationTargets.length === 0) {
+      this.addEdgeTargets();
+    }
+  }
+  
+  private calculateExplorationPriority(position: number): number {
+    const { terrain, width } = this.gameState;
+    const row = Math.floor(position / width);
+    const col = position % width;
+    
+    let priority = 10;
+    
+    // Higher priority for tiles near our territory
+    const ourTiles = this.getOurTiles();
+    if (ourTiles.length > 0) {
+      const minDistance = Math.min(...ourTiles.map(tile => this.getDistance(tile, position)));
+      priority += Math.max(0, 20 - minDistance); // Closer = higher priority
+    }
+    
+    // Higher priority for central areas
+    const centerRow = Math.floor(this.gameState.height / 2);
+    const centerCol = Math.floor(width / 2);
+    const distanceFromCenter = Math.abs(row - centerRow) + Math.abs(col - centerCol);
+    priority += Math.max(0, 10 - distanceFromCenter);
+    
+    return priority;
+  }
+  
+  private findPathToTarget(target: number): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
     
-    // Move armies from interior toward edges/unexplored areas
+    // Find our tiles that can move toward the target
     const candidates = [];
     
     for (let i = 0; i < terrain.length; i++) {
@@ -483,16 +622,13 @@ export class ArrowBot extends BaseBot {
         const adjacent = this.getAdjacentTiles(i);
         
         for (const adj of adjacent) {
-          if (terrain[adj] === this.gameState.playerIndex && 
-              armies[adj] < armies[i] && 
-              !this.wouldCreateLoop(i, adj)) {
-            
-            // Prefer moving toward edges of our territory
-            const isEdgeMove = this.isMovingTowardEdge(adj);
+          if ((terrain[adj] === -1 || terrain[adj] === -3) && !this.wouldCreateLoop(i, adj)) {
+            const distanceToTarget = this.getDistance(adj, target);
             candidates.push({
               from: i,
               to: adj,
-              priority: isEdgeMove ? 2 : 1
+              distance: distanceToTarget,
+              armies: armies[i]
             });
           }
         }
@@ -500,21 +636,100 @@ export class ArrowBot extends BaseBot {
     }
     
     if (candidates.length > 0) {
-      candidates.sort((a, b) => b.priority - a.priority);
+      // Sort by distance to target, then by army strength
+      candidates.sort((a, b) => a.distance - b.distance || b.armies - a.armies);
       return { from: candidates[0].from, to: candidates[0].to };
     }
     
     return null;
   }
   
-  private isMovingTowardEdge(position: number): boolean {
-    const { terrain } = this.gameState;
-    const adjacent = this.getAdjacentTiles(position);
+  private expandToFog(): { from: number; to: number } | null {
+    const { armies, terrain } = this.gameState;
     
-    // Check if this position is near unexplored territory
-    return adjacent.some(adj => 
-      terrain[adj] === -1 || terrain[adj] === -3 || 
-      (terrain[adj] >= 0 && terrain[adj] !== this.gameState.playerIndex)
-    );
+    // Find any move toward fog of war
+    for (let i = 0; i < terrain.length; i++) {
+      if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
+        const adjacent = this.getAdjacentTiles(i);
+        
+        for (const adj of adjacent) {
+          if (terrain[adj] === -3 && !this.wouldCreateLoop(i, adj)) {
+            return { from: i, to: adj };
+          }
+        }
+      }
+    }
+    
+    return null;
+  }
+  
+  private findAnyValidMove(): { from: number; to: number } | null {
+    const { armies, terrain } = this.gameState;
+    
+    // Find ANY valid expansion move
+    for (let i = 0; i < terrain.length; i++) {
+      if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
+        const adjacent = this.getAdjacentTiles(i);
+        
+        for (const adj of adjacent) {
+          if ((terrain[adj] === -1 || terrain[adj] === -3) && !this.wouldCreateLoop(i, adj)) {
+            return { from: i, to: adj };
+          }
+        }
+      }
+    }
+    
+    // If no expansion possible, consolidate armies
+    for (let i = 0; i < terrain.length; i++) {
+      if (terrain[i] === this.gameState.playerIndex && armies[i] > 2) {
+        const adjacent = this.getAdjacentTiles(i);
+        
+        for (const adj of adjacent) {
+          if (terrain[adj] === this.gameState.playerIndex && 
+              armies[adj] < armies[i] && 
+              !this.wouldCreateLoop(i, adj)) {
+            return { from: i, to: adj };
+          }
+        }
+      }
+    }
+    
+    return null;
+  }
+  
+  private addEdgeTargets() {
+    const { width, height } = this.gameState;
+    
+    // Add map edge positions as targets
+    for (let i = 0; i < width; i++) {
+      this.explorationTargets.push(i); // Top edge
+      this.explorationTargets.push((height - 1) * width + i); // Bottom edge
+    }
+    
+    for (let i = 0; i < height; i++) {
+      this.explorationTargets.push(i * width); // Left edge
+      this.explorationTargets.push(i * width + width - 1); // Right edge
+    }
+  }
+  
+  private getOurTiles(): number[] {
+    const { terrain } = this.gameState;
+    const ourTiles = [];
+    
+    for (let i = 0; i < terrain.length; i++) {
+      if (terrain[i] === this.gameState.playerIndex) {
+        ourTiles.push(i);
+      }
+    }
+    
+    return ourTiles;
+  }
+  
+  private getDistance(from: number, to: number): number {
+    const fromX = from % this.gameState.width;
+    const fromY = Math.floor(from / this.gameState.width);
+    const toX = to % this.gameState.width;
+    const toY = Math.floor(to / this.gameState.width);
+    return Math.abs(fromX - toX) + Math.abs(fromY - toY);
   }
 }
