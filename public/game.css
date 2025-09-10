@@ -40,6 +40,11 @@ h3, h4 {
     padding: 0 12px;
 }
 
+.header h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
 #gameControls { 
     display: flex;
     flex-direction: column;
@@ -257,7 +262,7 @@ input[type="text"]:focus {
     right: 0;
     padding: 0;
     z-index: 9999;
-    height: 65px;
+    height: 35px;
     box-sizing: border-box;
 }
 
@@ -305,6 +310,19 @@ body.mobile-chat-active .mobile-tab-bar {
     display: flex !important;
 }
 
+body.mobile-game-active .header h1,
+body.mobile-chat-active .header h1,
+body.mobile-controls-active .header h1 {
+    font-size: 18px;
+}
+
+body.mobile-game-active .header,
+body.mobile-chat-active .header,
+body.mobile-controls-active .header {
+    font-size: 18px;
+    margin: 0;
+}
+
 /* Override parent containers for mobile */
 body.mobile-game-active,
 body.mobile-controls-active,
@@ -336,12 +354,12 @@ body.mobile-chat-active .mainRow {
 body.mobile-game-active #gameCanvas {
     width: 100vw;
     margin: 0;
-    height: calc(100vh - 112px);
+    height: calc(100vh - 75px);
 }
 
 body.mobile-game-active #gameBoard {
     width: 100vw;
-    height: calc(100vh - 112px);
+    height: calc(100vh - 75px);
     box-sizing: border-box;
 }
 
@@ -373,7 +391,7 @@ body.mobile-controls-active #gameControls {
     box-sizing: border-box;
     justify-content: start;
     align-items: center;
-    min-height: calc(100vh - 112px);
+    min-height: calc(100vh - 75px);
     border: 2px solid #ffd700;
     border-radius: 8px;
 }
@@ -448,7 +466,7 @@ body.mobile-chat-active #chatSection {
     padding: 10px 10px 0;
     width: 100vw;
     box-sizing: border-box;
-    height: calc(100vh - 112px);
+    height: calc(100vh - 75px);
 }
 
 /* Override the chat input parent container */
