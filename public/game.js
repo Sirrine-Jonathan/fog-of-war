@@ -2,6 +2,152 @@ const canvas = document.getElementById('gameBoard');
 const ctx = canvas.getContext('2d');
 const socket = io();
 
+// Animation variables
+let animationId = null;
+let animationTime = 0;
+
+// App colors
+const appColors = {
+    gold: '#ffd700',
+    slate: '#2c3e50',
+    darkSlate: '#34495e'
+};
+
+// Colors for players (supports up to 10 players)
+const playerColors = [
+    '#ff6b6b', // Red
+    '#4ecdc4', // Teal
+    '#45b7d1', // Blue
+    '#96ceb4', // Green
+    '#feca57', // Yellow
+    '#ff9ff3', // Pink
+    '#54a0ff', // Light Blue
+    '#5f27cd', // Purple
+    '#00d2d3', // Cyan
+    '#ff6348'  // Orange
+];
+
+// Simplified tiling animation using existing canvas
+function drawTilingAnimation() {
+    const time = animationTime * 0.0003; // Much slower animation
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // White background
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Save context and apply rotation/scale transform
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(0.15 + time * 0.07); // Static rotation + slow spin (1 revolution per 90 seconds)
+    ctx.scale(1.6, 1.6); // Larger scale for more overflow
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+    
+    const tileSize = 40;
+    const cols = Math.ceil(canvas.width / tileSize) + 4; // More extra tiles
+    const rows = Math.ceil(canvas.height / tileSize) + 4;
+    
+    for (let x = -2; x < cols; x++) { // Start further back for overflow
+        for (let y = -2; y < rows; y++) {
+            const xPos = x * tileSize;
+            const yPos = y * tileSize;
+            
+            // Wave effect - horizontal wave with uneven timing and row variation
+            const rowSpeed = 1 + (y % 5) * 0.3; // Different speeds per row
+            const rowOffset = y * 0.7; // Different start positions per row
+            const waveOffset = Math.sin(time * 2 * rowSpeed + x * 0.3 + y * 0.1 + rowOffset) * 0.5 + 0.5;
+            const scale = 0.4 + waveOffset * 0.6; // Larger min (0.4), max (1.0)
+            
+            const centerX = xPos + tileSize / 2;
+            const centerY = yPos + tileSize / 2;
+            const scaledSize = tileSize * scale;
+            
+            // Color fading effect for some tiles
+            const colorPhase = Math.sin(time * 0.8 + x * 0.2 + y * 0.15) * 0.5 + 0.5;
+            const shouldFade = (x + y * 3) % 5 === 0; // More tiles fade (was % 7)
+            const shouldBePlayerColor = (x * 2 + y) % 6 === 0; // More player color tiles (every 6th)
+            
+            let tileColor = appColors.slate; // Default dark slate
+            
+            if (shouldBePlayerColor && waveOffset > 0.6) {
+                // Random player color tiles when wave is high
+                const colorIndex = (x + y * 2) % playerColors.length;
+                const playerColor = playerColors[colorIndex];
+                if (playerColor) {
+                    tileColor = playerColor;
+                }
+            } else if (shouldFade && colorPhase > 0.7) {
+                // Fading to player color
+                const colorIndex = (x + y) % playerColors.length;
+                const fadeAmount = (colorPhase - 0.7) / 0.3; // 0 to 1
+                const playerColor = playerColors[colorIndex];
+                
+                // Safety check for valid player color
+                if (playerColor && playerColor.startsWith('#')) {
+                    // Interpolate between slate and player color
+                    const slateRGB = [44, 62, 80]; // #2c3e50
+                    const playerRGB = [
+                        parseInt(playerColor.slice(1, 3), 16),
+                        parseInt(playerColor.slice(3, 5), 16),
+                        parseInt(playerColor.slice(5, 7), 16)
+                    ];
+                    
+                    const r = Math.round(slateRGB[0] + (playerRGB[0] - slateRGB[0]) * fadeAmount);
+                    const g = Math.round(slateRGB[1] + (playerRGB[1] - slateRGB[1]) * fadeAmount);
+                    const b = Math.round(slateRGB[2] + (playerRGB[2] - slateRGB[2]) * fadeAmount);
+                    
+                    tileColor = `rgb(${r}, ${g}, ${b})`;
+                }
+            }
+            
+            // Subtle lighter slate gradient for high wave peaks
+            if (waveOffset > 0.75) {
+                const lightness = (waveOffset - 0.75) / 0.25; // 0 to 1
+                const centerLightness = Math.max(0, 1 - Math.abs(waveOffset - 0.875) / 0.125); // Peak at 0.875
+                const finalLightness = lightness * 0.4 + centerLightness * 0.3; // Subtle effect
+                
+                const baseRGB = [44, 62, 80]; // #2c3e50
+                const r = Math.round(baseRGB[0] + (120 - baseRGB[0]) * finalLightness);
+                const g = Math.round(baseRGB[1] + (140 - baseRGB[1]) * finalLightness);
+                const b = Math.round(baseRGB[2] + (160 - baseRGB[2]) * finalLightness);
+                
+                tileColor = `rgb(${r}, ${g}, ${b})`;
+            }
+            
+            ctx.fillStyle = tileColor;
+            ctx.fillRect(
+                centerX - scaledSize / 2,
+                centerY - scaledSize / 2,
+                scaledSize,
+                scaledSize
+            );
+        }
+    }
+    
+    // Restore context
+    ctx.restore();
+}
+
+function startAnimation() {
+    if (animationId) return;
+    
+    function animate() {
+        animationTime += 16;
+        drawTilingAnimation();
+        animationId = requestAnimationFrame(animate);
+    }
+    
+    animationId = requestAnimationFrame(animate);
+}
+
+function stopAnimation() {
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+    }
+}
+
 // Camera system
 let camera = {
     x: 0,
@@ -123,19 +269,6 @@ function attemptAutoRejoin() {
     }
 }
 
-// Colors for players (supports up to 10 players)
-const playerColors = [
-    '#ff6b6b', // Red
-    '#4ecdc4', // Teal
-    '#45b7d1', // Blue
-    '#96ceb4', // Green
-    '#feca57', // Yellow
-    '#ff9ff3', // Pink
-    '#54a0ff', // Light Blue
-    '#5f27cd', // Purple
-    '#00d2d3', // Cyan
-    '#ff9f43'  // Orange
-];
 const emptyColor = '#f0f0f0';
 const mountainColor = '#333';
 const fogColor = '#888';
@@ -253,6 +386,10 @@ socket.on('game_start', (data) => {
     document.getElementById('gameBoard').style.display = 'block'; // Show canvas
     playerIndex = data.playerIndex !== undefined ? data.playerIndex : -1;
     gameStarted = true;
+    
+    // Stop animation when game starts
+    stopAnimation();
+    
     updateButtonVisibility(); // Update button visibility
     saveState(); // Save state when game starts
     console.log('   Player index set to:', playerIndex);
@@ -379,6 +516,9 @@ socket.on('game_won', (data) => {
     gameStarted = false;
     const winnerName = players[data.winner]?.username || 'Unknown';
     
+    // Start animation when game ends
+    startAnimation();
+    
     // Show game over overlay
     showGameOverOverlay(winnerName);
     
@@ -424,6 +564,9 @@ socket.on('attack_result', (data) => {
 
 socket.on('game_update', (data) => {
     console.log('🔄 Game update received:', data);
+    
+    // Stop animation when game state is received
+    stopAnimation();
     
     if (data.map_diff && data.map_diff.length > 0) {
         console.log('   Map diff length:', data.map_diff.length);
@@ -546,6 +689,9 @@ socket.on('game_update', (data) => {
 socket.on('game_end', (data) => {
     console.log('Game ended:', data);
     gameEnded = true;
+    
+    // Start animation when game ends
+    startAnimation();
     
     // Show the existing end game notification
     const notification = document.getElementById('gameEndNotification');
@@ -848,13 +994,13 @@ function drawGame() {
             // Draw army count or tower defense
             if (gameState.armies[i] > 0) {
                 ctx.fillStyle = terrain === -2 ? 'white' : 'black';
-                ctx.font = `bold ${Math.max(8, 10 * camera.zoom)}px Arial`;
+                ctx.font = `bold ${Math.max(10, 12 * camera.zoom)}px 'Courier New', monospace`;
                 ctx.textAlign = 'center';
                 ctx.fillText(gameState.armies[i].toString(), x + tileSize/2, y + tileSize/2 + 3*camera.zoom);
             } else if (terrain === -5 && gameState.towerDefense && gameState.towerDefense[i] > 0) {
                 // Show tower defense for neutral towers
                 ctx.fillStyle = 'white';
-                ctx.font = `bold ${Math.max(8, 10 * camera.zoom)}px Arial`;
+                ctx.font = `bold ${Math.max(10, 12 * camera.zoom)}px 'Courier New', monospace`;
                 ctx.textAlign = 'center';
                 ctx.fillText(gameState.towerDefense[i].toString(), x + tileSize/2, y + tileSize/2 + 3*camera.zoom);
             }
@@ -1893,5 +2039,22 @@ socket.on('chat_message', (data) => {
     // Auto-scroll only if user was already at bottom
     if (wasScrolledToBottom) {
         chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+});
+
+// Initialize animation on page load if no game is active
+document.addEventListener('DOMContentLoaded', () => {
+    // Start animation if no game is running
+    if (!gameStarted && !gameState) {
+        startAnimation();
+    }
+});
+
+// Also start animation when canvas is resized and no game is active
+window.addEventListener('resize', () => {
+    if (!gameStarted && !gameState) {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight - 120;
+        // Animation will continue running and adapt to new size
     }
 });

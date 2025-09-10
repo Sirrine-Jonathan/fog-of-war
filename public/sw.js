@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fog-of-war-v1';
+const CACHE_NAME = 'fog-of-war-v12';
 const urlsToCache = [
   '/',
   '/game.html',

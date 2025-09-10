@@ -311,11 +311,18 @@ export class BlobBot extends BaseBot {
         
         for (const adj of adjacent) {
           if ((terrain[adj] === -1 || terrain[adj] === -3) && !this.wouldCreateLoop(frontTile, adj)) {
+            let priority = this.getExpansionPriority(adj);
+            
+            // PRIORITIZE CITIES for increased army generation
+            if (this.gameState.cities.includes(adj)) {
+              priority += 1000; // Highest priority for cities
+            }
+            
             expansions.push({
               from: frontTile,
               to: adj,
               armies: armies[frontTile],
-              priority: this.getExpansionPriority(adj)
+              priority: priority
             });
           }
         }
@@ -335,15 +342,16 @@ export class BlobBot extends BaseBot {
   private flowArmiesRobust(): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
     
-    // Find sources with excess armies
-    const sources = Array.from(this.generationSources)
-      .filter(source => armies[source] > 3)
-      .sort((a, b) => armies[b] - armies[a]);
-    
-    for (const source of sources) {
-      const pathMove = this.findPathToFrontlineRobust(source);
-      if (pathMove) {
-        return pathMove;
+    // Flow ALL excess armies to frontlines, not just small amounts
+    for (let i = 0; i < terrain.length; i++) {
+      if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
+        // Skip if this is already a frontline tile
+        if (this.frontlineTiles.has(i)) continue;
+        
+        const pathMove = this.findPathToFrontlineRobust(i);
+        if (pathMove) {
+          return pathMove;
+        }
       }
     }
     
@@ -453,14 +461,19 @@ export class ArrowBot extends BaseBot {
       return;
     }
     
-    // Strategy 2: Attack enemy territory with concentrated force
-    const enemyAttack = this.findStrategicEnemyAttack();
-    if (enemyAttack) {
-      this.attack(enemyAttack.from, enemyAttack.to);
-      return;
+    // Determine strategy based on frontline analysis
+    const shouldExplore = this.shouldContinueExploring();
+    
+    if (!shouldExplore) {
+      // Strategy 2: Attack mode - enemy territory available
+      const enemyAttack = this.findStrategicEnemyAttack();
+      if (enemyAttack) {
+        this.attack(enemyAttack.from, enemyAttack.to);
+        return;
+      }
     }
     
-    // Strategy 3: Systematic exploration with robust pathfinding
+    // Strategy 3: Exploration mode - more unknown territory available
     const exploration = this.findSystematicExploration();
     if (exploration) {
       this.attack(exploration.from, exploration.to);
@@ -472,6 +485,47 @@ export class ArrowBot extends BaseBot {
     if (fallback) {
       this.attack(fallback.from, fallback.to);
     }
+  }
+  
+  private findLookoutTowerCapture(): { from: number; to: number } | null {
+    const { armies, terrain } = this.gameState;
+    
+    // Find adjacent lookout towers we can capture
+    for (let i = 0; i < terrain.length; i++) {
+      if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
+        const adjacent = this.getAdjacentTiles(i);
+        
+        for (const adj of adjacent) {
+          // Check if this is a lookout tower (terrain -3)
+          if (terrain[adj] === -3 && !this.wouldCreateLoop(i, adj)) {
+            return { from: i, to: adj };
+          }
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  private shouldContinueExploring(): boolean {
+    const { terrain } = this.gameState;
+    let unknownAdjacent = 0;
+    let enemyAdjacent = 0;
+    
+    // Count adjacent tiles from frontlines
+    for (let i = 0; i < terrain.length; i++) {
+      if (terrain[i] === this.gameState.playerIndex) {
+        const adjacent = this.getAdjacentTiles(i);
+        const hasUnknown = adjacent.some(adj => terrain[adj] === -1 || terrain[adj] === -3);
+        const hasEnemy = adjacent.some(adj => terrain[adj] >= 0 && terrain[adj] !== this.gameState.playerIndex);
+        
+        if (hasUnknown) unknownAdjacent++;
+        if (hasEnemy) enemyAdjacent++;
+      }
+    }
+    
+    // Continue exploring if more unknown territory than enemy territory
+    return unknownAdjacent > enemyAdjacent;
   }
   
   private findCounterAttack(): { from: number; to: number } | null {
@@ -498,8 +552,9 @@ export class ArrowBot extends BaseBot {
     const { armies, terrain } = this.gameState;
     const attacks = [];
     
+    // Prioritize high-army tiles for attacks
     for (let i = 0; i < terrain.length; i++) {
-      if (terrain[i] === this.gameState.playerIndex && armies[i] > 2) {
+      if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
         const adjacent = this.getAdjacentTiles(i);
         
         for (const adj of adjacent) {
@@ -533,6 +588,12 @@ export class ArrowBot extends BaseBot {
   private findSystematicExploration(): { from: number; to: number } | null {
     // Update exploration targets - imagine directions to explore
     this.updateExplorationTargets();
+    
+    // PRIORITIZE LOOKOUT TOWERS for map knowledge
+    const towerMove = this.findLookoutTowerCapture();
+    if (towerMove) {
+      return towerMove;
+    }
     
     // Try current target first
     if (this.currentTarget !== -1 && !this.failedTargets.has(this.currentTarget)) {

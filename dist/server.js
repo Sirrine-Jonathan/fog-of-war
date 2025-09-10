@@ -277,12 +277,31 @@ io.on('connection', (socket) => {
         socket.data.username = username;
         console.log(`👤 User ${userId} set username: ${username}`);
     });
+    socket.on('get_current_room', () => {
+        const currentRoom = playerRooms.get(socket.id);
+        socket.emit('current_room', { room: currentRoom || null });
+    });
     socket.on('join_private', async (gameId, userId) => {
         console.log(`🎮 Join private game request: gameId=${gameId}, userId=${userId}`);
         // Leave previous room if any
         const previousRoom = playerRooms.get(socket.id);
         if (previousRoom) {
             console.log(`   Leaving previous room: ${previousRoom}`);
+            // Remove player from previous game
+            const previousGame = games.get(previousRoom);
+            if (previousGame && socket.data.userId) {
+                const removed = previousGame.removePlayer(socket.data.userId);
+                if (removed) {
+                    console.log(`   Removed player ${socket.data.userId} from game ${previousRoom}`);
+                    // Clear socket player data
+                    delete socket.data.playerIndex;
+                    socket.data.isViewer = true;
+                    // Notify remaining players in previous room
+                    io.to(previousRoom).emit('player_left', {
+                        players: previousGame.getState().players
+                    });
+                }
+            }
             socket.leave(previousRoom);
         }
         // Join new room
@@ -542,6 +561,16 @@ io.on('connection', (socket) => {
             // Start sending updates
             const updateInterval = setInterval(async () => {
                 const gameState = game.getState();
+                // Log map state every 25 ticks
+                if (gameState.turn % 25 === 0) {
+                    console.log(`\n📊 MAP STATE - Turn ${gameState.turn}:`);
+                    const playerStats = gameState.players.map(p => {
+                        const territories = gameState.terrain.filter(t => t === p.index).length;
+                        const totalArmies = gameState.armies.reduce((sum, armies, i) => gameState.terrain[i] === p.index ? sum + armies : sum, 0);
+                        return `${p.username}(P${p.index}): ${territories} territories, ${totalArmies} armies`;
+                    });
+                    console.log(`   ${playerStats.join(' | ')}`);
+                }
                 if (gameState.gameEnded) {
                     // Notify players of game end
                     console.log(`   Game ${gameId} ended, winner: ${gameState.winner}`);
@@ -645,9 +674,27 @@ io.on('connection', (socket) => {
         });
     });
     socket.on('attack', (from, to) => {
-        console.log(`⚔️ Attack request: from=${from}, to=${to}, player=${socket.data.playerIndex}`);
         const roomId = playerRooms.get(socket.id);
         const game = games.get(roomId || '');
+        const playerIndex = socket.data.playerIndex;
+        const playerName = socket.data.username || 'Unknown';
+        // Enhanced logging with strategic context
+        if (game) {
+            const gameMap = game.getMapData();
+            const fromArmies = gameMap[from + 2]; // armies start at index 2
+            const toArmies = gameMap[to + 2];
+            const size = gameMap[0] * gameMap[1];
+            const fromTerrain = gameMap[from + size + 2]; // terrain starts after armies
+            const toTerrain = gameMap[to + size + 2];
+            let moveType = 'EXPAND';
+            if (toTerrain >= 0 && toTerrain !== playerIndex) {
+                moveType = 'ATTACK';
+            }
+            console.log(`⚔️ ${moveType}: ${playerName}(P${playerIndex}) ${from}(${fromArmies}) -> ${to}(${toArmies})`);
+        }
+        else {
+            console.log(`⚔️ Attack request: from=${from}, to=${to}, player=${playerIndex}`);
+        }
         // Prevent viewers from attacking
         if (socket.data.isViewer) {
             console.log(`   Attack blocked: viewer cannot attack`);
