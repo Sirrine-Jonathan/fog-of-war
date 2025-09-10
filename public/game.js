@@ -42,6 +42,10 @@ document.getElementById('roomId').textContent = roomId;
 
 // Persistence keys (defined after roomId)
 const STORAGE_KEY = `fog_of_war_${roomId}`;
+const DISCOVERED_KEY = `discovered_tiles_${roomId}`;
+
+// Discovered tiles that remain visible permanently
+let discoveredTiles = new Set();
 
 // Load persisted state
 function loadPersistedState() {
@@ -51,6 +55,21 @@ function loadPersistedState() {
             const state = JSON.parse(saved);
             lastUsername = state.username || '';
             document.getElementById('usernameInput').value = lastUsername;
+            
+            // Load discovered tiles
+            const savedDiscovered = localStorage.getItem(DISCOVERED_KEY);
+            if (savedDiscovered) {
+                try {
+                    const data = JSON.parse(savedDiscovered);
+                    if (data.roomId === roomId) {
+                        discoveredTiles = new Set(data.tiles);
+                        console.log('Loaded discovered tiles:', discoveredTiles.size);
+                    }
+                } catch (e) {
+                    console.warn('Failed to parse discovered tiles:', e);
+                }
+            }
+            
             return state;
         } catch (e) {
             console.warn('Failed to load persisted state:', e);
@@ -73,9 +92,23 @@ function saveState() {
     }
 }
 
+// Save discovered tiles to localStorage
+function saveDiscoveredTiles() {
+    if (playerIndex >= 0) {
+        const data = {
+            roomId: roomId,
+            tiles: Array.from(discoveredTiles),
+            timestamp: Date.now()
+        };
+        localStorage.setItem(DISCOVERED_KEY, JSON.stringify(data));
+    }
+}
+
 // Clear saved state
 function clearState() {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(DISCOVERED_KEY);
+    discoveredTiles.clear();
 }
 
 // Auto-rejoin if we were previously in this game (only if we were a player in an active game)
@@ -545,6 +578,9 @@ function updateVisibleTiles() {
         return;
     }
     
+    // Add discovered tiles (permanently visible)
+    discoveredTiles.forEach(tile => visibleTiles.add(tile));
+    
     // Active players see fog of war
     for (let i = 0; i < gameState.terrain.length; i++) {
         if (gameState.terrain[i] === playerIndex) {
@@ -554,7 +590,11 @@ function updateVisibleTiles() {
             if (gameState.lookoutTowers && gameState.lookoutTowers.includes(i)) {
                 // Lookout towers provide 5-tile radius vision
                 const towerVision = getTilesInRadius(i, 5);
-                towerVision.forEach(tile => visibleTiles.add(tile));
+                towerVision.forEach(tile => {
+                    visibleTiles.add(tile);
+                    discoveredTiles.add(tile); // Permanently discover these tiles
+                });
+                saveDiscoveredTiles(); // Save to localStorage
             } else {
                 // Regular tiles provide adjacent vision
                 const adjacent = getAdjacentTiles(i);
@@ -943,8 +983,8 @@ canvas.addEventListener('click', (e) => {
     const row = Math.floor(y / tileSize);
     const tileIndex = row * gameState.width + col;
     
-    // Only allow interaction with visible tiles
-    if (!visibleTiles.has(tileIndex)) return;
+    // Only allow interaction with visible tiles (except mobile users can click through fog)
+    if (!visibleTiles.has(tileIndex) && !isMobile) return;
     
     if (selectedTile === null) {
         // No active tile: clicking owned tile makes it active, otherwise no action
@@ -1259,8 +1299,8 @@ function handleTouchTap(x, y, isActivationOnly) {
     const row = Math.floor(gameY / tileSize);
     const tileIndex = row * gameState.width + col;
     
-    // Only allow interaction with visible tiles
-    if (!visibleTiles.has(tileIndex)) return;
+    // Only allow interaction with visible tiles (except mobile users can click through fog)
+    if (!visibleTiles.has(tileIndex) && !isMobile) return;
     
     console.log(`Touch tap: tile ${tileIndex}, activation-only: ${isActivationOnly}`);
     
