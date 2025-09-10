@@ -1572,6 +1572,10 @@ function updatePlayersList() {
                 const playerStat = document.createElement('div');
                 playerStat.className = 'player-stat';
                 
+                if (player.index === playerIndex) {
+                    playerStat.classList.add('current-player');
+                }
+                
                 const playerName = document.createElement('span');
                 playerName.textContent = player.username + (player.isBot ? ' [BOT]' : '');
                 playerName.style.color = playerColors[player.index] || 'black';
@@ -1613,6 +1617,10 @@ function updateMobileGameStats(sortedPlayers) {
     sortedPlayers.forEach(player => {
         console.log('Adding mobile stats row for player:', player.username);
         const row = document.createElement('tr');
+        
+        if (player.index === playerIndex) {
+            row.classList.add('current-player');
+        }
         
         const nameCell = document.createElement('td');
         nameCell.textContent = player.username + (player.isBot ? ' [BOT]' : '');
@@ -1734,17 +1742,26 @@ document.addEventListener('keydown', (e) => {
         canvas.style.cursor = 'grab';
     }
     
-    // Spacebar: Make general the active tile (handle this first, always)
+    // Spacebar: Make general the active tile (but only if not typing in input fields)
     if (e.key === ' ' || e.key === 'Spacebar') {
-        if (gameState && playerIndex >= 0) {
+        // Check if user is typing in an input field
+        const activeElement = document.activeElement;
+        const isTypingInInput = activeElement && (
+            activeElement.tagName === 'INPUT' || 
+            activeElement.tagName === 'TEXTAREA' ||
+            activeElement.contentEditable === 'true'
+        );
+        
+        // Only handle spacebar for game controls if not typing in an input
+        if (!isTypingInInput && gameState && playerIndex >= 0) {
             const generalPos = gameState.generals[playerIndex];
             if (generalPos >= 0) {
                 setSelectedTile(generalPos);
             }
+            e.preventDefault();
+            e.stopPropagation();
+            return;
         }
-        e.preventDefault();
-        e.stopPropagation();
-        return;
     }
     
     // Game controls (only if game is active)

@@ -279,6 +279,17 @@ input[type="text"]:focus {
     background-color: #e8f5e8;
 }
 
+.mobile-stats-table tr.current-player {
+    background-color: #e8f5e8;
+}
+
+.player-stat.current-player {
+    background-color: #e8f5e8;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin: 2px 0;
+}
+
 .players-table tr.eliminated-player {
     opacity: 0.6;
     text-decoration: line-through;
@@ -426,8 +437,9 @@ body.mobile-controls-active #gameControls {
     width: 100vw;
     box-sizing: border-box;
     justify-content: start;
-    align-items: center;
     min-height: calc(100vh - 75px);
+    max-height: calc(100vh - 75px);
+    overflow-y: auto;
     border: 2px solid #ffd700;
     border-radius: 8px;
 }
