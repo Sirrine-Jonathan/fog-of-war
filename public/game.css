@@ -304,13 +304,14 @@ input[type="text"]:focus {
 .mobile-tab-bar {
     display: none;
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    bottom: env(safe-area-inset-bottom, 0);
+    left: env(safe-area-inset-left, 0);
+    right: env(safe-area-inset-right, 0);
     padding: 0;
     z-index: 9999;
-    height: 35px;
+    height: calc(35px + env(safe-area-inset-bottom, 0));
     box-sizing: border-box;
+    padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 .mobile-tab {
@@ -381,7 +382,7 @@ body.mobile-game-active .fullDisplay,
 body.mobile-controls-active .fullDisplay,
 body.mobile-chat-active .fullDisplay {
     padding: 0 !important; /* Remove fullDisplay padding */
-    padding-bottom: 80px; /* Only keep space for tab bar */
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0)) !important; /* Space for tab bar + safe area */
     margin: 0 !important;
 }
 
@@ -591,11 +592,11 @@ body.mobile-chat-active #chatInput {
 .mobile-stats-table td {
     padding: 3px 6px;
     text-align: center;
-    border: 1px solid rgba(255,255,255,0.3);
+    border: 1px solid rgba(255,215,0,0.9);
 }
 
 .mobile-stats-table th {
-    background: rgba(255,215,0,0.2);
+    background: #1a1a1a;
 }
 
 /* Mobile game tab layout */
@@ -633,7 +634,7 @@ body.mobile-game-active #mobileGameStats {
     }
     
     .fullDisplay {
-        padding-bottom: 80px;
+        padding-bottom: calc(80px + env(safe-area-inset-bottom, 0));
     }
     
     .mainRow {
