@@ -270,6 +270,10 @@ socket.on('game_start_error', (message) => {
         
         <h2>🗺️ Game Mechanics</h2>
         
+        <div class="info">
+            <strong>Recent Updates:</strong> The game now features enhanced lookout tower mechanics with maximum spawning, permanent vision, and mobile-specific fog interaction.
+        </div>
+        
         <h3>Map Data Structure</h3>
         <p>The game map is represented as a flat array where each index represents a tile:</p>
         
@@ -304,7 +308,7 @@ socket.on('game_start_error', (message) => {
         <ul>
             <li><strong>Empty (-1):</strong> Neutral territory, can be captured</li>
             <li><strong>Mountain (-2):</strong> Impassable terrain</li>
-            <li><strong>Lookout Tower (-5):</strong> Defensive structure with towerDefense value</li>
+            <li><strong>Lookout Tower (-5):</strong> Defensive structure with towerDefense value (10 defense). <em>New: Maximum towers spawn with no overlapping 5-tile vision radius</em></li>
             <li><strong>City (-6):</strong> Neutral city, generates armies when captured</li>
             <li><strong>Player Territory (0+):</strong> Owned by player with that index</li>
         </ul>
@@ -321,7 +325,7 @@ socket.on('game_start_error', (message) => {
         <h3>Combat Mechanics</h3>
         <ul>
             <li><strong>Regular Combat:</strong> Attacker wins if armies > defender armies</li>
-            <li><strong>Lookout Towers:</strong> Must overcome towerDefense value to capture</li>
+            <li><strong>Lookout Towers:</strong> Must overcome towerDefense value (10) to capture. <em>New: Provides permanent vision of 5-tile radius once captured</em></li>
             <li><strong>Cities:</strong> Start with 40 armies, generate 1 army per turn when captured</li>
             <li><strong>Generals:</strong> Generate 1 army per turn, capturing eliminates player</li>
         </ul>
@@ -380,11 +384,12 @@ socket.on('game_start_error', (message) => {
         <ul>
             <li><strong>Early Game:</strong> Expand quickly to claim territory and cities</li>
             <li><strong>City Priority:</strong> Capture cities for consistent army generation</li>
-            <li><strong>Tower Strategy:</strong> Build up armies before attacking towers (30+ defense)</li>
+            <li><strong>Tower Strategy:</strong> Build up armies before attacking towers (10 defense). <em>New: Capturing towers provides permanent vision advantage</em></li>
             <li><strong>Mid Game:</strong> Build army strength and identify enemy generals</li>
             <li><strong>Late Game:</strong> Focus attacks on enemy generals</li>
             <li><strong>Defense:</strong> Keep armies near your general</li>
             <li><strong>Economy:</strong> Cities and generals provide steady army growth</li>
+            <li><strong>Vision Control:</strong> <em>New: Prioritize tower capture for permanent map vision and strategic advantage</em></li>
         </ul>
         
         <h3>Advanced Bot Features</h3>
