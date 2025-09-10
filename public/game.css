@@ -222,7 +222,6 @@ input[type="text"]:focus {
 .players-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 10px;
     font-size: 14px;
 }
 
@@ -237,6 +236,43 @@ input[type="text"]:focus {
 .players-table td {
     border: 1px solid #ddd;
     padding: 8px;
+}
+
+.players-mobile-list {
+    display: none;
+    list-style: none;
+    padding: 0;
+    margin: 10px 0;
+}
+
+.players-mobile-list .stat-group {
+    margin-bottom: 8px;
+}
+
+.players-mobile-list .stat-title {
+    font-weight: bold;
+    color: #333;
+    font-size: 12px;
+    margin-bottom: 4px;
+    padding: 2px 0;
+    border-bottom: 1px solid #ddd;
+}
+
+.players-mobile-list .player-stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 0;
+    font-size: 12px;
+}
+
+@media (max-width: 768px) {
+    .players-table {
+        display: none;
+    }
+    
+    .players-mobile-list {
+        display: block;
+    }
 }
 
 .players-table tr.current-player {
@@ -488,11 +524,94 @@ body.mobile-chat-active #chatInput {
     box-sizing: border-box;
 }
 
-body.mobile-chat-active #sendChatBtn {
-    width: calc(100% - 8px) !important;
-    height: 50px !important;
-    margin-bottom: 10px;
+#mobileGameStats {
+    display: none;
+    color: white;
+    padding: 8px;
+    margin: 0;
+}
+
+#mobileGameStats .stats-wrapper {
+    display: flex;
+    align-items: start;
+    gap: 8px;
+}
+
+#mobileGameStats .stats-wrapper.collapsed {
+    align-items: center;
+}
+
+#mobileStatsLabel {
+    color: white;
+    font-size: 14px;
+    margin-left: auto;
+    margin-right: 8px;
+    text-align: left;
+    flex: 1;
+}
+
+/* Hide mobile stats on desktop */
+@media (min-width: 769px) {
+    #mobileGameStats {
+        display: none !important;
+    }
+}
+
+#mobileStatsToggle {
+    cursor: pointer;
+    font-size: 12px;
+    padding: 4px 8px;
+    background: rgba(255,215,0,0.9);
+    color: #2c3e50;
+    font-weight: bold;
+    margin-left: auto;
+    border-radius: 3px;
+    height: fit-content;
+}
+
+.mobile-stats-table {
+    width: 100%;
+    font-size: 11px;
+    border-collapse: collapse;
+}
+
+.mobile-stats-table th,
+.mobile-stats-table td {
+    padding: 3px 6px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.3);
+}
+
+.mobile-stats-table th {
+    background: rgba(255,215,0,0.2);
+}
+
+/* Mobile game tab layout */
+body.mobile-game-active #gameCanvas {
+    width: 100vw;
+    margin: 0;
+    height: calc(100vh - 75px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+body.mobile-game-active #gameCanvas > div:first-child {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+}
+
+body.mobile-game-active #gameBoard {
+    width: 100vw;
+    height: 100%;
     box-sizing: border-box;
+}
+
+/* Show mobile stats only on mobile game tab */
+body.mobile-game-active #mobileGameStats {
+    display: block;
+    flex-shrink: 0;
 }
 
 /* Legacy media query for fallback */

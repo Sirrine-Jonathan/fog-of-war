@@ -1534,7 +1534,119 @@ function updatePlayersList() {
     
     table.appendChild(tbody);
     playersDiv.appendChild(table);
+    
+    // Update mobile game stats table
+    updateMobileGameStats(sortedPlayers);
+    
+    // Create mobile list
+    const mobileList = document.getElementById('playersMobile');
+    console.log('Mobile list element:', mobileList);
+    
+    if (!mobileList) {
+        console.error('Mobile list element not found!');
+        return;
+    }
+    
+    mobileList.innerHTML = '';
+    
+    if (sortedPlayers.length > 0) {
+        console.log('Creating mobile list content for', sortedPlayers.length, 'players');
+        
+        const statTypes = [
+            { key: 'tiles', label: 'Tiles' },
+            { key: 'armies', label: 'Armies' },
+            { key: 'density', label: 'Density' },
+            { key: 'total', label: 'Total' }
+        ];
+        
+        statTypes.forEach(statType => {
+            const statGroup = document.createElement('li');
+            statGroup.className = 'stat-group';
+            
+            const title = document.createElement('div');
+            title.className = 'stat-title';
+            title.textContent = statType.label;
+            statGroup.appendChild(title);
+            
+            sortedPlayers.forEach(player => {
+                const playerStat = document.createElement('div');
+                playerStat.className = 'player-stat';
+                
+                const playerName = document.createElement('span');
+                playerName.textContent = player.username + (player.isBot ? ' [BOT]' : '');
+                playerName.style.color = playerColors[player.index] || 'black';
+                
+                const statValue = document.createElement('span');
+                if (!gameStarted) {
+                    statValue.textContent = '-';
+                } else {
+                    if (statType.key === 'density') {
+                        const density = player.stats.tiles > 0 ? 
+                            (player.stats.armies / player.stats.tiles).toFixed(1) : '0.0';
+                        statValue.textContent = density;
+                    } else if (statType.key === 'total') {
+                        statValue.textContent = player.score;
+                    } else {
+                        statValue.textContent = player.stats[statType.key];
+                    }
+                }
+                
+                playerStat.appendChild(playerName);
+                playerStat.appendChild(statValue);
+                statGroup.appendChild(playerStat);
+            });
+            
+            mobileList.appendChild(statGroup);
+        });
+    }
 }
+
+function updateMobileGameStats(sortedPlayers) {
+    console.log('Updating mobile game stats for', sortedPlayers.length, 'players');
+    const tbody = document.querySelector('#mobileStatsTable tbody');
+    console.log('Mobile stats tbody element:', tbody);
+    
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    sortedPlayers.forEach(player => {
+        console.log('Adding mobile stats row for player:', player.username);
+        const row = document.createElement('tr');
+        
+        const nameCell = document.createElement('td');
+        nameCell.textContent = player.username + (player.isBot ? ' [BOT]' : '');
+        nameCell.style.color = playerColors[player.index] || 'white';
+        
+        const armiesCell = document.createElement('td');
+        armiesCell.textContent = gameStarted ? player.stats.armies : '-';
+        
+        const tilesCell = document.createElement('td');
+        tilesCell.textContent = gameStarted ? player.stats.tiles : '-';
+        
+        row.appendChild(nameCell);
+        row.appendChild(armiesCell);
+        row.appendChild(tilesCell);
+        tbody.appendChild(row);
+    });
+}
+
+// Toggle mobile stats visibility
+document.addEventListener('DOMContentLoaded', () => {
+    const toggle = document.getElementById('mobileStatsToggle');
+    const table = document.getElementById('mobileStatsTable');
+    const label = document.getElementById('mobileStatsLabel');
+    const wrapper = document.querySelector('#mobileGameStats .stats-wrapper');
+    let isVisible = true;
+    
+    toggle.addEventListener('click', () => {
+        isVisible = !isVisible;
+        table.style.display = isVisible ? 'table' : 'none';
+        label.style.display = isVisible ? 'none' : 'inline';
+        wrapper.classList.toggle('collapsed', !isVisible);
+        toggle.textContent = isVisible ? '▲' : '▼';
+    });
+});
 
 function transferHost(targetPlayerIndex) {
     const targetSocketId = playerSocketMap.get(targetPlayerIndex.toString());

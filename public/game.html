@@ -23,6 +23,22 @@
                 <div>
                     <canvas id="gameBoard" width="800" height="600"></canvas>
                 </div>
+                <div id="mobileGameStats">
+                    <div class="stats-wrapper">
+                        <table id="mobileStatsTable" class="mobile-stats-table">
+                            <thead>
+                                <tr>
+                                    <th>Player</th>
+                                    <th>Armies</th>
+                                    <th>Tiles</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                        <span id="mobileStatsLabel" style="display: none;">Show game stats</span>
+                        <div id="mobileStatsToggle">▲</div>
+                    </div>
+                </div>
                 <button id="mobileStartBtn" class="btn">Start Game</button>
                 <div id="gameOverOverlay">
                     <div class="game-over-text">Game Over</div>
@@ -49,6 +65,7 @@
                             <div style="font-size: 14px; color: #666;">Game has ended. Players can rejoin for the next game.</div>
                         </div>
                         <div id="players"></div>
+                        <ul id="playersMobile" class="players-mobile-list"></ul>
                     </div>
                 </div>
                 
