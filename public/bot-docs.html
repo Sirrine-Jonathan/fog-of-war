@@ -91,7 +91,14 @@ socket.on('game_update', (data) => {
     // Update game state using patch function
     cities = patch(cities, data.cities_diff);
     gameMap = patch(gameMap, data.map_diff);
-    generals = data.generals;
+    generals = data.generals; // Only shows your general + discovered enemy generals
+    
+    // Check for newly discovered enemy generals
+    for (let i = 0; i < generals.length; i++) {
+        if (i !== playerIndex && generals[i] !== -1) {
+            console.log(`Enemy general discovered at position ${generals[i]}!`);
+        }
+    }
     
     // Make a move
     makeMove();
@@ -296,7 +303,7 @@ socket.on('game_start_error', (message) => {
             </tr>
             <tr>
                 <td><code>generals</code></td>
-                <td>General positions array (index = player, value = tile position)</td>
+                <td>General positions array with fog of war - only shows your own general and discovered enemy generals (index = player, value = tile position or -1 if unknown)</td>
             </tr>
             <tr>
                 <td><code>cities</code></td>
@@ -327,7 +334,7 @@ socket.on('game_start_error', (message) => {
             <li><strong>Regular Combat:</strong> Attacker wins if armies > defender armies</li>
             <li><strong>Lookout Towers:</strong> Must overcome towerDefense value (10) to capture. <em>New: Provides permanent vision of 5-tile radius once captured</em></li>
             <li><strong>Cities:</strong> Start with 40 armies, generate 1 army per turn when captured</li>
-            <li><strong>Generals:</strong> Generate 1 army per turn, capturing eliminates player</li>
+            <li><strong>Generals:</strong> Generate 1 army per turn, capturing eliminates player. <em>Enemy generals are hidden by fog of war until discovered!</em></li>
         </ul>
         
         <h3>Army Generation</h3>
@@ -335,6 +342,14 @@ socket.on('game_start_error', (message) => {
             <li><strong>Generals:</strong> +1 army every turn</li>
             <li><strong>Cities:</strong> +1 army every turn when owned</li>
             <li><strong>Regular Territory:</strong> +1 army every 25 turns</li>
+        </ul>
+        
+        <h3>Fog of War System</h3>
+        <ul>
+            <li><strong>Enemy Generals:</strong> Hidden until discovered through combat or adjacent territory</li>
+            <li><strong>Discovery Methods:</strong> Attack enemy territory, expand adjacent to enemy generals, or capture enemy tiles</li>
+            <li><strong>Strategic Importance:</strong> Must actively search for and discover enemy positions</li>
+            <li><strong>Fair Play:</strong> All players (bots and humans) have equal information - no cheating!</li>
         </ul>
         
         <h3>Victory Conditions</h3>
@@ -385,11 +400,12 @@ socket.on('game_start_error', (message) => {
             <li><strong>Early Game:</strong> Expand quickly to claim territory and cities</li>
             <li><strong>City Priority:</strong> Capture cities for consistent army generation</li>
             <li><strong>Tower Strategy:</strong> Build up armies before attacking towers (10 defense). <em>New: Capturing towers provides permanent vision advantage</em></li>
-            <li><strong>Mid Game:</strong> Build army strength and identify enemy generals</li>
-            <li><strong>Late Game:</strong> Focus attacks on enemy generals</li>
+            <li><strong>Mid Game:</strong> Build army strength and discover enemy generals through exploration and combat</li>
+            <li><strong>Late Game:</strong> Focus attacks on discovered enemy generals</li>
             <li><strong>Defense:</strong> Keep armies near your general</li>
             <li><strong>Economy:</strong> Cities and generals provide steady army growth</li>
             <li><strong>Vision Control:</strong> <em>New: Prioritize tower capture for permanent map vision and strategic advantage</em></li>
+            <li><strong>Enemy Discovery:</strong> <em>Critical: Actively search for enemy generals through expansion and combat - they're hidden by fog of war!</em></li>
         </ul>
         
         <h3>Advanced Bot Features</h3>
