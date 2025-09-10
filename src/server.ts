@@ -28,6 +28,67 @@ function parseMapData(mapData: number[]): any {
   };
 }
 
+function getPersonalizedGenerals(allGenerals: number[], playerIndex: number, gameState: any): number[] {
+  const personalizedGenerals = new Array(allGenerals.length).fill(-1);
+  
+  // Player always knows their own general position
+  personalizedGenerals[playerIndex] = allGenerals[playerIndex];
+  
+  // Check if player can see enemy generals through vision or discovery
+  for (let i = 0; i < allGenerals.length; i++) {
+    if (i === playerIndex) continue; // Skip own general
+    
+    const enemyGeneralPos = allGenerals[i];
+    if (enemyGeneralPos === -1) continue; // General doesn't exist or is eliminated
+    
+    // Check if enemy general is visible (on player's territory or adjacent to it)
+    if (isPositionVisibleToPlayer(enemyGeneralPos, playerIndex, gameState)) {
+      personalizedGenerals[i] = enemyGeneralPos;
+    }
+  }
+  
+  return personalizedGenerals;
+}
+
+function isPositionVisibleToPlayer(position: number, playerIndex: number, gameState: any): boolean {
+  // Enemy general is visible if:
+  // 1. It's on player's territory (captured)
+  // 2. It's adjacent to player's territory (discovered through combat/vision)
+  
+  if (gameState.terrain[position] === playerIndex) {
+    return true; // On player's territory
+  }
+  
+  // Check adjacent tiles for player's territory
+  const width = gameState.width;
+  const height = gameState.height;
+  const x = position % width;
+  const y = Math.floor(position / width);
+  
+  const adjacent = [
+    position - 1,     // Left
+    position + 1,     // Right  
+    position - width, // Up
+    position + width  // Down
+  ];
+  
+  for (const adj of adjacent) {
+    if (adj >= 0 && adj < gameState.terrain.length) {
+      const adjX = adj % width;
+      const adjY = Math.floor(adj / width);
+      
+      // Check bounds
+      if (Math.abs(adjX - x) <= 1 && Math.abs(adjY - y) <= 1) {
+        if (gameState.terrain[adj] === playerIndex) {
+          return true; // Adjacent to player's territory
+        }
+      }
+    }
+  }
+  
+  return false;
+}
+
 const games = new Map<string, Game>();
 const playerRooms = new Map<string, string>();
 const gameHosts = new Map<string, string>(); // gameId -> socketId of host
@@ -547,13 +608,34 @@ io.on('connection', (socket) => {
         });
       }
 
-      // Send initial map state
+      // Send initial map state to each player individually with proper fog of war
       console.log(`   Broadcasting initial game_update to room ${gameId}`);
-      io.to(gameId).emit('game_update', {
-        cities_diff: [0, gameState.cities.length, ...gameState.cities],
-        map_diff: [0, mapData.length, ...mapData],
-        generals: gameState.generals,
-        players: gameState.players
+      
+      // Send personalized updates to each player
+      gameState.players.forEach((player, playerIndex) => {
+        const playerSocket = [...io.sockets.sockets.values()].find(s => s.data.userId === player.id);
+        if (playerSocket) {
+          const personalizedGenerals = getPersonalizedGenerals(gameState.generals, playerIndex, gameState);
+          playerSocket.emit('game_update', {
+            cities_diff: [0, gameState.cities.length, ...gameState.cities],
+            map_diff: [0, mapData.length, ...mapData],
+            generals: personalizedGenerals,
+            players: gameState.players
+          });
+        }
+      });
+      
+      // Send to viewers (they can see everything)
+      const viewerSockets = [...io.sockets.sockets.values()].filter(s => 
+        s.rooms.has(gameId) && !gameState.players.some(p => p.id === s.data.userId)
+      );
+      viewerSockets.forEach(socket => {
+        socket.emit('game_update', {
+          cities_diff: [0, gameState.cities.length, ...gameState.cities],
+          map_diff: [0, mapData.length, ...mapData],
+          generals: gameState.generals, // Viewers see all generals
+          players: gameState.players
+        });
       });
 
       // Start sending updates
@@ -614,12 +696,34 @@ io.on('connection', (socket) => {
         }
 
         const mapData = game.getMapData();
-        io.to(gameId).emit('game_update', {
-          cities_diff: [0, gameState.cities.length, ...gameState.cities],
-          lookoutTowers_diff: [0, gameState.lookoutTowers.length, ...gameState.lookoutTowers],
-          map_diff: [0, mapData.length, ...mapData],
-          generals: gameState.generals,
-          players: gameState.players
+        
+        // Send personalized updates to each player with fog of war
+        gameState.players.forEach((player, playerIndex) => {
+          const playerSocket = [...io.sockets.sockets.values()].find(s => s.data.userId === player.id);
+          if (playerSocket) {
+            const personalizedGenerals = getPersonalizedGenerals(gameState.generals, playerIndex, gameState);
+            playerSocket.emit('game_update', {
+              cities_diff: [0, gameState.cities.length, ...gameState.cities],
+              lookoutTowers_diff: [0, gameState.lookoutTowers.length, ...gameState.lookoutTowers],
+              map_diff: [0, mapData.length, ...mapData],
+              generals: personalizedGenerals,
+              players: gameState.players
+            });
+          }
+        });
+        
+        // Send full data to viewers
+        const viewerSockets = [...io.sockets.sockets.values()].filter(s => 
+          s.rooms.has(gameId) && !gameState.players.some(p => p.id === s.data.userId)
+        );
+        viewerSockets.forEach(socket => {
+          socket.emit('game_update', {
+            cities_diff: [0, gameState.cities.length, ...gameState.cities],
+            lookoutTowers_diff: [0, gameState.lookoutTowers.length, ...gameState.lookoutTowers],
+            map_diff: [0, mapData.length, ...mapData],
+            generals: gameState.generals, // Viewers see all generals
+            players: gameState.players
+          });
         });
       }, 100);
     } else {

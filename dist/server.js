@@ -27,6 +27,56 @@ function parseMapData(mapData) {
         armies
     };
 }
+function getPersonalizedGenerals(allGenerals, playerIndex, gameState) {
+    const personalizedGenerals = new Array(allGenerals.length).fill(-1);
+    // Player always knows their own general position
+    personalizedGenerals[playerIndex] = allGenerals[playerIndex];
+    // Check if player can see enemy generals through vision or discovery
+    for (let i = 0; i < allGenerals.length; i++) {
+        if (i === playerIndex)
+            continue; // Skip own general
+        const enemyGeneralPos = allGenerals[i];
+        if (enemyGeneralPos === -1)
+            continue; // General doesn't exist or is eliminated
+        // Check if enemy general is visible (on player's territory or adjacent to it)
+        if (isPositionVisibleToPlayer(enemyGeneralPos, playerIndex, gameState)) {
+            personalizedGenerals[i] = enemyGeneralPos;
+        }
+    }
+    return personalizedGenerals;
+}
+function isPositionVisibleToPlayer(position, playerIndex, gameState) {
+    // Enemy general is visible if:
+    // 1. It's on player's territory (captured)
+    // 2. It's adjacent to player's territory (discovered through combat/vision)
+    if (gameState.terrain[position] === playerIndex) {
+        return true; // On player's territory
+    }
+    // Check adjacent tiles for player's territory
+    const width = gameState.width;
+    const height = gameState.height;
+    const x = position % width;
+    const y = Math.floor(position / width);
+    const adjacent = [
+        position - 1, // Left
+        position + 1, // Right  
+        position - width, // Up
+        position + width // Down
+    ];
+    for (const adj of adjacent) {
+        if (adj >= 0 && adj < gameState.terrain.length) {
+            const adjX = adj % width;
+            const adjY = Math.floor(adj / width);
+            // Check bounds
+            if (Math.abs(adjX - x) <= 1 && Math.abs(adjY - y) <= 1) {
+                if (gameState.terrain[adj] === playerIndex) {
+                    return true; // Adjacent to player's territory
+                }
+            }
+        }
+    }
+    return false;
+}
 const games = new Map();
 const playerRooms = new Map();
 const gameHosts = new Map(); // gameId -> socketId of host
@@ -360,15 +410,27 @@ io.on('connection', (socket) => {
             // Send updated game info to ensure host status is correct
             await sendGameInfo(gameId);
         }
-        // Check and assign host using priority system if no host exists
+        // Check and assign host using priority system
         console.log(`🔍 Host check: gameId=${gameId}, hasHost=${gameHosts.has(gameId)}, isBot=${botDetected}, username=${username}, isViewer=${isViewer}`);
-        if (!gameHosts.has(gameId) && !botDetected && !username.includes('Viewer')) {
-            // Assign host based on priority: players first, then viewers
-            if (!isViewer || (isViewer && !(await findBestHost(gameId)))) {
+        if (!botDetected) {
+            if (!gameHosts.has(gameId)) {
+                // No host exists - assign this client as host
                 gameHosts.set(gameId, socket.id);
                 socket.data.isHost = true;
                 console.log(`👑 ${username} assigned as host for game ${gameId} (${isViewer ? 'viewer' : 'player'} host)`);
                 await sendGameInfo(gameId);
+            }
+            else if (!isViewer) {
+                // Player joining when viewer is host - auto-transfer
+                const currentHostId = gameHosts.get(gameId);
+                const currentHostSocket = currentHostId ? (await io.in(gameId).fetchSockets()).find(s => s.id === currentHostId) : null;
+                if (currentHostSocket?.data.isViewer) {
+                    gameHosts.set(gameId, socket.id);
+                    currentHostSocket.data.isHost = false;
+                    socket.data.isHost = true;
+                    console.log(`👑 Host auto-transferred from viewer ${currentHostSocket.data.username} to player ${username}`);
+                    await sendGameInfo(gameId);
+                }
             }
         }
         else {
@@ -380,15 +442,16 @@ io.on('connection', (socket) => {
     socket.on('transfer_host', async (gameId, targetSocketId) => {
         if (socket.data.isHost && gameHosts.get(gameId) === socket.id) {
             const targetSocket = (await io.in(gameId).fetchSockets()).find(s => s.id === targetSocketId);
-            if (targetSocket && !isBot(targetSocket, targetSocket.data.userId || '', targetSocket.data.username || '') && !targetSocket.data.username?.includes('Viewer')) {
+            // Allow transfer to players only (not viewers), but from any host type
+            if (targetSocket && !isBot(targetSocket, targetSocket.data.userId || '', targetSocket.data.username || '') && !targetSocket.data.isViewer) {
                 gameHosts.set(gameId, targetSocketId);
                 socket.data.isHost = false;
                 targetSocket.data.isHost = true;
-                console.log(`👑 Host transferred from ${socket.data.username} to ${targetSocket.data.username} (${targetSocket.data.isViewer ? 'viewer' : 'player'})`);
+                console.log(`👑 Host transferred from ${socket.data.username} to ${targetSocket.data.username}`);
                 await sendGameInfo(gameId);
             }
             else {
-                console.log(`❌ Invalid host transfer target: ${targetSocket?.data.username || 'unknown'} (bot detected or invalid)`);
+                console.log(`❌ Invalid host transfer target: ${targetSocket?.data.username || 'unknown'} (must be a player)`);
             }
         }
     });
@@ -450,13 +513,30 @@ io.on('connection', (socket) => {
                     mapData: mapData
                 });
             }
-            // Send initial map state
+            // Send initial map state to each player individually with proper fog of war
             console.log(`   Broadcasting initial game_update to room ${gameId}`);
-            io.to(gameId).emit('game_update', {
-                cities_diff: [0, gameState.cities.length, ...gameState.cities],
-                map_diff: [0, mapData.length, ...mapData],
-                generals: gameState.generals,
-                players: gameState.players
+            // Send personalized updates to each player
+            gameState.players.forEach((player, playerIndex) => {
+                const playerSocket = [...io.sockets.sockets.values()].find(s => s.data.userId === player.id);
+                if (playerSocket) {
+                    const personalizedGenerals = getPersonalizedGenerals(gameState.generals, playerIndex, gameState);
+                    playerSocket.emit('game_update', {
+                        cities_diff: [0, gameState.cities.length, ...gameState.cities],
+                        map_diff: [0, mapData.length, ...mapData],
+                        generals: personalizedGenerals,
+                        players: gameState.players
+                    });
+                }
+            });
+            // Send to viewers (they can see everything)
+            const viewerSockets = [...io.sockets.sockets.values()].filter(s => s.rooms.has(gameId) && !gameState.players.some(p => p.id === s.data.userId));
+            viewerSockets.forEach(socket => {
+                socket.emit('game_update', {
+                    cities_diff: [0, gameState.cities.length, ...gameState.cities],
+                    map_diff: [0, mapData.length, ...mapData],
+                    generals: gameState.generals, // Viewers see all generals
+                    players: gameState.players
+                });
             });
             // Start sending updates
             const updateInterval = setInterval(async () => {
@@ -508,12 +588,30 @@ io.on('connection', (socket) => {
                     return;
                 }
                 const mapData = game.getMapData();
-                io.to(gameId).emit('game_update', {
-                    cities_diff: [0, gameState.cities.length, ...gameState.cities],
-                    lookoutTowers_diff: [0, gameState.lookoutTowers.length, ...gameState.lookoutTowers],
-                    map_diff: [0, mapData.length, ...mapData],
-                    generals: gameState.generals,
-                    players: gameState.players
+                // Send personalized updates to each player with fog of war
+                gameState.players.forEach((player, playerIndex) => {
+                    const playerSocket = [...io.sockets.sockets.values()].find(s => s.data.userId === player.id);
+                    if (playerSocket) {
+                        const personalizedGenerals = getPersonalizedGenerals(gameState.generals, playerIndex, gameState);
+                        playerSocket.emit('game_update', {
+                            cities_diff: [0, gameState.cities.length, ...gameState.cities],
+                            lookoutTowers_diff: [0, gameState.lookoutTowers.length, ...gameState.lookoutTowers],
+                            map_diff: [0, mapData.length, ...mapData],
+                            generals: personalizedGenerals,
+                            players: gameState.players
+                        });
+                    }
+                });
+                // Send full data to viewers
+                const viewerSockets = [...io.sockets.sockets.values()].filter(s => s.rooms.has(gameId) && !gameState.players.some(p => p.id === s.data.userId));
+                viewerSockets.forEach(socket => {
+                    socket.emit('game_update', {
+                        cities_diff: [0, gameState.cities.length, ...gameState.cities],
+                        lookoutTowers_diff: [0, gameState.lookoutTowers.length, ...gameState.lookoutTowers],
+                        map_diff: [0, mapData.length, ...mapData],
+                        generals: gameState.generals, // Viewers see all generals
+                        players: gameState.players
+                    });
                 });
             }, 100);
         }
