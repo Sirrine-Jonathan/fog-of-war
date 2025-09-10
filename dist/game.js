@@ -158,19 +158,30 @@ class Game {
         console.log(`   Cities spawned: ${this.state.cities.length}`);
     }
     spawnLookoutTowers() {
-        const towerCount = Math.max(2, this.state.players.length * 2);
-        console.log(`🗼 Spawning ${towerCount} lookout towers...`);
-        for (let i = 0; i < towerCount; i++) {
+        const TOWER_SIGHT_RADIUS = 5;
+        const MIN_TOWER_DISTANCE = TOWER_SIGHT_RADIUS * 2 + 1; // 11 tiles apart
+        console.log(`🗼 Spawning maximum lookout towers with ${MIN_TOWER_DISTANCE} tile separation...`);
+        const placedTowers = [];
+        const maxAttempts = this.state.width * this.state.height;
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
             try {
                 const pos = this.findEmptyPosition();
-                this.state.lookoutTowers.push(pos);
-                this.state.terrain[pos] = types_1.TILE_LOOKOUT_TOWER;
-                this.state.towerDefense[pos] = 10;
-                this.state.armies[pos] = 0;
-                console.log(`   Tower ${i} placed at position ${pos}`);
+                // Check if this position conflicts with existing towers
+                const conflicts = placedTowers.some(existingPos => {
+                    const distance = this.calculateDistance(pos, existingPos);
+                    return distance < MIN_TOWER_DISTANCE;
+                });
+                if (!conflicts) {
+                    placedTowers.push(pos);
+                    this.state.lookoutTowers.push(pos);
+                    this.state.terrain[pos] = types_1.TILE_LOOKOUT_TOWER;
+                    this.state.towerDefense[pos] = 10;
+                    this.state.armies[pos] = 0;
+                    console.log(`   Tower ${placedTowers.length} placed at position ${pos}`);
+                }
             }
             catch (error) {
-                console.warn(`   Could not place lookout tower ${i}, map may be full`);
+                console.warn(`   Could not find more valid tower positions after ${attempt} attempts`);
                 break;
             }
         }
@@ -185,6 +196,13 @@ class Game {
                 }
             }
         });
+    }
+    calculateDistance(pos1, pos2) {
+        const row1 = Math.floor(pos1 / this.state.width);
+        const col1 = pos1 % this.state.width;
+        const row2 = Math.floor(pos2 / this.state.width);
+        const col2 = pos2 % this.state.width;
+        return Math.max(Math.abs(row1 - row2), Math.abs(col1 - col2));
     }
     processTurn() {
         this.state.turn++;

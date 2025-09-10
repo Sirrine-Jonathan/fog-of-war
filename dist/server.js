@@ -66,15 +66,24 @@ function isBot(socket, userId, username) {
     });
     return result;
 }
-// Helper function to find next eligible host (non-bot, non-viewer)
-async function findEligibleHost(gameId, excludeSocketId) {
+// Helper function to find best available host using priority system
+async function findBestHost(gameId, excludeSocketId) {
     const sockets = await io.in(gameId).fetchSockets();
-    return sockets.find(s => s.id !== excludeSocketId &&
+    // Priority 1: Non-bot players (existing behavior)
+    const playerHost = sockets.find(s => s.id !== excludeSocketId &&
         !s.data.isViewer &&
         s.data.playerIndex !== undefined &&
         s.data.playerIndex >= 0 &&
         !isBot(s, s.data.userId || '', s.data.username || '') &&
         !s.data.username?.includes('Viewer'));
+    if (playerHost) {
+        return playerHost;
+    }
+    // Priority 2: Non-bot viewers/spectators (new behavior for bot-only games)
+    const viewerHost = sockets.find(s => s.id !== excludeSocketId &&
+        !isBot(s, s.data.userId || '', s.data.username || '') &&
+        !s.data.username?.includes('Viewer'));
+    return viewerHost;
 }
 // Helper function to calculate territory and check for milestones
 function checkTerritoryMilestones(gameId, game) {
@@ -351,13 +360,16 @@ io.on('connection', (socket) => {
             // Send updated game info to ensure host status is correct
             await sendGameInfo(gameId);
         }
-        // Always check and assign host if none exists and this is a non-bot, non-viewer
-        console.log(`🔍 Host check: gameId=${gameId}, hasHost=${gameHosts.has(gameId)}, isBot=${botDetected}, username=${username}`);
+        // Check and assign host using priority system if no host exists
+        console.log(`🔍 Host check: gameId=${gameId}, hasHost=${gameHosts.has(gameId)}, isBot=${botDetected}, username=${username}, isViewer=${isViewer}`);
         if (!gameHosts.has(gameId) && !botDetected && !username.includes('Viewer')) {
-            gameHosts.set(gameId, socket.id);
-            socket.data.isHost = true;
-            console.log(`👑 ${username} assigned as host for game ${gameId} (no existing host)`);
-            await sendGameInfo(gameId);
+            // Assign host based on priority: players first, then viewers
+            if (!isViewer || (isViewer && !(await findBestHost(gameId)))) {
+                gameHosts.set(gameId, socket.id);
+                socket.data.isHost = true;
+                console.log(`👑 ${username} assigned as host for game ${gameId} (${isViewer ? 'viewer' : 'player'} host)`);
+                await sendGameInfo(gameId);
+            }
         }
         else {
             socket.data.isHost = (gameHosts.get(gameId) === socket.id);
@@ -368,15 +380,15 @@ io.on('connection', (socket) => {
     socket.on('transfer_host', async (gameId, targetSocketId) => {
         if (socket.data.isHost && gameHosts.get(gameId) === socket.id) {
             const targetSocket = (await io.in(gameId).fetchSockets()).find(s => s.id === targetSocketId);
-            if (targetSocket && !isBot(targetSocket, targetSocket.data.userId || '', targetSocket.data.username || '')) {
+            if (targetSocket && !isBot(targetSocket, targetSocket.data.userId || '', targetSocket.data.username || '') && !targetSocket.data.username?.includes('Viewer')) {
                 gameHosts.set(gameId, targetSocketId);
                 socket.data.isHost = false;
                 targetSocket.data.isHost = true;
-                console.log(`👑 Host transferred from ${socket.data.username} to ${targetSocket.data.username}`);
+                console.log(`👑 Host transferred from ${socket.data.username} to ${targetSocket.data.username} (${targetSocket.data.isViewer ? 'viewer' : 'player'})`);
                 await sendGameInfo(gameId);
             }
             else {
-                console.log(`❌ Invalid host transfer target: ${targetSocket?.data.username || 'unknown'} (bot detected)`);
+                console.log(`❌ Invalid host transfer target: ${targetSocket?.data.username || 'unknown'} (bot detected or invalid)`);
             }
         }
     });
@@ -658,21 +670,20 @@ io.on('connection', (socket) => {
     });
     // Helper to transfer host when current host disconnects
     async function transferHostToNextPlayer(gameId) {
-        const nextHost = await findEligibleHost(gameId, socket.id);
+        const nextHost = await findBestHost(gameId, socket.id);
         if (nextHost) {
             gameHosts.set(gameId, nextHost.id);
             nextHost.data.isHost = true;
-            console.log(`👑 Host auto-transferred to ${nextHost.data.username}`);
+            console.log(`👑 Host auto-transferred to ${nextHost.data.username} (${nextHost.data.isViewer ? 'viewer' : 'player'})`);
             // Send system message for host transfer
             sendSystemMessage(gameId, `👑 ${nextHost.data.username} is now the host`);
         }
         else {
             gameHosts.delete(gameId);
-            console.log(`👑 No eligible human host found for game ${gameId} - game may be abandoned`);
+            console.log(`👑 No eligible host found for game ${gameId} - game may be abandoned`);
             // Check if game should be cleaned up (no connected human players)
             const sockets = await io.in(gameId).fetchSockets();
-            const connectedHumans = sockets.filter(s => !s.data.isViewer &&
-                s.data.playerIndex !== undefined &&
+            const connectedHumans = sockets.filter(s => s.data.playerIndex !== undefined &&
                 s.data.playerIndex >= 0 &&
                 !isBot(s, s.data.userId || '', s.data.username || ''));
             if (connectedHumans.length === 0) {

@@ -1431,7 +1431,7 @@ function updatePlayersList() {
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
     
-    const headers = ['Player', 'Tiles', 'Armies', 'Total'];
+    const headers = ['Player', 'Tiles', 'Armies', 'Density', 'Total'];
     if (isHost && !gameStarted) {
         headers.push('Actions');
     }
@@ -1498,6 +1498,15 @@ function updatePlayersList() {
         armiesCell.textContent = gameStarted ? player.stats.armies : '-';
         armiesCell.style.textAlign = 'center';
         row.appendChild(armiesCell);
+        
+        // Density cell
+        const densityCell = document.createElement('td');
+        const density = player.stats.tiles > 0 ? 
+            (player.stats.armies / player.stats.tiles).toFixed(1) : '0.0';
+        densityCell.textContent = gameStarted ? density : '-';
+        densityCell.style.textAlign = 'center';
+        densityCell.style.fontWeight = 'bold';
+        row.appendChild(densityCell);
         
         // Total cell
         const totalCell = document.createElement('td');

@@ -75,10 +75,12 @@ function isBot(socket: any, userId: string, username: string): boolean {
   return result;
 }
 
-// Helper function to find next eligible host (non-bot, non-viewer)
-async function findEligibleHost(gameId: string, excludeSocketId?: string): Promise<any> {
+// Helper function to find best available host using priority system
+async function findBestHost(gameId: string, excludeSocketId?: string): Promise<any> {
   const sockets = await io.in(gameId).fetchSockets();
-  return sockets.find(s => 
+  
+  // Priority 1: Non-bot players (existing behavior)
+  const playerHost = sockets.find(s => 
     s.id !== excludeSocketId &&
     !s.data.isViewer &&
     s.data.playerIndex !== undefined &&
@@ -86,6 +88,19 @@ async function findEligibleHost(gameId: string, excludeSocketId?: string): Promi
     !isBot(s, s.data.userId || '', s.data.username || '') &&
     !s.data.username?.includes('Viewer')
   );
+  
+  if (playerHost) {
+    return playerHost;
+  }
+  
+  // Priority 2: Non-bot viewers/spectators (new behavior for bot-only games)
+  const viewerHost = sockets.find(s => 
+    s.id !== excludeSocketId &&
+    !isBot(s, s.data.userId || '', s.data.username || '') &&
+    !s.data.username?.includes('Viewer')
+  );
+  
+  return viewerHost;
 }
 
 // Helper function to calculate territory and check for milestones
@@ -415,13 +430,29 @@ io.on('connection', (socket) => {
       await sendGameInfo(gameId);
     }
     
-    // Always check and assign host if none exists and this is a non-bot, non-viewer
-    console.log(`🔍 Host check: gameId=${gameId}, hasHost=${gameHosts.has(gameId)}, isBot=${botDetected}, username=${username}`);
-    if (!gameHosts.has(gameId) && !botDetected && !username.includes('Viewer')) {
-      gameHosts.set(gameId, socket.id);
-      socket.data.isHost = true;
-      console.log(`👑 ${username} assigned as host for game ${gameId} (no existing host)`);
-      await sendGameInfo(gameId);
+    // Check and assign host using priority system
+    console.log(`🔍 Host check: gameId=${gameId}, hasHost=${gameHosts.has(gameId)}, isBot=${botDetected}, username=${username}, isViewer=${isViewer}`);
+    
+    if (!botDetected) {
+      if (!gameHosts.has(gameId)) {
+        // No host exists - assign this client as host
+        gameHosts.set(gameId, socket.id);
+        socket.data.isHost = true;
+        console.log(`👑 ${username} assigned as host for game ${gameId} (${isViewer ? 'viewer' : 'player'} host)`);
+        await sendGameInfo(gameId);
+      } else if (!isViewer) {
+        // Player joining when viewer is host - auto-transfer
+        const currentHostId = gameHosts.get(gameId);
+        const currentHostSocket = currentHostId ? (await io.in(gameId).fetchSockets()).find(s => s.id === currentHostId) : null;
+        
+        if (currentHostSocket?.data.isViewer) {
+          gameHosts.set(gameId, socket.id);
+          currentHostSocket.data.isHost = false;
+          socket.data.isHost = true;
+          console.log(`👑 Host auto-transferred from viewer ${currentHostSocket.data.username} to player ${username}`);
+          await sendGameInfo(gameId);
+        }
+      }
     } else {
       socket.data.isHost = (gameHosts.get(gameId) === socket.id);
       console.log(`🔍 Host not assigned: hasHost=${gameHosts.has(gameId)}, currentHost=${gameHosts.get(gameId)}, socketId=${socket.id}`);
@@ -432,7 +463,8 @@ io.on('connection', (socket) => {
   socket.on('transfer_host', async (gameId: string, targetSocketId: string) => {
     if (socket.data.isHost && gameHosts.get(gameId) === socket.id) {
       const targetSocket = (await io.in(gameId).fetchSockets()).find(s => s.id === targetSocketId);
-      if (targetSocket && !isBot(targetSocket, targetSocket.data.userId || '', targetSocket.data.username || '')) {
+      // Allow transfer to players only (not viewers), but from any host type
+      if (targetSocket && !isBot(targetSocket, targetSocket.data.userId || '', targetSocket.data.username || '') && !targetSocket.data.isViewer) {
         gameHosts.set(gameId, targetSocketId);
         socket.data.isHost = false;
         targetSocket.data.isHost = true;
@@ -440,7 +472,7 @@ io.on('connection', (socket) => {
         console.log(`👑 Host transferred from ${socket.data.username} to ${targetSocket.data.username}`);
         await sendGameInfo(gameId);
       } else {
-        console.log(`❌ Invalid host transfer target: ${targetSocket?.data.username || 'unknown'} (bot detected)`);
+        console.log(`❌ Invalid host transfer target: ${targetSocket?.data.username || 'unknown'} (must be a player)`);
       }
     }
   });
@@ -770,23 +802,22 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
 
   // Helper to transfer host when current host disconnects
   async function transferHostToNextPlayer(gameId: string) {
-    const nextHost = await findEligibleHost(gameId, socket.id);
+    const nextHost = await findBestHost(gameId, socket.id);
     
     if (nextHost) {
       gameHosts.set(gameId, nextHost.id);
       nextHost.data.isHost = true;
-      console.log(`👑 Host auto-transferred to ${nextHost.data.username}`);
+      console.log(`👑 Host auto-transferred to ${nextHost.data.username} (${nextHost.data.isViewer ? 'viewer' : 'player'})`);
       
       // Send system message for host transfer
       sendSystemMessage(gameId, `👑 ${nextHost.data.username} is now the host`);
     } else {
       gameHosts.delete(gameId);
-      console.log(`👑 No eligible human host found for game ${gameId} - game may be abandoned`);
+      console.log(`👑 No eligible host found for game ${gameId} - game may be abandoned`);
       
       // Check if game should be cleaned up (no connected human players)
       const sockets = await io.in(gameId).fetchSockets();
       const connectedHumans = sockets.filter(s => 
-        !s.data.isViewer && 
         s.data.playerIndex !== undefined && 
         s.data.playerIndex >= 0 &&
         !isBot(s, s.data.userId || '', s.data.username || '')
