@@ -1667,11 +1667,37 @@ function transferHost(targetPlayerIndex) {
 }
 
 // Button handlers
-document.getElementById('joinBtn').addEventListener('click', joinAsPlayer);
-document.getElementById('leaveBtn').addEventListener('click', leaveGame);
-document.getElementById('startBtn').addEventListener('click', startGame);
-document.getElementById('mobileStartBtn').addEventListener('click', startGame);
-document.getElementById('copyUrlBtn').addEventListener('click', copyGameUrl);
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, setting up event listeners...');
+    
+    document.getElementById('joinBtn').addEventListener('click', joinAsPlayer);
+    document.getElementById('leaveBtn').addEventListener('click', leaveGame);
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('mobileStartBtn').addEventListener('click', startGame);
+    document.getElementById('copyUrlBtn').addEventListener('click', copyGameUrl);
+    
+    // Bot invite buttons
+    console.log('Looking for bot buttons...');
+    const blobBtn = document.getElementById('inviteBlobBtn');
+    const arrowBtn = document.getElementById('inviteArrowBtn');
+    
+    console.log('Blob button:', blobBtn);
+    console.log('Arrow button:', arrowBtn);
+    
+    if (blobBtn) {
+        blobBtn.addEventListener('click', () => inviteBot('blob'));
+        console.log('Blob button event listener attached');
+    } else {
+        console.error('Blob button not found');
+    }
+    
+    if (arrowBtn) {
+        arrowBtn.addEventListener('click', () => inviteBot('arrow'));
+        console.log('Arrow button event listener attached');
+    } else {
+        console.error('Arrow button not found');
+    }
+});
 
 function joinAsPlayer() {
     if (playerIndex >= 0) return;
@@ -1734,6 +1760,21 @@ function copyGameUrl() {
         }, 2000);
     });
 }
+
+function inviteBot(botType) {
+    console.log('Inviting bot:', botType, 'to room:', roomId);
+    socket.emit('invite_bot', roomId, botType);
+}
+
+// Bot invite result handlers
+socket.on('bot_invite_result', (message) => {
+    console.log('Bot invite result:', message);
+});
+
+socket.on('bot_invite_error', (error) => {
+    console.error('Bot invite error:', error);
+    alert(`Failed to invite bot: ${error}`);
+});
 
 // Keyboard controls
 document.addEventListener('keydown', (e) => {

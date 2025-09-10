@@ -8,6 +8,7 @@ const http_1 = require("http");
 const socket_io_1 = require("socket.io");
 const path_1 = __importDefault(require("path"));
 const game_1 = require("./game");
+const botManager_1 = require("./botManager");
 const app = (0, express_1.default)();
 const server = (0, http_1.createServer)(app);
 const io = new socket_io_1.Server(server);
@@ -680,6 +681,23 @@ io.on('connection', (socket) => {
             console.log(`   Attack failed: game=${!!game}, playerIndex=${socket.data.playerIndex}, roomId=${roomId}`);
         }
     });
+    socket.on('invite_bot', (gameId, botType) => {
+        console.log(`🤖 Bot invite request: gameId=${gameId}, botType=${botType}`);
+        if (!games.has(gameId)) {
+            socket.emit('bot_invite_error', 'Game not found');
+            return;
+        }
+        const result = botManager.inviteBot(botType, gameId);
+        socket.emit('bot_invite_result', result);
+        // Notify all players in the room
+        io.to(gameId).emit('chat_message', {
+            username: 'System',
+            message: `${botType.charAt(0).toUpperCase() + botType.slice(1)} bot has been invited to the game`,
+            playerIndex: -1,
+            timestamp: Date.now(),
+            isSystem: true
+        });
+    });
     socket.on('leave_game', (gameId, userId) => {
         console.log(`🚪 Player ${userId} leaving game ${gameId}`);
         if (!games.has(gameId)) {
@@ -798,6 +816,9 @@ io.on('connection', (socket) => {
     }
 });
 const PORT = process.env.PORT || 3001;
+// Initialize bot manager with dynamic URL
+const serverUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+const botManager = new botManager_1.BotManager(serverUrl);
 server.listen(PORT, () => {
     console.log(`Generals game server running on port ${PORT}`);
     console.log(`Visit http://localhost:${PORT}`);

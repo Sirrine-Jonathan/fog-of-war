@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
 import { Game } from './game';
+import { BotManager } from './botManager';
 
 const app = express();
 const server = createServer(app);
@@ -329,6 +330,11 @@ io.on('connection', (socket) => {
     console.log(`👤 User ${userId} set username: ${username}`);
   });
 
+  socket.on('get_current_room', () => {
+    const currentRoom = playerRooms.get(socket.id);
+    socket.emit('current_room', { room: currentRoom || null });
+  });
+
   socket.on('join_private', async (gameId: string, userId: string) => {
     console.log(`🎮 Join private game request: gameId=${gameId}, userId=${userId}`);
     
@@ -336,6 +342,23 @@ io.on('connection', (socket) => {
     const previousRoom = playerRooms.get(socket.id);
     if (previousRoom) {
       console.log(`   Leaving previous room: ${previousRoom}`);
+      
+      // Remove player from previous game
+      const previousGame = games.get(previousRoom);
+      if (previousGame && socket.data.userId) {
+        const removed = previousGame.removePlayer(socket.data.userId);
+        if (removed) {
+          console.log(`   Removed player ${socket.data.userId} from game ${previousRoom}`);
+          // Clear socket player data
+          delete socket.data.playerIndex;
+          socket.data.isViewer = true;
+          // Notify remaining players in previous room
+          io.to(previousRoom).emit('player_left', {
+            players: previousGame.getState().players
+          });
+        }
+      }
+      
       socket.leave(previousRoom);
     }
 
@@ -802,6 +825,27 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
     }
   });
 
+  socket.on('invite_bot', (gameId: string, botType: 'blob' | 'arrow') => {
+    console.log(`🤖 Bot invite request: gameId=${gameId}, botType=${botType}`);
+    
+    if (!games.has(gameId)) {
+      socket.emit('bot_invite_error', 'Game not found');
+      return;
+    }
+
+    const result = botManager.inviteBot(botType, gameId);
+    socket.emit('bot_invite_result', result);
+    
+    // Notify all players in the room
+    io.to(gameId).emit('chat_message', {
+      username: 'System',
+      message: `${botType.charAt(0).toUpperCase() + botType.slice(1)} bot has been invited to the game`,
+      playerIndex: -1,
+      timestamp: Date.now(),
+      isSystem: true
+    });
+  });
+
   socket.on('leave_game', (gameId: string, userId: string) => {
     console.log(`🚪 Player ${userId} leaving game ${gameId}`);
     
@@ -942,6 +986,11 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
 });
 
 const PORT = process.env.PORT || 3001;
+
+// Initialize bot manager with dynamic URL
+const serverUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+const botManager = new BotManager(serverUrl);
+
 server.listen(PORT, () => {
   console.log(`Generals game server running on port ${PORT}`);
   console.log(`Visit http://localhost:${PORT}`);
