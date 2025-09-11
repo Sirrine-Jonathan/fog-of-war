@@ -242,6 +242,9 @@ let camera = {
     smoothing: 0.1
 };
 
+// Special tile defense display tracking
+const specialTileDefenseDisplay = new Map(); // tileIndex -> { showUntil: timestamp, lastAttack: timestamp }
+
 function drawCrownIcon(ctx, x, y, size) {
     const centerX = x + size / 2;
     const centerY = y + size / 2;
@@ -778,6 +781,20 @@ socket.on('attack_result', (data) => {
         // selectedTile remains unchanged
         drawGame();
     }
+    
+    // Track attacks on special tiles for defense display
+    if (gameState && (gameState.lookoutTowers?.includes(data.to) || gameState.cities?.includes(data.to))) {
+        const now = Date.now();
+        const existing = specialTileDefenseDisplay.get(data.to);
+        
+        // Throttle: only update if it's been at least 500ms since last attack
+        if (!existing || now - existing.lastAttack > 500) {
+            specialTileDefenseDisplay.set(data.to, {
+                showUntil: now + 1000, // Show for 1 second
+                lastAttack: now
+            });
+        }
+    }
 });
 
 socket.on('game_update', (data) => {
@@ -1248,7 +1265,7 @@ function drawGame() {
                 ctx.fillRect(x, y, tileSize, tileSize);
             }
             
-            // Draw icons for special tiles
+            // Draw icons for special tiles (only for neutral tiles)
             const iconSize = tileSize * 0.6;
             const iconX = x + (tileSize - iconSize) / 2;
             const iconY = y + (tileSize - iconSize) / 2;
@@ -1256,27 +1273,46 @@ function drawGame() {
             if (terrain >= 0 && gameState.generals && gameState.generals.includes(i)) {
                 // Draw crown icon on general tiles
                 drawCrownIcon(ctx, iconX, iconY, iconSize);
-            } else if (isTower) {
-                // Draw tower icon on lookout towers
+            } else if (isTower && terrain < 0) {
+                // Draw tower icon only on neutral towers
                 drawTowerIcon(ctx, iconX, iconY, iconSize);
-            } else if (isCity) {
-                // Draw city icon on cities
+            } else if (isCity && terrain < 0) {
+                // Draw city icon only on neutral cities
                 drawCityIcon(ctx, iconX, iconY, iconSize);
             }
             
-            // Draw army count or tower defense
+            // Draw army count or special tile defense
             if (gameState.armies[i] > 0) {
                 ctx.fillStyle = terrain === -2 ? 'white' : 'black';
                 ctx.font = `bold ${Math.max(10, 12 * camera.zoom)}px 'Courier New', monospace`;
                 ctx.textAlign = 'center';
                 ctx.fillText(gameState.armies[i].toString(), x + tileSize/2, y + tileSize/2 + 3*camera.zoom);
-            } else if (terrain === -5 && gameState.towerDefense && gameState.towerDefense[i] > 0) {
-                // Show tower defense for neutral towers
-                ctx.fillStyle = 'white';
-                ctx.font = `bold ${Math.max(10, 12 * camera.zoom)}px 'Courier New', monospace`;
-                ctx.textAlign = 'center';
-                ctx.fillText(gameState.towerDefense[i].toString(), x + tileSize/2, y + tileSize/2 + 3*camera.zoom);
+            } else if ((isTower || isCity) && terrain < 0) {
+                // Handle special tile defense display
+                const now = Date.now();
+                const defenseDisplay = specialTileDefenseDisplay.get(i);
+                const shouldShowDefense = defenseDisplay && now < defenseDisplay.showUntil;
+                
+                if (shouldShowDefense) {
+                    const defense = isTower ? gameState.towerDefense?.[i] : gameState.cityDefense?.[i];
+                    if (defense > 0) {
+                        // Calculate fade opacity
+                        const timeLeft = defenseDisplay.showUntil - now;
+                        const opacity = Math.min(1, timeLeft / 300); // Fade in last 300ms
+                        
+                        ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+                        ctx.font = `bold ${Math.max(10, 12 * camera.zoom)}px 'Courier New', monospace`;
+                        ctx.textAlign = 'center';
+                        ctx.fillText(defense.toString(), x + tileSize/2, y + tileSize/2 + 3*camera.zoom);
+                    }
+                }
+                
+                // Clean up expired entries
+                if (defenseDisplay && now >= defenseDisplay.showUntil) {
+                    specialTileDefenseDisplay.delete(i);
+                }
             }
+        }
         }
         
         // Draw intent path
