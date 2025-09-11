@@ -49,7 +49,6 @@
             <div id="gameControls">
                 <div class="info">
                     <div class="game-info">
-                        <h3 style="margin-top: 0; color: #333;">Game Info</h3>
                         
                         <!-- How to play section (closed by default) -->
                         <div class="accordion-section">
@@ -87,25 +86,31 @@
                         <p><strong>Status:</strong> <span id="gameStarted">Waiting</span></p>
                         <p><strong>Host:</strong> <span id="hostName">-</span></p>
                         <p><strong>Spectators:</strong> <span id="spectatorCount">0</span></p>
-                        
-                        <div id="botInviteSection" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
-                            <p style="margin-bottom: 10px; color: #666;">Invite a bot to play with you:</p>
-                            <div style="display: flex; gap: 8px;">
-                                <button id="inviteBlobBtn" class="btn" style="font-size: 12px; padding: 6px 12px; display: flex; align-items: center; gap: 4px;">
-                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                        <circle cx="8" cy="8" r="6" opacity="0.8"/>
-                                        <circle cx="8" cy="8" r="3" opacity="0.6"/>
-                                    </svg>
-                                    Blob
-                                </button>
-                                <button id="inviteArrowBtn" class="btn" style="font-size: 12px; padding: 6px 12px; display: flex; align-items: center; gap: 4px;">
-                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                        <path d="M2 8 L10 8 M6 4 L10 8 L6 12" stroke="currentColor" stroke-width="2" fill="none"/>
-                                    </svg>
-                                    Arrow
-                                </button>
                             </div>
                         </div>
+                        
+                        <!-- Invite Bots section -->
+                        <div class="accordion-section">
+                            <div class="accordion-header" onclick="toggleAccordion(this)">
+                                <span>Invite Bots</span>
+                                <span class="accordion-arrow">▶</span>
+                            </div>
+                            <div class="accordion-content">
+                                <div class="bot-buttons">
+                                    <button id="inviteBlobBtn" class="btn bot-btn">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                            <circle cx="8" cy="8" r="6" opacity="0.8"/>
+                                            <circle cx="8" cy="8" r="3" opacity="0.6"/>
+                                        </svg>
+                                        Blob
+                                    </button>
+                                    <button id="inviteArrowBtn" class="btn bot-btn">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                            <path d="M2 8 L10 8 M6 4 L10 8 L6 12" stroke="currentColor" stroke-width="2" fill="none"/>
+                                        </svg>
+                                        Arrow
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -113,7 +118,6 @@
                 
                 <div class="info">
                     <div class="players-list">
-                        <h4 style="margin-top: 0; color: #333;">Players & Stats</h4>
                         <div id="gameEndNotification" style="display: none; background: #f0f8ff; border: 2px solid #4CAF50; padding: 15px; margin: 10px 0; border-radius: 5px; text-align: center;">
                             <div id="gameEndText" style="font-weight: bold; font-size: 18px; margin-bottom: 10px;"></div>
                             <div style="font-size: 14px; color: #666;">Game has ended. Players can rejoin for the next game.</div>

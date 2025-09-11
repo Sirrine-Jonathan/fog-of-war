@@ -48,7 +48,7 @@ h3, h4 {
 #gameControls { 
     display: flex;
     flex-direction: column;
-    gap: 20px; 
+    gap: 12px; 
     background: rgba(255,255,255,0.95);
     padding: 20px;
     border-radius: 8px;
@@ -235,7 +235,6 @@ input[type="text"]:focus {
 #startControls {
     margin-top: 30px;
     display: flex;
-    justify-content: center;
 }
 
 
@@ -832,4 +831,17 @@ body.mobile-game-active #mobileGameStats {
     #mobileStartBtn {
         display: none !important;
     }
+}
+/* Bot Invite Section */
+.bot-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.bot-btn {
+    font-size: 12px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
