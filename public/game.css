@@ -57,6 +57,9 @@ h3, h4 {
     max-width: 800px;
     width: 100%;
     border: 2px solid #ffd700;
+    max-height: 606px;
+    overflow-y: auto;
+    box-sizing: border-box;
 }
 
 #gameBoard { 
@@ -70,6 +73,27 @@ h3, h4 {
 }
 
 .game-info p {
+    margin: 4px 0;
+    display: flex;
+    justify-content: space-between;
+}
+
+ul.game-stats {
+    margin: 0;
+}
+
+.mobile-player-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0px;
+    border-bottom: 1px solid rgb(238, 238, 238);
+}
+
+.mobile-player-item:last-of-type {
+    border-bottom: none;
+}
+
+ul.game-stats li {
     margin: 4px 0;
     display: flex;
     justify-content: space-between;
@@ -181,14 +205,19 @@ h3, h4 {
 .accordion-content {
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.3s ease-out;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out;
     background: white;
+    padding: 0;
+    font-size: 13px;
 }
+
+.accordion-content > * {
+    padding: 15px;
+}
+
 
 .accordion-content.active {
     max-height: 500px;
-    padding: 15px;
-    font-size: 13px;
 }
 
 .controls-section ul {
@@ -233,7 +262,6 @@ input[type="text"]:focus {
 }
 
 #startControls {
-    margin-top: 30px;
     display: flex;
 }
 
@@ -812,11 +840,6 @@ body.mobile-game-active #mobileGameStats {
     background: white;
 }
 
-.accordion-content.active {
-    max-height: 500px;
-    padding: 15px;
-}
-
 .controls-section ul {
     margin: 8px 0;
     padding-left: 20px;
@@ -844,4 +867,56 @@ body.mobile-game-active #mobileGameStats {
     display: flex;
     align-items: center;
     gap: 4px;
+}
+/* Hide players list when empty */
+.empty {
+    display: none;
+}
+/* Hide desktop players list on mobile */
+@media (max-width: 768px) {
+    .players-list {
+        display: none !important;
+    }
+}
+/* Mobile-only accordion */
+.mobile-only {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .mobile-only {
+        display: block;
+    }
+}
+/* Hide start controls on mobile - use canvas overlay instead */
+@media (max-width: 768px) {
+    #startControls {
+        display: none !important;
+    }
+}
+/* Chat input styling */
+#chatInput {
+    width: 400px;
+    height: 80px;
+    resize: none;
+    padding: 6px;
+    font-size: 14px;
+    border-radius: 4px;
+}
+/* Send chat button styling */
+#sendChatBtn {
+    height: 35px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+/* Chat messages styling */
+#chatMessages {
+    flex: 1;
+    height: 120px;
+    border: 1px solid #ccc;
+    padding: 8px;
+    overflow-y: auto;
+    background-color: #f9f9f9;
+    border-radius: 4px;
 }

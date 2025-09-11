@@ -1,204 +1,327 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
+  <head>
     <title>Fog of War</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#fbbf24">
-    <link rel="manifest" href="/manifest.json">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/game.css">
-</head>
-<body>
-
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#fbbf24" />
+    <link rel="manifest" href="/manifest.json" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/game.css" />
+  </head>
+  <body>
     <div class="fullDisplay">
-        <div class="header">
-            <h1 >Fog of War</h1>
-            <div id="headerActions">
-                <button id="copyUrlBtn" class="btn" style="font-size: 10px; padding: 4px 8px;">Copy URL</button>
-                <button id="installBtn" class="btn" style="display: none; font-size: 10px; padding: 4px 8px; margin-left: 8px;">Install App</button>
-            </div>
+      <div class="header">
+        <h1>Fog of War</h1>
+        <div id="headerActions">
+          <button
+            id="copyUrlBtn"
+            class="btn"
+            style="font-size: 10px; padding: 4px 8px"
+          >
+            Copy URL
+          </button>
+          <button
+            id="installBtn"
+            class="btn"
+            style="
+              display: none;
+              font-size: 10px;
+              padding: 4px 8px;
+              margin-left: 8px;
+            "
+          >
+            Install App
+          </button>
         </div>
-        <div class="mainRow">
-            <div id="gameCanvas">
-                <div>
-                    <canvas id="gameBoard" width="800" height="600"></canvas>
-                </div>
-                <div id="mobileGameStats">
-                    <div class="stats-wrapper">
-                        <table id="mobileStatsTable" class="mobile-stats-table">
-                            <thead>
-                                <tr>
-                                    <th>Player</th>
-                                    <th>Armies</th>
-                                    <th>Tiles</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                        <span id="mobileStatsLabel" style="display: none;">Show game stats</span>
-                        <div id="mobileStatsToggle">▲</div>
-                    </div>
-                </div>
-                <button id="mobileStartBtn" class="btn">Start Game</button>
-                <div id="gameOverOverlay">
-                    <div class="game-over-text">Game Over</div>
-                    <div class="winner-text" id="overlayWinnerText">The winner is Player</div>
-                </div>
+      </div>
+      <div class="mainRow">
+        <div id="gameCanvas">
+          <div>
+            <canvas id="gameBoard" width="800" height="600"></canvas>
+          </div>
+          <div id="mobileGameStats">
+            <div class="stats-wrapper">
+              <table id="mobileStatsTable" class="mobile-stats-table">
+                <thead>
+                  <tr>
+                    <th>Player</th>
+                    <th>Armies</th>
+                    <th>Tiles</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+              <span id="mobileStatsLabel" style="display: none"
+                >Show game stats</span
+              >
+              <div id="mobileStatsToggle">▲</div>
             </div>
-            
-            <div id="gameControls">
-                <div class="info">
-                    <div class="game-info">
-                        
-                        <!-- How to play section (closed by default) -->
-                        <div class="accordion-section">
-                            <div class="accordion-header" onclick="toggleAccordion(this)">
-                                <span>How to play</span>
-                                <span class="accordion-arrow">▶</span>
-                            </div>
-                            <div class="accordion-content">
-                                <div id="desktopControls" class="controls-section">
-                                    <ul style="margin: 8px 0; padding-left: 20px; font-size: 13px;">
-                                        <li><strong>Click:</strong> Click visible tile to move armies there from the active territory</li>
-                                        <li><strong>Shift+Click:</strong> Activate territory without moving armies</li>
-                                        <li><strong>Keyboard:</strong> Arrow keys or WASD to move, Spacebar to select base territory</li>
-                                        <li><strong>Map:</strong> Shift+drag to pan, scroll to zoom</li>
-                                    </ul>
-                                </div>
-                                <div id="mobileControls" class="controls-section" style="display: none;">
-                                    <ul style="margin: 8px 0; padding-left: 20px; font-size: 13px;">
-                                        <li><strong>Tap:</strong> Tap territory to activate, tap visible tile to move</li>
-                                        <li><strong>Pan:</strong> Drag to move map view</li>
-                                        <li><strong>Zoom:</strong> Pinch to zoom in/out</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Game details section (collapsible) -->
-                        <div class="accordion-section">
-                            <div class="accordion-header" onclick="toggleAccordion(this)">
-                                <span>Game Details</span>
-                                <span class="accordion-arrow">▶</span>
-                            </div>
-                            <div class="accordion-content">
-                        <p><strong>Room:</strong> <span id="roomId"></span></p>
-                        <p><strong>Status:</strong> <span id="gameStarted">Waiting</span></p>
-                        <p><strong>Host:</strong> <span id="hostName">-</span></p>
-                        <p><strong>Spectators:</strong> <span id="spectatorCount">0</span></p>
-                            </div>
-                        </div>
-                        
-                        <!-- Invite Bots section -->
-                        <div class="accordion-section">
-                            <div class="accordion-header" onclick="toggleAccordion(this)">
-                                <span>Invite Bots</span>
-                                <span class="accordion-arrow">▶</span>
-                            </div>
-                            <div class="accordion-content">
-                                <div class="bot-buttons">
-                                    <button id="inviteBlobBtn" class="btn bot-btn">
-                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                            <circle cx="8" cy="8" r="6" opacity="0.8"/>
-                                            <circle cx="8" cy="8" r="3" opacity="0.6"/>
-                                        </svg>
-                                        Blob
-                                    </button>
-                                    <button id="inviteArrowBtn" class="btn bot-btn">
-                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                            <path d="M2 8 L10 8 M6 4 L10 8 L6 12" stroke="currentColor" stroke-width="2" fill="none"/>
-                                        </svg>
-                                        Arrow
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="info">
-                    <div class="players-list">
-                        <div id="gameEndNotification" style="display: none; background: #f0f8ff; border: 2px solid #4CAF50; padding: 15px; margin: 10px 0; border-radius: 5px; text-align: center;">
-                            <div id="gameEndText" style="font-weight: bold; font-size: 18px; margin-bottom: 10px;"></div>
-                            <div style="font-size: 14px; color: #666;">Game has ended. Players can rejoin for the next game.</div>
-                        </div>
-                        <div id="players"></div>
-                        <ul id="playersMobile" class="players-mobile-list"></ul>
-                    </div>
-                </div>
-                
-                <div class="info">
-                    <div id="joinControls">
-                        <input type="text" id="usernameInput" placeholder="Enter your username">
-                        <button id="joinBtn" class="btn">Join</button>
-                        <button id="leaveBtn" class="btn" style="background: #dc3545; display: none;">Leave Game</button>
-                    </div>
-                    <div id="startControls">
-                        <button id="startBtn" class="btn">Start Game</button>
-                    </div>
-                </div>
+          </div>
+          <button id="mobileStartBtn" class="btn">Start Game</button>
+          <div id="gameOverOverlay">
+            <div class="game-over-text">Game Over</div>
+            <div class="winner-text" id="overlayWinnerText">
+              The winner is Player
             </div>
+          </div>
         </div>
 
-        <!-- Chat Section -->
-        <div id="chatSection">
-            <div id="chatMessages" style="flex: 1; height: 120px; border: 1px solid #ccc; padding: 8px; overflow-y: auto; background-color: #f9f9f9; border-radius: 4px"></div>
-            <div style="display: flex; flex-direction: column; gap: 5px;">
-                <textarea id="chatInput" placeholder="Type message..." style="width: 200px; height: 80px; resize: none; padding: 6px; font-size: 14px; border-radius: 4px"></textarea>
-                <button id="sendChatBtn" class="btn" style="height: 35px; display: flex; justify-content: center; align-items: center;">Send</button>
+        <div id="gameControls">
+          <div class="info">
+            <div class="game-info">
+              <div id="hostIndicator" style="display: none; background: #e8f5e8; border: 1px solid #4CAF50; padding: 8px; margin-bottom: 10px; border-radius: 4px; font-size: 12px; color: #2e7d32;">
+                👑 You are the host - you can start the game and manage players
+              </div>
+              <!-- Game details section (collapsible) -->
+              <div class="accordion-section">
+                <div class="accordion-header" onclick="toggleAccordion(this)">
+                  <span>Game Details</span>
+                  <span class="accordion-arrow">▶</span>
+                </div>
+                <div class="accordion-content">
+                  <ul class="game-stats">
+                    <li><strong>Room:</strong> <span id="roomId"></span></li>
+                    <li>
+                      <strong>Status:</strong>
+                      <span id="gameStarted">Waiting</span>
+                    </li>
+                    <li><strong>Host:</strong> <span id="hostName">-</span></li>
+                    <li>
+                      <strong>Spectators:</strong>
+                      <span id="spectatorCount">0</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- How to play section (closed by default) -->
+              <div class="accordion-section">
+                <div class="accordion-header" onclick="toggleAccordion(this)">
+                  <span>How to play</span>
+                  <span class="accordion-arrow">▶</span>
+                </div>
+                <div class="accordion-content">
+                  <div id="desktopControls" class="controls-section">
+                    <ul
+                      style="margin: 8px 0; padding-left: 20px; font-size: 13px"
+                    >
+                      <li>
+                        <strong>Click:</strong> Click a visible tile to move
+                        armies there from the active tile
+                      </li>
+                      <li>
+                        <strong>Shift+Click:</strong> Activate a tile without
+                        moving armies
+                      </li>
+                      <li>
+                        <strong>Movement:</strong> Use arrow keys or WASD to
+                        move
+                      </li>
+                      <li>
+                        <strong>Home:</strong> Press the space bar to activate
+                        your base tile
+                      </li>
+                      <li>
+                        <strong>Map:</strong> Shift+drag to pan, scroll to zoom
+                      </li>
+                    </ul>
+                  </div>
+                  <div
+                    id="mobileControls"
+                    class="controls-section"
+                    style="display: none"
+                  >
+                    <ul
+                      style="margin: 8px 0; padding-left: 20px; font-size: 13px"
+                    >
+                      <li>
+                        <strong>Tap:</strong> Tap a visible tile to move armies
+                        there from the active tile
+                      </li>
+                      <li>
+                        <strong>Press:</strong> Long press an owned tile to
+                        activate it without moving armies
+                      </li>
+                      <li><strong>Pan:</strong> Drag to move map view</li>
+                      <li><strong>Zoom:</strong> Pinch to zoom in/out</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Invite Bots section -->
+              <div class="accordion-section">
+                <div class="accordion-header" onclick="toggleAccordion(this)">
+                  <span>Invite Bots</span>
+                  <span class="accordion-arrow">▶</span>
+                </div>
+                <div class="accordion-content">
+                  <div class="bot-buttons">
+                    <button id="inviteBlobBtn" class="btn bot-btn">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="currentColor"
+                      >
+                        <circle cx="8" cy="8" r="6" opacity="0.8" />
+                        <circle cx="8" cy="8" r="3" opacity="0.6" />
+                      </svg>
+                      Blob
+                    </button>
+                    <button id="inviteArrowBtn" class="btn bot-btn">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="currentColor"
+                      >
+                        <path
+                          d="M2 8 L10 8 M6 4 L10 8 L6 12"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          fill="none"
+                        />
+                      </svg>
+                      Arrow
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mobile Players & Stats accordion (mobile only) -->
+              <div class="accordion-section mobile-only">
+                <div class="accordion-header" onclick="toggleAccordion(this)">
+                  <span>Players & Stats</span>
+                  <span class="accordion-arrow">▶</span>
+                </div>
+                <div class="accordion-content">
+                  <div id="mobilePlayersAccordion"></div>
+                </div>
+              </div>
             </div>
+          </div>
+
+          <div class="info">
+            <div
+              id="gameEndNotification"
+              style="
+                display: none;
+                background: #f0f8ff;
+                border: 2px solid #4caf50;
+                padding: 15px;
+                margin: 10px 0;
+                border-radius: 5px;
+                text-align: center;
+              "
+            >
+              <div
+                id="gameEndText"
+                style="font-weight: bold; font-size: 18px; margin-bottom: 10px"
+              ></div>
+              <div style="font-size: 14px; color: #666">
+                Game has ended. Players can rejoin for the next game.
+              </div>
+            </div>
+            <div class="players-list empty">
+              <h4 style="margin-top: 0; color: #333">Players & Stats</h4>
+              <div id="players"></div>
+              <ul id="playersMobile" class="players-mobile-list"></ul>
+            </div>
+          </div>
+
+          <div class="info">
+            <div id="joinControls">
+              <input
+                type="text"
+                id="usernameInput"
+                placeholder="Enter your username"
+              />
+              <button id="joinBtn" class="btn">Join</button>
+              <button id="leaveBtn" class="btn" style="display: none">
+                Leave Game
+              </button>
+            </div>
+            <div id="startControls">
+              <button id="startBtn" class="btn">Start Game</button>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <!-- Chat Section -->
+      <div id="chatSection">
+        <div id="chatMessages"></div>
+        <div style="display: flex; flex-direction: column; gap: 5px">
+          <textarea
+            id="chatInput"
+            placeholder="Type message..."
+          ></textarea>
+          <button
+            id="sendChatBtn"
+            class="btn"
+          >
+            Send
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Mobile Tab Navigation -->
     <div id="mobileTabBar" class="mobile-tab-bar">
-        <button id="gameTab" class="mobile-tab active">Game</button>
-        <button id="controlsTab" class="mobile-tab">Controls</button>
-        <button id="chatTab" class="mobile-tab">Chat</button>
+      <button id="gameTab" class="mobile-tab active">Game</button>
+      <button id="controlsTab" class="mobile-tab">Controls</button>
+      <button id="chatTab" class="mobile-tab">Chat</button>
     </div>
 
     <!-- Game End Modal -->
     <div id="gameEndModal">
-        <div class="modal-content">
-            <span class="close" onclick="closeGameEndModal()">&times;</span>
-            <div class="winner-text" id="winnerText"></div>
-            <p id="gameEndMessage"></p>
-        </div>
+      <div class="modal-content">
+        <span class="close" onclick="closeGameEndModal()">&times;</span>
+        <div class="winner-text" id="winnerText"></div>
+        <p id="gameEndMessage"></p>
+      </div>
     </div>
-
-
 
     <script src="/socket.io/socket.io.js"></script>
     <!-- P5.js for intricate tiling animation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
     <script src="/game.js"></script>
     <script>
-        let deferredPrompt;
-        
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js');
+      let deferredPrompt;
+
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js");
+      }
+
+      // Handle install prompt
+      window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+
+        // Only show prompt if game not started and not already prompted for any game
+        if (!gameStarted && !localStorage.getItem("pwa-install-prompted")) {
+          document.getElementById("installBtn").style.display = "inline-block";
         }
-        
-        // Handle install prompt
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            
-            // Only show prompt if game not started and not already prompted for any game
-            if (!gameStarted && !localStorage.getItem('pwa-install-prompted')) {
-                document.getElementById('installBtn').style.display = 'inline-block';
-            }
-        });
-        
-        document.getElementById('installBtn').addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const result = await deferredPrompt.userChoice;
-                localStorage.setItem('pwa-install-prompted', 'true');
-                document.getElementById('installBtn').style.display = 'none';
-                deferredPrompt = null;
-            }
+      });
+
+      document
+        .getElementById("installBtn")
+        .addEventListener("click", async () => {
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const result = await deferredPrompt.userChoice;
+            localStorage.setItem("pwa-install-prompted", "true");
+            document.getElementById("installBtn").style.display = "none";
+            deferredPrompt = null;
+          }
         });
     </script>
-</body>
+  </body>
 </html>

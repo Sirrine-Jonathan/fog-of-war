@@ -360,6 +360,9 @@ initMobileTabs();
 // Initialize accordion and mobile/desktop controls
 initAccordion();
 
+// Initialize players list state (hide when empty)
+updatePlayersList();
+
 function toggleAccordion(header) {
     const content = header.nextElementSibling;
     const arrow = header.querySelector('.accordion-arrow');
@@ -391,19 +394,6 @@ function initAccordion() {
 // Initialize accordion and mobile/desktop controls
 initAccordion();
 
-function toggleAccordion(header) {
-    const content = header.nextElementSibling;
-    const arrow = header.querySelector('.accordion-arrow');
-    
-    header.classList.toggle('active');
-    content.classList.toggle('active');
-    
-    if (content.classList.contains('active')) {
-        arrow.textContent = '▼';
-    } else {
-        arrow.textContent = '▶';
-    }
-}
 
 function initAccordion() {
     // Show appropriate controls based on device type
@@ -465,6 +455,12 @@ socket.on('game_info', (data) => {
     // Update host status based on server data
     isHost = (data.hostSocketId === socket.id);
     console.log('Host status update:', { mySocketId: socket.id, hostSocketId: data.hostSocketId, isHost, playerIndex });
+    
+    // Show/hide host indicator
+    const hostIndicator = document.getElementById('hostIndicator');
+    if (hostIndicator) {
+        hostIndicator.style.display = isHost ? 'block' : 'none';
+    }
     
     // Update player socket mapping
     if (data.playerSocketMap) {
@@ -1009,48 +1005,33 @@ function drawGame() {
             } else if (terrain === -5) { // Lookout Tower
                 ctx.fillStyle = '#696969'; // Dim gray for towers
             } else if (terrain >= 0) { // Player owned
-                ctx.fillStyle = playerColors[terrain] || emptyColor;
+                // Check if this is a general tile
+                const isGeneral = gameState.generals && gameState.generals.includes(i);
+                if (isGeneral) {
+                    // Create gold gradient for general tiles
+                    const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
+                    gradient.addColorStop(0, '#FFD700'); // Gold
+                    gradient.addColorStop(0.3, '#FFF8DC'); // Cornsilk (lighter)
+                    gradient.addColorStop(0.7, '#DAA520'); // Goldenrod
+                    gradient.addColorStop(1, '#B8860B'); // Dark goldenrod
+                    ctx.fillStyle = gradient;
+                } else {
+                    ctx.fillStyle = playerColors[terrain] || emptyColor;
+                }
             } else { // Empty
                 ctx.fillStyle = emptyColor;
             }
             
             ctx.fillRect(x, y, tileSize, tileSize);
             
-            // Draw city buildings
-            if (terrain === -6 || (terrain >= 0 && gameState.cities && gameState.cities.includes(i))) {
-                ctx.fillStyle = '#8B4513'; // Brown buildings
-                const scale = camera.zoom;
-                ctx.fillRect(x + 4*scale, y + 12*scale, 6*scale, 12*scale);
-                ctx.fillRect(x + 12*scale, y + 8*scale, 6*scale, 16*scale);
-                ctx.fillRect(x + 20*scale, y + 15*scale, 4*scale, 9*scale);
-            }
-            
-            // Draw lookout tower
-            if (terrain === -5 || (terrain >= 0 && gameState.lookoutTowers && gameState.lookoutTowers.includes(i))) {
-                ctx.fillStyle = '#654321'; // Dark brown tower
-                const scale = camera.zoom;
-                ctx.fillRect(x + 10*scale, y + 6*scale, 6*scale, 18*scale);
-                ctx.fillRect(x + 8*scale, y + 4*scale, 10*scale, 4*scale);
-                // Tower flag
-                if (terrain >= 0) {
-                    ctx.fillStyle = playerColors[terrain];
-                    ctx.fillRect(x + 16*scale, y + 4*scale, 4*scale, 3*scale);
-                }
-            }
-            
-            // Draw castle only for current player's general
-            if (playerGenerals.has(playerIndex) && playerGenerals.get(playerIndex) === i) {
-                console.log(`🏰 Drawing castle for player ${terrain} at position ${i}`);
-                ctx.fillStyle = '#8B4513'; // Brown castle base
-                const scale = camera.zoom;
-                ctx.fillRect(x + 8*scale, y + 18*scale, 9*scale, 7*scale);
-                ctx.fillRect(x + 6*scale, y + 15*scale, 4*scale, 10*scale);
-                ctx.fillRect(x + 15*scale, y + 15*scale, 4*scale, 10*scale);
-                ctx.fillRect(x + 10*scale, y + 12*scale, 5*scale, 13*scale);
-                
-                // Castle flag
-                ctx.fillStyle = playerColors[terrain];
-                ctx.fillRect(x + 11*scale, y + 8*scale, 3*scale, 4*scale);
+            // Add shine effect for general tiles
+            if (terrain >= 0 && gameState.generals && gameState.generals.includes(i)) {
+                // Add a subtle shine overlay
+                const shineGradient = ctx.createLinearGradient(x, y, x + tileSize * 0.6, y + tileSize * 0.6);
+                shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+                shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = shineGradient;
+                ctx.fillRect(x, y, tileSize, tileSize);
             }
             
             // Draw army count or tower defense
@@ -1628,8 +1609,24 @@ function calculatePlayerStats() {
 
 function updatePlayersList() {
     const playersDiv = document.getElementById('players');
+    const playersList = document.querySelector('.players-list');
     playersDiv.innerHTML = '';
     const stats = calculatePlayerStats();
+    
+    console.log('updatePlayersList called, stats:', stats, 'players:', players);
+    
+    // Show/hide players list based on whether there are players
+    // Check players array directly since stats might be empty before game starts
+    if (!players || players.length === 0) {
+        console.log('No players, hiding list');
+        playersList.classList.add('empty');
+        hideMobilePlayersAccordion();
+        return;
+    } else {
+        console.log('Players found, showing list');
+        playersList.classList.remove('empty');
+        updateMobilePlayersAccordion();
+    }
     
     // Create table
     const table = document.createElement('table');
@@ -1678,7 +1675,9 @@ function updatePlayersList() {
         
         // Player name cell
         const nameCell = document.createElement('td');
-        nameCell.textContent = player.username;
+        const playerSocketId = playerSocketMap.get(player.index);
+        const isHostPlayer = playerSocketId === hostSocketId;
+        nameCell.textContent = (isHostPlayer ? '👑 ' : '') + player.username;
         
         if (player.isBot) {
             const botTag = document.createElement('span');
@@ -2128,3 +2127,55 @@ window.addEventListener('resize', () => {
         // Animation will continue running and adapt to new size
     }
 });
+function updateMobilePlayersAccordion() {
+    if (!isMobile) return;
+    
+    const mobileAccordion = document.querySelector('.mobile-only');
+    const mobilePlayersDiv = document.getElementById('mobilePlayersAccordion');
+    
+    if (!players || players.length === 0) {
+        mobileAccordion.style.display = 'none';
+        return;
+    }
+    
+    mobileAccordion.style.display = 'block';
+    mobilePlayersDiv.innerHTML = '';
+    
+    // Create simplified mobile player list
+    const playersList = document.createElement('div');
+    playersList.className = 'mobile-players-simple';
+    
+    players.forEach((player, index) => {
+        const playerDiv = document.createElement('div');
+        playerDiv.className = 'mobile-player-item';
+        
+        const stats = calculatePlayerStats();
+        const playerStats = stats[player.index] || { tiles: 0, armies: 0 };
+
+        const playerIsClient = player.index === playerIndex;
+        const playerSocketId = playerSocketMap.get(player.index);
+        const isHostPlayer = playerSocketId === hostSocketId;
+
+        const playerColor = playerIsClient ? playerColors[player.index] : '#000';
+        
+        playerDiv.innerHTML = `
+            <span style="color: ${playerColor}; font-weight: 600;">${isHostPlayer ? '👑 ' : ''}${player.username}${player.isBot ? ' (Bot)' : ''}</span>
+            <span style="color: #666; font-size: 12px;">
+                ${playerStats.tiles} tiles, ${playerStats.armies} armies
+            </span>
+        `;
+        
+        playersList.appendChild(playerDiv);
+    });
+    
+    mobilePlayersDiv.appendChild(playersList);
+}
+
+function hideMobilePlayersAccordion() {
+    if (!isMobile) return;
+    
+    const mobileAccordion = document.querySelector('.mobile-only');
+    if (mobileAccordion) {
+        mobileAccordion.style.display = 'none';
+    }
+}
