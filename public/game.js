@@ -5,11 +5,12 @@ const socket = io();
 // Animation variables
 let animationId = null;
 let animationTime = 0;
+let ripples = []; // Array to store active ripples
 
 // App colors
 const appColors = {
     gold: '#ffd700',
-    slate: '#2c3e50',
+    slate: '#0f1419',
     darkSlate: '#34495e'
 };
 
@@ -86,7 +87,7 @@ function drawTilingAnimation() {
                 // Safety check for valid player color
                 if (playerColor && playerColor.startsWith('#')) {
                     // Interpolate between slate and player color
-                    const slateRGB = [44, 62, 80]; // #2c3e50
+                    const slateRGB = [15, 20, 25]; // #0f1419
                     const playerRGB = [
                         parseInt(playerColor.slice(1, 3), 16),
                         parseInt(playerColor.slice(3, 5), 16),
@@ -107,7 +108,7 @@ function drawTilingAnimation() {
                 const centerLightness = Math.max(0, 1 - Math.abs(waveOffset - 0.875) / 0.125); // Peak at 0.875
                 const finalLightness = lightness * 0.4 + centerLightness * 0.3; // Subtle effect
                 
-                const baseRGB = [44, 62, 80]; // #2c3e50
+                const baseRGB = [15, 20, 25]; // #0f1419
                 const r = Math.round(baseRGB[0] + (120 - baseRGB[0]) * finalLightness);
                 const g = Math.round(baseRGB[1] + (140 - baseRGB[1]) * finalLightness);
                 const b = Math.round(baseRGB[2] + (160 - baseRGB[2]) * finalLightness);
@@ -135,10 +136,12 @@ function startAnimation() {
     function animate() {
         animationTime += 16;
         drawTilingAnimation();
+        drawRipples(); // Add ripples to animation
         animationId = requestAnimationFrame(animate);
     }
     
     animationId = requestAnimationFrame(animate);
+    addRippleListeners(); // Add interactive listeners
 }
 
 function stopAnimation() {
@@ -2178,4 +2181,105 @@ function hideMobilePlayersAccordion() {
     if (mobileAccordion) {
         mobileAccordion.style.display = 'none';
     }
+}
+// Ripple effect functions
+function createRipple(x, y, size = 'normal') {
+    const randomColor = playerColors[Math.floor(Math.random() * playerColors.length)];
+    const maxRadius = size === 'big' ? 400 : 200;
+    const lineWidth = size === 'big' ? 16 : 4;
+    ripples.push({
+        x: x,
+        y: y,
+        radius: 0,
+        maxRadius: maxRadius,
+        lineWidth: lineWidth,
+        opacity: 1,
+        startTime: animationTime,
+        color: randomColor
+    });
+}
+
+function drawRipples() {
+    ripples = ripples.filter(ripple => {
+        const age = animationTime - ripple.startTime;
+        const progress = age / 1000; // 1 second duration
+        
+        if (progress >= 1) return false; // Remove old ripples
+        
+        ripple.radius = progress * ripple.maxRadius;
+        ripple.opacity = 1 - progress;
+        
+        // Draw ripple
+        ctx.save();
+        ctx.globalAlpha = ripple.opacity * 0.4;
+        ctx.strokeStyle = ripple.color;
+        ctx.lineWidth = ripple.lineWidth;
+        ctx.beginPath();
+        ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+        
+        return true;
+    });
+}
+
+// Add mouse and touch event listeners for ripples
+function addRippleListeners() {
+    // Only add listeners when animation is active (no game running)
+    if (gameStarted || gameState) return;
+    
+    // Mouse events (throttled)
+    canvas.addEventListener('mousemove', (e) => {
+        if (!animationId) return; // Only when animation is running
+        
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        // Throttle ripples - only create one every 200ms
+        const now = Date.now();
+        if (!canvas.lastMouseRipple || now - canvas.lastMouseRipple > 200) {
+            createRipple(x, y);
+            canvas.lastMouseRipple = now;
+        }
+    });
+    
+    // Touch events (throttled)
+    canvas.addEventListener('touchmove', (e) => {
+        if (!animationId) return;
+        e.preventDefault();
+        
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        
+        const now = Date.now();
+        if (!canvas.lastTouchRipple || now - canvas.lastTouchRipple > 200) {
+            createRipple(x, y);
+            canvas.lastTouchRipple = now;
+        }
+    });
+    
+    // Click/tap for big ripples (no throttling)
+    canvas.addEventListener('click', (e) => {
+        if (!animationId) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        createRipple(x, y, 'big');
+    });
+    
+    // Touchstart for big ripples (no throttling)
+    canvas.addEventListener('touchstart', (e) => {
+        if (!animationId) return;
+        e.preventDefault();
+        
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        createRipple(x, y, 'big');
+    });
 }
