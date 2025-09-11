@@ -243,7 +243,7 @@ let camera = {
 };
 
 // Special tile defense display tracking
-const specialTileDefenseDisplay = new Map(); // tileIndex -> { showUntil: timestamp, lastAttack: timestamp }
+const specialTileDefenseDisplay = new Map(); // tileIndex -> { startTime: timestamp, defense: number }
 
 // Track which towers have already been processed for discovery
 const processedTowers = new Set();
@@ -815,19 +815,38 @@ socket.on('game_update', (data) => {
         updateVisibleTiles();
         
         // Execute intent-based movement
-        if (activeIntent && activeIntent.currentStep < activeIntent.path.length) {
+        if (activeIntent && activeIntent.currentStep <= activeIntent.path.length) {
             const currentTile = activeIntent.currentStep === 0 ? activeIntent.fromTile : activeIntent.path[activeIntent.currentStep - 1];
-            const nextTile = activeIntent.path[activeIntent.currentStep];
+            const nextTile = activeIntent.currentStep < activeIntent.path.length ? activeIntent.path[activeIntent.currentStep] : activeIntent.targetTile;
+            
+            console.log(`Intent step ${activeIntent.currentStep}/${activeIntent.path.length}: from ${currentTile} to ${nextTile}, armies: ${gameState.armies[currentTile]}, adjacent: ${isAdjacent(currentTile, nextTile)}`);
             
             if (gameState.armies[currentTile] > 1 && isAdjacent(currentTile, nextTile)) {
+                console.log(`Executing move from ${currentTile} to ${nextTile}`);
+                
+                // Capture defense value before attack for special tiles
+                if (gameState.lookoutTowers?.includes(nextTile) || gameState.cities?.includes(nextTile)) {
+                    const isTower = gameState.lookoutTowers?.includes(nextTile);
+                    const preAttackDefense = isTower ? gameState.towerDefense?.[nextTile] : gameState.armies[nextTile];
+                    if (preAttackDefense !== undefined) {
+                        specialTileDefenseDisplay.set(nextTile, {
+                            startTime: Date.now(),
+                            defense: Math.max(0, preAttackDefense - (gameState.armies[currentTile] - 1))
+                        });
+                    }
+                }
+                
                 socket.emit('attack', currentTile, nextTile);
                 activeIntent.currentStep++;
                 
                 // Check if we've reached the target
-                if (activeIntent.currentStep >= activeIntent.path.length) {
+                if (activeIntent.currentStep > activeIntent.path.length) {
+                    console.log(`Intent completed, setting target ${activeIntent.targetTile} as selected`);
+                    setSelectedTile(activeIntent.targetTile);
                     activeIntent = null; // Clear completed intent
                 }
             } else {
+                console.log(`Intent failed: armies=${gameState.armies[currentTile]}, adjacent=${isAdjacent(currentTile, nextTile)}`);
                 activeIntent = null; // Clear invalid intent
             }
         }
@@ -1000,8 +1019,7 @@ function attemptMove(fromTile, toTile) {
             const preAttackDefense = isTower ? gameState.towerDefense?.[toTile] : gameState.armies[toTile];
             if (preAttackDefense !== undefined) {
                 specialTileDefenseDisplay.set(toTile, {
-                    showUntil: Date.now() + 1500,
-                    lastAttack: Date.now(),
+                    startTime: Date.now(),
                     defense: Math.max(0, preAttackDefense - (gameState.armies[fromTile] - 1))
                 });
             }
@@ -1200,32 +1218,32 @@ function drawGame() {
                 ctx.fillText(gameState.armies[i].toString(), x + tileSize/2, y + tileSize/2 + 3*camera.zoom);
             } else if ((isTower || isCity) && terrain < 0) {
                 // Handle neutral special tile defense display (only when attacked)
-                const now = Date.now();
                 const defenseDisplay = specialTileDefenseDisplay.get(i);
-                const shouldShowDefense = defenseDisplay && now < defenseDisplay.showUntil;
                 
-                if (shouldShowDefense) {
-                    const defense = defenseDisplay.defense; // Use stored defense value
-                    if (defense !== undefined && defense >= 0) {
-                        // Calculate fade opacity - start fading in last 1 second
-                        const timeLeft = defenseDisplay.showUntil - now;
-                        const opacity = Math.min(1, timeLeft / 1000);
+                if (defenseDisplay) {
+                    const elapsed = Date.now() - defenseDisplay.startTime;
+                    const duration = 1500;
+                    
+                    if (elapsed < duration) {
+                        const progress = elapsed / duration;
+                        const yOffset = -20 * progress * camera.zoom;
+                        const scale = 1 + (0.5 * (1 - progress));
+                        const opacity = 1 - progress;
                         
-                        ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
+                        // Color based on remaining defense: black normally, red when < 10
+                        const color = defenseDisplay.defense < 10 ? '255, 0, 0' : '0, 0, 0';
+                        
+                        ctx.save();
+                        ctx.translate(x + tileSize/2, y + tileSize/2 + yOffset);
+                        ctx.scale(scale, scale);
+                        ctx.fillStyle = `rgba(${color}, ${opacity})`;
                         ctx.font = `bold ${Math.max(10, 12 * camera.zoom)}px 'Courier New', monospace`;
                         ctx.textAlign = 'center';
-                        ctx.fillText(defense.toString(), x + tileSize/2, y + tileSize/2 + 3*camera.zoom);
-                        
-                        // Schedule another redraw for smooth fade animation
-                        if (timeLeft > 0) {
-                            setTimeout(() => drawGame(), 16); // ~60fps
-                        }
+                        ctx.fillText(defenseDisplay.defense.toString(), 0, 3*camera.zoom);
+                        ctx.restore();
+                    } else {
+                        specialTileDefenseDisplay.delete(i);
                     }
-                }
-                
-                // Clean up expired entries
-                if (defenseDisplay && now >= defenseDisplay.showUntil) {
-                    specialTileDefenseDisplay.delete(i);
                 }
             }
         }
@@ -1407,6 +1425,7 @@ canvas.addEventListener('click', (e) => {
                         path: path,
                         currentStep: 0
                     };
+                    console.log(`Created intent from ${selectedTile} to ${tileIndex}, path: [${path.join(', ')}]`);
                 }
             }
         }
@@ -1722,6 +1741,7 @@ function handleTouchTap(x, y, isActivationOnly) {
                         path: path,
                         currentStep: 0
                     };
+                    console.log(`Created intent from ${selectedTile} to ${tileIndex}, path: [${path.join(', ')}]`);
                 }
             }
         }

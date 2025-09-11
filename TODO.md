@@ -13,9 +13,9 @@
   needs to be updated to move armies all the way to the target square and the target square should become
 	the active square if the armies arrived safely.
 - ✅ **COMPLETED**: The active square's border is currently gold. It should be gray if the active square has only 1 army.
-- The text in #mobileStatsTable is white, but the highlight color used on the player's row is too light for
+- ✅ **COMPLETED**: The text in #mobileStatsTable is white, but the highlight color used on the player's row is too light for
   white text. Let's highlight the players row with a darker color that can use white text.
-- Remove the icon from the general tile
+- ✅ **COMPLETED**: Remove the icon from the general tile
 - ✅ **COMPLETED**: When a tower or city is attacked, it will display the defense it was lowered to at the time of the attack.
   The number shows for 1.5 seconds before fading out. Currently the number displayed is always zero.
 	If a user attacks with 5 armies (6 on the tile minus one to leave behind) and the tower starts with a 
