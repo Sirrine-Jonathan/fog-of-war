@@ -201,6 +201,23 @@ input[type="text"]:focus {
     color: #666;
 }
 
+/* Inline style replacements */
+.install-btn-hidden {
+    display: none;
+}
+
+.intro-text {
+    text-align: center;
+    font-size: 1.2em;
+    color: #666;
+}
+
+.intro-subtext {
+    text-align: center;
+    font-size: 1em;
+    color: #666;
+}
+
 /* Mobile responsiveness */
 @media (max-width: 768px) {
     body {

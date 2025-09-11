@@ -22,20 +22,13 @@
         <div id="headerActions">
           <button
             id="copyUrlBtn"
-            class="btn"
-            style="font-size: 10px; padding: 4px 8px"
+            class="btn copy-url-btn"
           >
             Copy URL
           </button>
           <button
             id="installBtn"
-            class="btn"
-            style="
-              display: none;
-              font-size: 10px;
-              padding: 4px 8px;
-              margin-left: 8px;
-            "
+            class="btn install-btn-game"
           >
             Install App
           </button>
@@ -59,7 +52,7 @@
                 </thead>
                 <tbody></tbody>
               </table>
-              <span id="mobileStatsLabel" style="display: none">
+              <span id="mobileStatsLabel" class="mobile-stats-label">>
                 Show game stats ->
               </span>
               <div id="mobileStatsToggle">
@@ -82,7 +75,7 @@
         <div id="gameControls">
           <div class="info">
             <div class="game-info">
-              <div id="hostIndicator" style="display: none; background: #e8f5e8; border: 1px solid #4CAF50; padding: 8px; margin-bottom: 10px; border-radius: 4px; font-size: 12px; color: #2e7d32;">
+              <div id="hostIndicator" class="host-indicator">>
                 👑 You are the host - you can start the game and manage players
               </div>
               <!-- Game details section (collapsible) -->
@@ -123,8 +116,7 @@
                 </div>
                 <div class="accordion-content">
                   <div id="desktopControls" class="controls-section">
-                    <ul
-                      style="margin: 8px 0; padding-left: 20px; font-size: 13px"
+                    <ul class="controls-list">
                     >
                       <li>
                         <strong>Click:</strong> Click a visible tile to move
@@ -149,11 +141,9 @@
                   </div>
                   <div
                     id="mobileControls"
-                    class="controls-section"
-                    style="display: none"
+                    class="controls-section mobile-controls-hidden"
                   >
-                    <ul
-                      style="margin: 8px 0; padding-left: 20px; font-size: 13px"
+                    <ul class="controls-list">
                     >
                       <li>
                         <strong>Tap:</strong> Tap a visible tile to move armies
@@ -234,26 +224,18 @@
           <div class="info">
             <div
               id="gameEndNotification"
-              style="
-                display: none;
-                background: #f0f8ff;
-                border: 2px solid #4caf50;
-                padding: 15px;
-                margin: 10px 0;
-                border-radius: 5px;
-                text-align: center;
-              "
+              class="game-end-notification"
             >
               <div
                 id="gameEndText"
-                style="font-weight: bold; font-size: 18px; margin-bottom: 10px"
+                class="game-end-text"
               ></div>
-              <div style="font-size: 14px; color: #666">
+              <div class="game-end-subtext">>
                 Game has ended. Players can rejoin for the next game.
               </div>
             </div>
             <div class="players-list empty">
-              <h4 style="margin-top: 0; color: #333">Players & Stats</h4>
+              <h4 class="players-header">Players & Stats</h4>
               <div id="players"></div>
               <ul id="playersMobile" class="players-mobile-list"></ul>
             </div>
@@ -267,7 +249,7 @@
                 placeholder="Enter your username"
               />
               <button id="joinBtn" class="btn">Join</button>
-              <button id="leaveBtn" class="btn" style="display: none">
+              <button id="leaveBtn" class="btn leave-btn-hidden">>
                 Leave Game
               </button>
             </div>
@@ -278,7 +260,7 @@
       <!-- Chat Section -->
       <div id="chatSection">
         <div id="chatMessages"></div>
-        <div style="display: flex; flex-direction: column; gap: 5px">
+        <div class="chat-input-container">>
           <textarea
             id="chatInput"
             placeholder="Type message..."
