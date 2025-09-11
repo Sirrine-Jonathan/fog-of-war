@@ -2090,7 +2090,7 @@ document.addEventListener('DOMContentLoaded', () => {
         table.style.display = isVisible ? 'table' : 'none';
         label.style.display = isVisible ? 'none' : 'inline';
         wrapper.classList.toggle('collapsed', !isVisible);
-        toggle.textContent = isVisible ? '▲' : '▼';
+        toggle.classList.toggle('collapsed', !isVisible);
     });
 });
 
