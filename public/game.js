@@ -736,24 +736,8 @@ socket.on('attack_result', (data) => {
         drawGame();
     }
     
-    // Track attacks on special tiles for defense display
-    if (gameState && (gameState.lookoutTowers?.includes(data.to) || gameState.cities?.includes(data.to))) {
-        const now = Date.now();
-        const existing = specialTileDefenseDisplay.get(data.to);
-        
-        // Throttle: only update if it's been at least 100ms since last attack
-        if (!existing || now - existing.lastAttack > 100) {
-            const defenseValue = gameState.towerDefense?.[data.to];
-            specialTileDefenseDisplay.set(data.to, {
-                showUntil: now + 1500, // Show for 3 seconds
-                lastAttack: now,
-                defense: defenseValue // Store the defense value at time of attack
-            });
-            
-            // Force a redraw to show the defense number immediately
-            drawGame();
-        }
-    }
+    // Force a redraw to show any defense numbers that were set in attemptMove
+    drawGame();
 });
 
 socket.on('game_update', (data) => {
@@ -1016,6 +1000,19 @@ function attemptMove(fromTile, toTile) {
     if (!gameState || !visibleTiles.has(toTile)) return false;
     
     if (gameState.armies[fromTile] > 1) {
+        // Capture defense value before attack for special tiles
+        if (gameState.lookoutTowers?.includes(toTile) || gameState.cities?.includes(toTile)) {
+            const isTower = gameState.lookoutTowers?.includes(toTile);
+            const preAttackDefense = isTower ? gameState.towerDefense?.[toTile] : gameState.armies[toTile];
+            if (preAttackDefense !== undefined) {
+                specialTileDefenseDisplay.set(toTile, {
+                    showUntil: Date.now() + 1500,
+                    lastAttack: Date.now(),
+                    defense: Math.max(0, preAttackDefense - (gameState.armies[fromTile] - 1))
+                });
+            }
+        }
+        
         // Have armies to move - attempt attack/move
         socket.emit('attack', fromTile, toTile);
         return true;
