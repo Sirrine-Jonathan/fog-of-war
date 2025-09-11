@@ -1313,7 +1313,6 @@ function drawGame() {
                 }
             }
         }
-        }
         
         // Draw intent path
         if (activeIntent && activeIntent.path.includes(i)) {
