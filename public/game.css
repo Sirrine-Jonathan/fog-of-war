@@ -2,7 +2,7 @@ body {
     margin: 0;
     padding: 0 20px;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: linear-gradient(135deg, #2c3e50 0%, #1a1a1a 100%);
+    background: linear-gradient(135deg, #1f2a36 0%, #1a1a1a 100%);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -27,7 +27,7 @@ h1 {
 h3, h4 {
     font-family: 'Orbitron', monospace;
     font-weight: 700;
-    color: #2c3e50;
+    color: #1f2a36;
     border-bottom: 2px solid #ffd700;
     padding-bottom: 5px;
 }
@@ -101,7 +101,7 @@ ul.game-stats li {
 
 .btn {
     font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+    background: linear-gradient(135deg, #34495e 0%, #1f2a36 100%);
     color: white;
     border: 2px solid #ffd700;
     padding: 12px 24px;
@@ -116,7 +116,7 @@ ul.game-stats li {
 
 .transfer-btn {
     font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+    background: linear-gradient(135deg, #34495e 0%, #1f2a36 100%);
     color: white;
     border: 2px solid #ffd700;
     padding: 6px 12px;
@@ -141,7 +141,7 @@ ul.game-stats li {
     transform: none;
 }
 
-#startBtn, #mobileStartBtn {
+#startBtn, #overlayStartBtn {
     background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
     border: 3px solid #ffd700;
     font-size: 16px;
@@ -153,7 +153,7 @@ ul.game-stats li {
     animation: pulse 2s infinite;
 }
 
-#startBtn:hover, #mobileStartBtn:hover {
+#startBtn:hover, #overlayStartBtn:hover {
     background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
     box-shadow: 0 8px 25px rgba(231, 76, 60, 0.6);
     transform: translateY(-3px);
@@ -261,10 +261,6 @@ input[type="text"]:focus {
     padding: 6px 12px;
 }
 
-#startControls {
-    display: flex;
-}
-
 
 .players-list {
     background: rgba(255,255,255,0.1);
@@ -301,7 +297,7 @@ input[type="text"]:focus {
 
 .player-name {
     font-weight: 600;
-    color: #2c3e50;
+    color: #1f2a36;
 }
 
 .player-stats {
@@ -451,7 +447,7 @@ input[type="text"]:focus {
 .mobile-tab {
     flex: 1;
     padding: 0 12px;
-    background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+    background: linear-gradient(135deg, #34495e 0%, #1f2a36 100%);
     color: white;
     border: 2px solid #ffd700;
     border-bottom: none; /* Remove bottom border to be flush */
@@ -482,7 +478,7 @@ input[type="text"]:focus {
 
 .mobile-tab.active {
     background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-    color: #2c3e50;
+    color: #1f2a36;
 }
 
 /* Force mobile styles when mobile classes are present */
@@ -526,6 +522,10 @@ body.mobile-chat-active .mainRow {
     flex-direction: column;
     gap: 0 !important; /* Remove gap */
     margin: 0 !important;
+}
+
+#gameCanvas {
+    position: relative;
 }
 
 #gameCanvas > div {
@@ -587,8 +587,41 @@ body.mobile-controls-active #chatSection {
     display: none !important;
 }
 
-#gameCanvas #mobileStartBtn {
-    display: none;
+#gameCanvas #overlayStartBtn {
+    padding: 15px 30px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+    transition: all 0.3s ease;
+}
+
+#gameOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+    pointer-events: none;
+}
+
+#gameOverlay * {
+    pointer-events: auto;
+}
+
+#gameTitle {
+    font-family: 'Orbitron', monospace;
+    font-size: 48px;
+    font-weight: 900;
+    color: #ffd700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    margin: 0 0 30px 0;
+    text-align: center;
 }
 
 #headerActions {
@@ -622,15 +655,6 @@ body.mobile-controls-active #chatSection {
 #gameCanvas #gameOverOverlay .winner-text {
     font-size: 20px;
     font-weight: 400;
-}
-
-body.mobile-game-active #gameCanvas #mobileStartBtn {
-    display: block;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 9999;
 }
 
 /* Chat Tab - Show only chat */
@@ -695,6 +719,7 @@ body.mobile-chat-active #chatInput {
     margin-right: 8px;
     text-align: left;
     flex: 1;
+    display: inline;
 }
 
 /* Hide mobile stats on desktop */
@@ -709,7 +734,7 @@ body.mobile-chat-active #chatInput {
     font-size: 12px;
     padding: 4px 8px;
     background: rgba(255,215,0,0.9);
-    color: #2c3e50;
+    color: #1f2a36;
     font-weight: bold;
     margin-left: auto;
     border-radius: 3px;
@@ -849,12 +874,6 @@ body.mobile-game-active #mobileGameStats {
     margin-bottom: 5px;
     font-size: 13px;
 }
-/* Hide mobile start button on desktop */
-@media (min-width: 769px) {
-    #mobileStartBtn {
-        display: none !important;
-    }
-}
 /* Bot Invite Section */
 .bot-buttons {
     display: flex;
@@ -886,12 +905,6 @@ body.mobile-game-active #mobileGameStats {
 @media (max-width: 768px) {
     .mobile-only {
         display: block;
-    }
-}
-/* Hide start controls on mobile - use canvas overlay instead */
-@media (max-width: 768px) {
-    #startControls {
-        display: none !important;
     }
 }
 /* Chat input styling */

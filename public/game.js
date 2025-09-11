@@ -291,7 +291,6 @@ function loadPersistedState() {
                     const data = JSON.parse(savedDiscovered);
                     if (data.roomId === roomId) {
                         discoveredTiles = new Set(data.tiles);
-                        console.log('Loaded discovered tiles:', discoveredTiles.size);
                     }
                 } catch (e) {
                     console.warn('Failed to parse discovered tiles:', e);
@@ -344,7 +343,6 @@ function attemptAutoRejoin() {
     const saved = loadPersistedState();
     // Only auto-rejoin if we were in a started game
     if (saved && saved.username && saved.playerIndex >= 0 && saved.gameStarted && (Date.now() - saved.timestamp < 30 * 60 * 1000)) { // 30 min timeout
-        console.log('Attempting auto-rejoin for player:', saved.username);
         const userId = 'human_' + Date.now();
         socket.emit('set_username', userId, saved.username);
         socket.emit('join_private', roomId, userId);
@@ -558,30 +556,36 @@ socket.on('game_info', (data) => {
 
 function updateButtonVisibility() {
     const joinControls = document.getElementById('joinControls');
-    const startBtn = document.getElementById('startBtn');
-    const mobileStartBtn = document.getElementById('mobileStartBtn');
+    const gameOverlay = document.getElementById('gameOverlay');
+    const overlayStartBtn = document.getElementById('overlayStartBtn');
     const joinBtn = document.getElementById('joinBtn');
     const leaveBtn = document.getElementById('leaveBtn');
     
     if (gameStarted) {
-        // Game is active - hide all join/leave controls
+        // Game is active - hide all join/leave controls and overlay
         joinControls.style.display = 'none';
+        if (gameOverlay) gameOverlay.style.display = 'none';
     } else if (playerIndex >= 0) {
-        // Joined but game not started - show leave button, hide join controls
+        // Joined but game not started - show leave button, hide join controls, show overlay
         joinBtn.style.display = 'none';
         leaveBtn.style.display = 'inline-block';
         document.getElementById('usernameInput').style.display = 'none';
+        if (gameOverlay) gameOverlay.style.display = 'flex';
     } else {
-        // Not joined and game not started - show join controls, hide leave button
+        // Not joined and game not started - show join controls, hide leave button, show overlay
         joinControls.style.display = 'flex';
         joinBtn.style.display = 'inline-block';
         leaveBtn.style.display = 'none';
         document.getElementById('usernameInput').style.display = 'block';
+        if (gameOverlay) gameOverlay.style.display = 'flex';
     }
     
-    // Show start button only to host when game not started
-    startBtn.style.display = (isHost && !gameStarted) ? 'inline-block' : 'none';
-    mobileStartBtn.style.display = (isHost && !gameStarted) ? 'inline-block' : 'none';
+    // Show start button only when there are 2+ players and user is host
+    const playerCount = players ? players.length : 0;
+    const canStart = isHost && !gameStarted && playerCount >= 2;
+    if (overlayStartBtn) {
+        overlayStartBtn.style.display = canStart ? 'block' : 'none';
+    }
 }
 
 socket.on('joined_as_player', (data) => {
@@ -703,8 +707,6 @@ socket.on('attack_result', (data) => {
 });
 
 socket.on('game_update', (data) => {
-    console.log('🔄 Game update received:', data);
-    
     // Stop animation when game state is received
     stopAnimation();
     
@@ -1039,8 +1041,6 @@ function updateCamera() {
 function drawGame() {
     if (!gameState) return;
     
-    console.log('🎨 Drawing game - terrain length:', gameState.terrain?.length);
-    
     const tileSize = 35 * camera.zoom;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
@@ -1158,7 +1158,15 @@ function drawGame() {
         
         // Add glow effect for selected tile
         if (selectedTile === i) {
-            ctx.shadowColor = '#ffd700';
+            const armyCount = gameState.armies[i];
+            const canMoveArmies = armyCount > 1;
+            if (canMoveArmies) {
+                // Bright gold for tiles that can move armies
+                ctx.shadowColor = '#ffed4e'; // Brighter gold
+            } else {
+                // Gray for tiles that cannot move armies
+                ctx.shadowColor = '#888888'; // Clear gray
+            }
             ctx.shadowBlur = 10 * camera.zoom;
             ctx.strokeRect(x, y, tileSize, tileSize);
             ctx.shadowBlur = 0;
@@ -1692,21 +1700,24 @@ function calculatePlayerStats() {
 function updatePlayersList() {
     const playersDiv = document.getElementById('players');
     const playersList = document.querySelector('.players-list');
+    const mobileGameStats = document.getElementById('mobileGameStats');
     playersDiv.innerHTML = '';
     const stats = calculatePlayerStats();
     
     console.log('updatePlayersList called, stats:', stats, 'players:', players);
     
-    // Show/hide players list based on whether there are players
+    // Show/hide players list and mobile game stats based on whether there are players
     // Check players array directly since stats might be empty before game starts
     if (!players || players.length === 0) {
         console.log('No players, hiding list');
         playersList.classList.add('empty');
+        mobileGameStats.classList.add('empty');
         hideMobilePlayersAccordion();
         return;
     } else {
         console.log('Players found, showing list');
         playersList.classList.remove('empty');
+        mobileGameStats.classList.remove('empty');
         updateMobilePlayersAccordion();
     }
     
@@ -1892,6 +1903,9 @@ function updatePlayersList() {
             mobileList.appendChild(statGroup);
         });
     }
+    
+    // Update button visibility after updating players list
+    updateButtonVisibility();
 }
 
 function updateMobileGameStats(sortedPlayers) {
@@ -1961,8 +1975,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('joinBtn').addEventListener('click', joinAsPlayer);
     document.getElementById('leaveBtn').addEventListener('click', leaveGame);
-    document.getElementById('startBtn').addEventListener('click', startGame);
-    document.getElementById('mobileStartBtn').addEventListener('click', startGame);
+    document.getElementById('overlayStartBtn').addEventListener('click', startGame);
     document.getElementById('copyUrlBtn').addEventListener('click', copyGameUrl);
     
     // Bot invite buttons

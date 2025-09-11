@@ -7,6 +7,7 @@
       content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <meta name="theme-color" content="#fbbf24" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="manifest" href="/manifest.json" />
     <link
       href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&display=swap"
@@ -45,7 +46,7 @@
           <div>
             <canvas id="gameBoard" width="800" height="600"></canvas>
           </div>
-          <div id="mobileGameStats">
+          <div id="mobileGameStats" class="empty">
             <div class="stats-wrapper">
               <table id="mobileStatsTable" class="mobile-stats-table">
                 <thead>
@@ -57,13 +58,16 @@
                 </thead>
                 <tbody></tbody>
               </table>
-              <span id="mobileStatsLabel" style="display: none"
-                >Show game stats</span
-              >
+              <span id="mobileStatsLabel" style="display: none">
+                Show game stats
+              </span>
               <div id="mobileStatsToggle">▲</div>
             </div>
           </div>
-          <button id="mobileStartBtn" class="btn">Start Game</button>
+          <div id="gameOverlay">
+            <h1 id="gameTitle">Fog of War</h1>
+            <button id="overlayStartBtn" class="btn">Start Game</button>
+          </div>
           <div id="gameOverOverlay">
             <div class="game-over-text">Game Over</div>
             <div class="winner-text" id="overlayWinnerText">
@@ -247,9 +251,6 @@
               <button id="leaveBtn" class="btn" style="display: none">
                 Leave Game
               </button>
-            </div>
-            <div id="startControls">
-              <button id="startBtn" class="btn">Start Game</button>
             </div>
           </div>
         </div>
