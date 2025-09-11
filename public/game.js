@@ -1312,7 +1312,7 @@ function drawGame() {
                 const shouldShowDefense = defenseDisplay && now < defenseDisplay.showUntil;
                 
                 if (shouldShowDefense) {
-                    const defense = isTower ? gameState.towerDefense?.[i] : gameState.cityDefense?.[i];
+                    const defense = gameState.towerDefense?.[i]; // Both towers and cities use towerDefense array
                     if (defense > 0) {
                         // Calculate fade opacity
                         const timeLeft = defenseDisplay.showUntil - now;
