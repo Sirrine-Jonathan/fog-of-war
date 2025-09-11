@@ -802,12 +802,15 @@ socket.on('attack_result', (data) => {
         const now = Date.now();
         const existing = specialTileDefenseDisplay.get(data.to);
         
+        console.log('Attack on special tile:', data.to, 'isTower:', gameState.lookoutTowers?.includes(data.to), 'isCity:', gameState.cities?.includes(data.to));
+        
         // Throttle: only update if it's been at least 500ms since last attack
         if (!existing || now - existing.lastAttack > 500) {
             specialTileDefenseDisplay.set(data.to, {
                 showUntil: now + 1000, // Show for 1 second
                 lastAttack: now
             });
+            console.log('Set defense display for tile:', data.to, 'until:', now + 1000);
         }
     }
 });
@@ -1313,6 +1316,7 @@ function drawGame() {
                 
                 if (shouldShowDefense) {
                     const defense = gameState.towerDefense?.[i]; // Both towers and cities use towerDefense array
+                    console.log('Showing defense for tile:', i, 'defense:', defense, 'timeLeft:', defenseDisplay.showUntil - now);
                     if (defense > 0) {
                         // Calculate fade opacity
                         const timeLeft = defenseDisplay.showUntil - now;
