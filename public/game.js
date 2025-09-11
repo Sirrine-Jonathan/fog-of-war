@@ -456,7 +456,6 @@ function checkIsMobile() {
 const isMobile = checkIsMobile();
 let currentMobileTab = 'game';
 
-console.log('🔍 Mobile Detection:', {
     windowWidth: window.innerWidth,
     isMobile: isMobile,
     hasTouch: 'ontouchstart' in window,
@@ -464,21 +463,17 @@ console.log('🔍 Mobile Detection:', {
 });
 
 function initMobileTabs() {
-    console.log('🔍 initMobileTabs called, isMobile:', isMobile);
     
     if (!isMobile) {
-        console.log('🔍 Not mobile, skipping tab init');
         return;
     }
     
-    console.log('🔍 Setting up mobile tabs...');
     
     const tabBar = document.getElementById('mobileTabBar');
     const gameTab = document.getElementById('gameTab');
     const controlsTab = document.getElementById('controlsTab');
     const chatTab = document.getElementById('chatTab');
     
-    console.log('🔍 Tab elements:', {
         tabBar: !!tabBar,
         gameTab: !!gameTab,
         controlsTab: !!controlsTab,
@@ -486,13 +481,11 @@ function initMobileTabs() {
     });
     
     document.body.classList.add('mobile-game-active');
-    console.log('🔍 Added mobile-game-active class');
     
     if (gameTab) gameTab.addEventListener('click', () => switchMobileTab('game'));
     if (controlsTab) controlsTab.addEventListener('click', () => switchMobileTab('controls'));
     if (chatTab) chatTab.addEventListener('click', () => switchMobileTab('chat'));
     
-    console.log('🔍 Mobile tabs initialized');
 }
 
 function switchMobileTab(tab) {
@@ -582,13 +575,9 @@ function initAccordion() {
 }
 
 socket.on('game_start', (data) => {
-    console.log('🎮 Game started!', data);
-    console.log('   Player index:', data.playerIndex);
-    console.log('   Map data length:', data.mapData?.length);
     
     if (data.mapData) {
         gameState = parseMapData(data.mapData);
-        console.log('   Parsed initial game state:', {
             width: gameState.width,
             height: gameState.height,
             armiesLength: gameState.armies?.length,
@@ -597,10 +586,8 @@ socket.on('game_start', (data) => {
         });
         
         // Log all player positions
-        console.log('   Initial player positions:');
         gameState.terrain.forEach((terrain, index) => {
             if (terrain >= 0) {
-                console.log(`     Position ${index}: player=${terrain}, armies=${gameState.armies[index]}`);
             }
         });
     }
@@ -616,7 +603,6 @@ socket.on('game_start', (data) => {
     
     updateButtonVisibility(); // Update button visibility
     saveState(); // Save state when game starts
-    console.log('   Player index set to:', playerIndex);
 });
 
 socket.on('game_info', (data) => {
@@ -626,7 +612,6 @@ socket.on('game_info', (data) => {
     
     // Update host status based on server data
     isHost = (data.hostSocketId === socket.id);
-    console.log('Host status update:', { mySocketId: socket.id, hostSocketId: data.hostSocketId, isHost, playerIndex });
     
     // Show/hide host indicator
     const hostIndicator = document.getElementById('hostIndicator');
@@ -681,21 +666,17 @@ function updateButtonVisibility() {
 }
 
 socket.on('joined_as_player', (data) => {
-    console.log('Joined as player:', data);
     playerIndex = data.playerIndex;
     saveState(); // Save state only after successfully joining
     updateButtonVisibility(); // Update button visibility
 });
 
 socket.on('player_joined', (data) => {
-    console.log('Player joined:', data);
-    console.log('Players received:', data.players.map(p => ({ username: p.username, isBot: p.isBot })));
     players = data.players;
     
     // Check if current player is eliminated
     if (playerIndex >= 0 && players[playerIndex]?.eliminated) {
         isEliminated = true;
-        console.log('Player eliminated - switching to spectator view');
         updateVisibleTiles(); // Update visibility to show full map
         drawGame();
     }
@@ -704,11 +685,9 @@ socket.on('player_joined', (data) => {
 });
 
 socket.on('disconnect', () => {
-    console.log('Disconnected from server');
     
     // If we were a joined player but game hasn't started, leave the game
     if (playerIndex >= 0 && !gameStarted) {
-        console.log('Disconnected while joined but game not started - leaving game');
         leaveGame();
     }
     
@@ -721,7 +700,6 @@ socket.on('disconnect', () => {
 });
 
 socket.on('connect', () => {
-    console.log('Connected to server');
     // Hide reconnection message
     const notification = document.getElementById('gameEndNotification');
     if (notification.style.display === 'block') {
@@ -730,7 +708,6 @@ socket.on('connect', () => {
     
     // Attempt to rejoin only if we were previously in an active game
     if (playerIndex >= 0 && lastUsername && gameStarted) {
-        console.log('Reconnecting as player:', lastUsername);
         const userId = 'human_' + Date.now();
         socket.emit('set_username', userId, lastUsername);
         socket.emit('join_private', roomId, userId);
@@ -802,7 +779,7 @@ socket.on('attack_result', (data) => {
         const now = Date.now();
         const existing = specialTileDefenseDisplay.get(data.to);
         
-        console.log('ATTACK on special tile:', data.to, 'defense:', gameState.towerDefense?.[data.to]);
+        console.log('ATTACK:', data.to, 'def:', gameState.towerDefense?.[data.to]);
         
         // Throttle: only update if it's been at least 500ms since last attack
         if (!existing || now - existing.lastAttack > 500) {
@@ -819,12 +796,9 @@ socket.on('game_update', (data) => {
     stopAnimation();
     
     if (data.map_diff && data.map_diff.length > 0) {
-        console.log('   Map diff length:', data.map_diff.length);
         const patchedMap = patch([], data.map_diff);
-        console.log('   Patched map length:', patchedMap.length);
         
         gameState = parseMapData(patchedMap);
-        console.log('   Parsed game state:', {
             width: gameState.width,
             height: gameState.height,
             armiesLength: gameState.armies?.length,
@@ -833,33 +807,27 @@ socket.on('game_update', (data) => {
         });
         
         // Log all player positions
-        console.log('   Player positions:');
         gameState.terrain.forEach((terrain, index) => {
             if (terrain >= 0) {
-                console.log(`     Position ${index}: player=${terrain}, armies=${gameState.armies[index]}`);
             }
         });
         
         // Update players data if provided
         if (data.players) {
             gameState.players = data.players;
-            console.log('   Players updated:', gameState.players);
         }
         
         // Update cities and lookout towers if provided
         if (data.cities_diff) {
             gameState.cities = patch(gameState.cities || [], data.cities_diff);
-            console.log('   Cities updated:', gameState.cities);
         }
         if (data.lookoutTowers_diff) {
             gameState.lookoutTowers = patch(gameState.lookoutTowers || [], data.lookoutTowers_diff);
-            console.log('   Lookout towers updated:', gameState.lookoutTowers);
         }
         
         // Update generals if provided
         if (data.generals) {
             gameState.generals = data.generals;
-            console.log('   Generals updated:', gameState.generals);
         }
         
         // Auto-select player's general on first update if no tile selected
@@ -867,7 +835,6 @@ socket.on('game_update', (data) => {
             const generalPos = data.generals[playerIndex];
             if (generalPos !== undefined) {
                 setSelectedTile(generalPos);
-                console.log(`🎯 Auto-selected general at position ${generalPos}`);
                 
                 // Center camera on general immediately (override smooth following)
                 const row = Math.floor(generalPos / gameState.width);
@@ -893,7 +860,6 @@ socket.on('game_update', (data) => {
         // Check if current player got eliminated this turn
         if (playerIndex >= 0 && gameState.players && gameState.players[playerIndex]?.eliminated && !isEliminated) {
             isEliminated = true;
-            console.log('Player just got eliminated - switching to spectator view');
         }
         
         // Track generals (starting positions)
@@ -904,7 +870,6 @@ socket.on('game_update', (data) => {
                     // Check if this might be a starting position (any army count for generals)
                     if (!playerGenerals.has(terrain)) {
                         playerGenerals.set(terrain, i);
-                        console.log(`🎯 Detected general for player ${terrain} at position ${i}`);
                     }
                 }
             }
@@ -937,7 +902,6 @@ socket.on('game_update', (data) => {
 });
 
 socket.on('game_end', (data) => {
-    console.log('Game ended:', data);
     gameEnded = true;
     
     // Start animation when game ends
@@ -1442,7 +1406,6 @@ function showGameEndModal(winnerName, winnerIndex) {
     const winnerText = document.getElementById('winnerText');
     const gameEndMessage = document.getElementById('gameEndMessage');
     
-    console.log('Game end modal:', { winnerName, winnerIndex, myPlayerIndex: playerIndex, myUsername: lastUsername });
     
     // Check if current player won by comparing usernames instead of indices
     const didIWin = (winnerName === lastUsername);
@@ -1507,7 +1470,6 @@ canvas.addEventListener('click', (e) => {
                         path: path,
                         currentStep: 0
                     };
-                    console.log('Intent path:', path);
                 }
             }
         }
@@ -1666,7 +1628,6 @@ canvas.addEventListener('touchstart', (e) => {
                 if (navigator.vibrate) {
                     navigator.vibrate(50);
                 }
-                console.log('Long press detected');
             }
         }, LONG_PRESS_DURATION);
         
@@ -1791,7 +1752,6 @@ function handleTouchTap(x, y, isActivationOnly) {
     // Only allow interaction with visible tiles (except mobile users can click through fog)
     if (!visibleTiles.has(tileIndex) && !isMobile) return;
     
-    console.log(`Touch tap: tile ${tileIndex}, activation-only: ${isActivationOnly}`);
     
     if (selectedTile === null) {
         // No active tile: clicking owned tile makes it active, otherwise no action
@@ -1825,7 +1785,6 @@ function handleTouchTap(x, y, isActivationOnly) {
                         path: path,
                         currentStep: 0
                     };
-                    console.log('Intent path:', path);
                 }
             }
         }
@@ -1914,18 +1873,15 @@ function updatePlayersList() {
     playersDiv.innerHTML = '';
     const stats = calculatePlayerStats();
     
-    console.log('updatePlayersList called, stats:', stats, 'players:', players);
     
     // Show/hide players list and mobile game stats based on whether there are players
     // Check players array directly since stats might be empty before game starts
     if (!players || players.length === 0) {
-        console.log('No players, hiding list');
         playersList.classList.add('empty');
         mobileGameStats.classList.add('empty');
         hideMobilePlayersAccordion();
         return;
     } else {
-        console.log('Players found, showing list');
         playersList.classList.remove('empty');
         mobileGameStats.classList.remove('empty');
         updateMobilePlayersAccordion();
@@ -2050,7 +2006,6 @@ function updatePlayersList() {
     
     // Create mobile list
     const mobileList = document.getElementById('playersMobile');
-    console.log('Mobile list element:', mobileList);
     
     if (!mobileList) {
         console.error('Mobile list element not found!');
@@ -2060,7 +2015,6 @@ function updatePlayersList() {
     mobileList.innerHTML = '';
     
     if (sortedPlayers.length > 0) {
-        console.log('Creating mobile list content for', sortedPlayers.length, 'players');
         
         const statTypes = [
             { key: 'tiles', label: 'Tiles' },
@@ -2119,16 +2073,13 @@ function updatePlayersList() {
 }
 
 function updateMobileGameStats(sortedPlayers) {
-    console.log('Updating mobile game stats for', sortedPlayers.length, 'players');
     const tbody = document.querySelector('#mobileStatsTable tbody');
-    console.log('Mobile stats tbody element:', tbody);
     
     if (!tbody) return;
     
     tbody.innerHTML = '';
     
     sortedPlayers.forEach(player => {
-        console.log('Adding mobile stats row for player:', player.username);
         const row = document.createElement('tr');
         
         if (player.index === playerIndex) {
@@ -2171,7 +2122,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function transferHost(targetPlayerIndex) {
     const targetSocketId = playerSocketMap.get(targetPlayerIndex.toString());
-    console.log('Transfer host attempt:', { targetPlayerIndex, targetSocketId, playerSocketMap });
     if (targetSocketId) {
         socket.emit('transfer_host', roomId, targetSocketId);
     } else {
@@ -2181,7 +2131,6 @@ function transferHost(targetPlayerIndex) {
 
 // Button handlers
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM loaded, setting up event listeners...');
     
     document.getElementById('joinBtn').addEventListener('click', joinAsPlayer);
     document.getElementById('leaveBtn').addEventListener('click', leaveGame);
@@ -2189,23 +2138,18 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('copyUrlBtn').addEventListener('click', copyGameUrl);
     
     // Bot invite buttons
-    console.log('Looking for bot buttons...');
     const blobBtn = document.getElementById('inviteBlobBtn');
     const arrowBtn = document.getElementById('inviteArrowBtn');
     
-    console.log('Blob button:', blobBtn);
-    console.log('Arrow button:', arrowBtn);
     
     if (blobBtn) {
         blobBtn.addEventListener('click', () => inviteBot('blob'));
-        console.log('Blob button event listener attached');
     } else {
         console.error('Blob button not found');
     }
     
     if (arrowBtn) {
         arrowBtn.addEventListener('click', () => inviteBot('arrow'));
-        console.log('Arrow button event listener attached');
     } else {
         console.error('Arrow button not found');
     }
@@ -2274,13 +2218,11 @@ function copyGameUrl() {
 }
 
 function inviteBot(botType) {
-    console.log('Inviting bot:', botType, 'to room:', roomId);
     socket.emit('invite_bot', roomId, botType);
 }
 
 // Bot invite result handlers
 socket.on('bot_invite_result', (message) => {
-    console.log('Bot invite result:', message);
 });
 
 socket.on('bot_invite_error', (error) => {
