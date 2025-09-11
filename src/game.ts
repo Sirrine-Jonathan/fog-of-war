@@ -211,7 +211,7 @@ export class Game {
           placedTowers.push(pos);
           this.state.lookoutTowers.push(pos);
           this.state.terrain[pos] = TILE_LOOKOUT_TOWER;
-          this.state.towerDefense[pos] = 10;
+          this.state.towerDefense[pos] = 25;
           this.state.armies[pos] = 0;
           console.log(`   Tower ${placedTowers.length} placed at position ${pos}`);
         }

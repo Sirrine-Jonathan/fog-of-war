@@ -18,6 +18,8 @@
 - The active square's border is currently gold. It should be gray if the active square has only 1 army.
 - The text in #mobileStatsTable is white, but the highlight color used on the player's row is too light for
   white text. Let's highlight the players row with a darker color that can use white text.
+- The numbers obscure the icon. Let's leave the numbers off until the city or tower is attacked. When it is attacked, show the defense after the attack but then fade it out after a second. You'll also need to throttle this "showing and fading out" because there may be frequent attacks. Once a city or tower is taken over, you can remove the icon, shiny style it using the capturing players color, and show the number of armies on that tile.
+- Remove the icon from the general tile
 
 ## Tech Debt  
 - Move all inline styles in all html files to css files.

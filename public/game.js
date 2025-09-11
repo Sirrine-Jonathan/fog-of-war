@@ -245,6 +245,9 @@ let camera = {
 // Special tile defense display tracking
 const specialTileDefenseDisplay = new Map(); // tileIndex -> { showUntil: timestamp, lastAttack: timestamp }
 
+// Track which towers have already been processed for discovery
+const processedTowers = new Set();
+
 function drawCrownIcon(ctx, x, y, size, color = '#FFD700') {
     const centerX = x + size / 2;
     const centerY = y + size / 2;
@@ -362,9 +365,8 @@ document.getElementById('roomId').textContent = roomId;
 
 // Persistence keys (defined after roomId)
 const STORAGE_KEY = `fog_of_war_${roomId}`;
-const DISCOVERED_KEY = `discovered_tiles_${roomId}`;
 
-// Discovered tiles that remain visible permanently
+// Discovered tiles that remain visible permanently (no localStorage)
 let discoveredTiles = new Set();
 
 // Load persisted state
@@ -375,19 +377,6 @@ function loadPersistedState() {
             const state = JSON.parse(saved);
             lastUsername = state.username || '';
             document.getElementById('usernameInput').value = lastUsername;
-            
-            // Load discovered tiles
-            const savedDiscovered = localStorage.getItem(DISCOVERED_KEY);
-            if (savedDiscovered) {
-                try {
-                    const data = JSON.parse(savedDiscovered);
-                    if (data.roomId === roomId) {
-                        discoveredTiles = new Set(data.tiles);
-                    }
-                } catch (e) {
-                    console.warn('Failed to parse discovered tiles:', e);
-                }
-            }
             
             return state;
         } catch (e) {
@@ -411,23 +400,11 @@ function saveState() {
     }
 }
 
-// Save discovered tiles to localStorage
-function saveDiscoveredTiles() {
-    if (playerIndex >= 0) {
-        const data = {
-            roomId: roomId,
-            tiles: Array.from(discoveredTiles),
-            timestamp: Date.now()
-        };
-        localStorage.setItem(DISCOVERED_KEY, JSON.stringify(data));
-    }
-}
-
 // Clear saved state
 function clearState() {
     localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(DISCOVERED_KEY);
     discoveredTiles.clear();
+    processedTowers.clear();
 }
 
 // Auto-rejoin if we were previously in this game (only if we were a player in an active game)
@@ -563,6 +540,9 @@ function initAccordion() {
 }
 
 socket.on('game_start', (data) => {
+    
+    // Reset tower processing tracking for new game
+    processedTowers.clear();
     
     if (data.mapData) {
         gameState = parseMapData(data.mapData);
@@ -761,12 +741,17 @@ socket.on('attack_result', (data) => {
         const now = Date.now();
         const existing = specialTileDefenseDisplay.get(data.to);
         
-        // Throttle: only update if it's been at least 500ms since last attack
-        if (!existing || now - existing.lastAttack > 500) {
+        // Throttle: only update if it's been at least 100ms since last attack
+        if (!existing || now - existing.lastAttack > 100) {
+            const defenseValue = gameState.towerDefense?.[data.to];
             specialTileDefenseDisplay.set(data.to, {
-                showUntil: now + 1000, // Show for 1 second
-                lastAttack: now
+                showUntil: now + 1500, // Show for 3 seconds
+                lastAttack: now,
+                defense: defenseValue // Store the defense value at time of attack
             });
+            
+            // Force a redraw to show the defense number immediately
+            drawGame();
         }
     }
 });
@@ -926,9 +911,15 @@ function updateVisibleTiles() {
                 const towerVision = getTilesInRadius(i, 5);
                 towerVision.forEach(tile => {
                     visibleTiles.add(tile);
-                    discoveredTiles.add(tile); // Permanently discover these tiles
                 });
-                saveDiscoveredTiles(); // Save to localStorage
+                
+                // Only add to discovered tiles if this tower hasn't been processed before
+                if (!processedTowers.has(i)) {
+                    towerVision.forEach(tile => {
+                        discoveredTiles.add(tile); // Permanently discover these tiles
+                    });
+                    processedTowers.add(i);
+                }
             } else {
                 // Regular tiles provide adjacent vision
                 const adjacent = getAdjacentTiles(i);
@@ -968,6 +959,10 @@ function getTilesInRadius(tileIndex, radius) {
     
     for (let dr = -radius; dr <= radius; dr++) {
         for (let dc = -radius; dc <= radius; dc++) {
+            // Use circular distance instead of square
+            const distance = Math.sqrt(dr * dr + dc * dc);
+            if (distance > radius) continue;
+            
             const newRow = row + dr;
             const newCol = col + dc;
             
@@ -1259,16 +1254,21 @@ function drawGame() {
                 const shouldShowDefense = defenseDisplay && now < defenseDisplay.showUntil;
                 
                 if (shouldShowDefense) {
-                    const defense = gameState.towerDefense?.[i];
+                    const defense = defenseDisplay.defense; // Use stored defense value
                     if (defense !== undefined && defense >= 0) {
-                        // Calculate fade opacity
+                        // Calculate fade opacity - start fading in last 1 second
                         const timeLeft = defenseDisplay.showUntil - now;
-                        const opacity = Math.min(1, timeLeft / 300); // Fade in last 300ms
+                        const opacity = Math.min(1, timeLeft / 1000);
                         
-                        ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+                        ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
                         ctx.font = `bold ${Math.max(10, 12 * camera.zoom)}px 'Courier New', monospace`;
                         ctx.textAlign = 'center';
                         ctx.fillText(defense.toString(), x + tileSize/2, y + tileSize/2 + 3*camera.zoom);
+                        
+                        // Schedule another redraw for smooth fade animation
+                        if (timeLeft > 0) {
+                            setTimeout(() => drawGame(), 16); // ~60fps
+                        }
                     }
                 }
                 
