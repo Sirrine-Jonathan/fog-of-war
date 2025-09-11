@@ -245,14 +245,14 @@ let camera = {
 // Special tile defense display tracking
 const specialTileDefenseDisplay = new Map(); // tileIndex -> { showUntil: timestamp, lastAttack: timestamp }
 
-function drawCrownIcon(ctx, x, y, size) {
+function drawCrownIcon(ctx, x, y, size, color = '#FFD700') {
     const centerX = x + size / 2;
     const centerY = y + size / 2;
     const crownHeight = size * 0.6;
     const crownWidth = size * 0.8;
     
-    ctx.fillStyle = '#FFD700';
-    ctx.strokeStyle = '#B8860B';
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color === '#FFFFFF' ? '#CCCCCC' : '#B8860B';
     ctx.lineWidth = 1;
     
     // Crown base
@@ -270,14 +270,14 @@ function drawCrownIcon(ctx, x, y, size) {
     ctx.stroke();
 }
 
-function drawTowerIcon(ctx, x, y, size) {
+function drawTowerIcon(ctx, x, y, size, color = '#4169E1') {
     const centerX = x + size / 2;
     const centerY = y + size / 2;
     const towerWidth = size * 0.4;
     const towerHeight = size * 0.7;
     
-    ctx.fillStyle = '#4169E1';
-    ctx.strokeStyle = '#2F4F4F';
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color === '#FFFFFF' ? '#CCCCCC' : '#2F4F4F';
     ctx.lineWidth = 1;
     
     // Tower body
@@ -290,14 +290,14 @@ function drawTowerIcon(ctx, x, y, size) {
     ctx.strokeRect(centerX - topWidth/2, centerY - towerHeight/2, topWidth, towerHeight/4);
 }
 
-function drawCityIcon(ctx, x, y, size) {
+function drawCityIcon(ctx, x, y, size, color = '#FF6347') {
     const centerX = x + size / 2;
     const centerY = y + size / 2;
     const buildingWidth = size * 0.2;
     const buildingHeight = size * 0.6;
     
-    ctx.fillStyle = '#FF6347';
-    ctx.strokeStyle = '#A0522D';
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color === '#FFFFFF' ? '#CCCCCC' : '#A0522D';
     ctx.lineWidth = 1;
     
     // Three buildings
@@ -317,6 +317,21 @@ function hexToRgb(hex) {
         g: parseInt(result[2], 16),
         b: parseInt(result[3], 16)
     } : null;
+}
+
+// Calculate luminance to determine if color is light or dark
+function getLuminance(r, g, b) {
+    const [rs, gs, bs] = [r, g, b].map(c => {
+        c = c / 255;
+        return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+}
+
+// Get contrasting color (black or white) for given RGB
+function getContrastColor(r, g, b) {
+    const luminance = getLuminance(r, g, b);
+    return luminance > 0.5 ? '#000000' : '#FFFFFF';
 }
 
 let isDragging = false;
@@ -1271,14 +1286,16 @@ function drawGame() {
             const iconY = y + (tileSize - iconSize) / 2;
             
             if (terrain >= 0 && gameState.generals && gameState.generals.includes(i)) {
-                // Draw crown icon on general tiles
+                // Draw crown icon on general tiles - always gold for generals
                 drawCrownIcon(ctx, iconX, iconY, iconSize);
             } else if (isTower && terrain < 0) {
                 // Draw tower icon only on neutral towers
-                drawTowerIcon(ctx, iconX, iconY, iconSize);
+                const towerColor = getContrastColor(65, 105, 225); // Royal blue background
+                drawTowerIcon(ctx, iconX, iconY, iconSize, towerColor);
             } else if (isCity && terrain < 0) {
-                // Draw city icon only on neutral cities
-                drawCityIcon(ctx, iconX, iconY, iconSize);
+                // Draw city icon only on neutral cities  
+                const cityColor = getContrastColor(255, 99, 71); // Tomato background
+                drawCityIcon(ctx, iconX, iconY, iconSize, cityColor);
             }
             
             // Draw army count or special tile defense
