@@ -1286,8 +1286,9 @@ function drawGame() {
             const iconY = y + (tileSize - iconSize) / 2;
             
             if (terrain >= 0 && gameState.generals && gameState.generals.includes(i)) {
-                // Draw crown icon on general tiles - always gold for generals
-                drawCrownIcon(ctx, iconX, iconY, iconSize);
+                // Draw crown icon on general tiles - use contrasting color against gold background
+                const crownColor = getContrastColor(255, 215, 0); // Gold background
+                drawCrownIcon(ctx, iconX, iconY, iconSize, crownColor);
             } else if (isTower && terrain < 0) {
                 // Draw tower icon only on neutral towers
                 const towerColor = getContrastColor(65, 105, 225); // Royal blue background
