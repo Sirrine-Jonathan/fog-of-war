@@ -1302,20 +1302,26 @@ function drawGame() {
             }
             
             // Draw army count or special tile defense
-            if (gameState.armies[i] > 0) {
+            if (gameState.armies[i] > 0 && !(isCity || isTower)) {
+                // Only show army count for non-special tiles
                 ctx.fillStyle = terrain === -2 ? 'white' : 'black';
                 ctx.font = `bold ${Math.max(10, 12 * camera.zoom)}px 'Courier New', monospace`;
                 ctx.textAlign = 'center';
                 ctx.fillText(gameState.armies[i].toString(), x + tileSize/2, y + tileSize/2 + 3*camera.zoom);
+            } else if (gameState.armies[i] > 0 && (isCity || isTower) && terrain >= 0) {
+                // Captured special tiles show army count
+                ctx.fillStyle = 'black';
+                ctx.font = `bold ${Math.max(10, 12 * camera.zoom)}px 'Courier New', monospace`;
+                ctx.textAlign = 'center';
+                ctx.fillText(gameState.armies[i].toString(), x + tileSize/2, y + tileSize/2 + 3*camera.zoom);
             } else if ((isTower || isCity) && terrain < 0) {
-                // Handle special tile defense display
+                // Handle neutral special tile defense display (only when attacked)
                 const now = Date.now();
                 const defenseDisplay = specialTileDefenseDisplay.get(i);
                 const shouldShowDefense = defenseDisplay && now < defenseDisplay.showUntil;
                 
                 if (shouldShowDefense) {
-                    const defense = gameState.towerDefense?.[i]; // Both towers and cities use towerDefense array
-                    console.log('Showing defense for tile:', i, 'defense:', defense, 'timeLeft:', defenseDisplay.showUntil - now);
+                    const defense = gameState.towerDefense?.[i];
                     if (defense > 0) {
                         // Calculate fade opacity
                         const timeLeft = defenseDisplay.showUntil - now;
