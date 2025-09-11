@@ -3,15 +3,6 @@
 ## Defects to fix  
 - Enemy generals spawn to close to each other. Update general spawn logic to
 	balance space between all other generals and edges of the map.
-- All special tiles (lookout towers, generals, cities) look flat
-	with the exception of the general tile which has a shiny gold surface.
-	Add the public/icons/crown-svgrepo-com-dark.svg to display centered on the general tile
-	Update the lookout tower tiles to have a shiny distinctly colored surface and
-	add the public/icons/tower-observation-svgrepo-com-dark.svg to display centered on it.
-	Update the city tiles to have a shiny distinctly colored surface and
-	add the public/icons/building-flag-svgrepo-com-dark.svg to display centered on it.
-- #mobileGameStats should not display until there is at least 1 person joined to the game.
-  (much like how the .players-list element already works).
 - Use public/icons/triangle-svgrepo-com-dark.svg for the toggle icon on #mobileStatsToggle
 - Use public/icons/triangle-svgrepo-com-dark.svg for the triangle toggle in .accordion-header
 
@@ -35,6 +26,7 @@
 	This isn't developer documentation or a user guide.
 	This is a spec that will be used by engineers wanting to make bots that play the game,
 	and rule officials and judges to be able to officiate regulated battles between bots.
+- Correctly attribute icons in public/icons according to https://www.svgrepo.com/page/licensing/#CC%20Attribution
 
 ## New features to implement  
 - A display of the "Tick" or "Turn" that .fullDisplay .header

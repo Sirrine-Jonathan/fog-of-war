@@ -242,6 +242,30 @@ let camera = {
     smoothing: 0.1
 };
 
+// Special tile icons
+const specialTileIcons = {
+    crown: null,
+    tower: null,
+    city: null
+};
+
+// Load special tile icons
+function loadSpecialTileIcons() {
+    const iconPaths = {
+        crown: 'icons/crown-svgrepo-com-dark.svg',
+        tower: 'icons/tower-observation-svgrepo-com-dark.svg',
+        city: 'icons/building-flag-svgrepo-com-dark.svg'
+    };
+    
+    Object.keys(iconPaths).forEach(key => {
+        const img = new Image();
+        img.onload = () => {
+            specialTileIcons[key] = img;
+        };
+        img.src = iconPaths[key];
+    });
+}
+
 let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
@@ -1083,9 +1107,21 @@ function drawGame() {
             if (terrain === -2) { // Mountain
                 ctx.fillStyle = mountainColor;
             } else if (terrain === -6) { // City
-                ctx.fillStyle = '#D2691E'; // Saddle brown for cities
+                // Create shiny gradient for city tiles
+                const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
+                gradient.addColorStop(0, '#FF6347'); // Tomato
+                gradient.addColorStop(0.3, '#FFB6C1'); // Light pink
+                gradient.addColorStop(0.7, '#CD5C5C'); // Indian red
+                gradient.addColorStop(1, '#A0522D'); // Sienna
+                ctx.fillStyle = gradient;
             } else if (terrain === -5) { // Lookout Tower
-                ctx.fillStyle = '#696969'; // Dim gray for towers
+                // Create shiny gradient for tower tiles
+                const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
+                gradient.addColorStop(0, '#4169E1'); // Royal blue
+                gradient.addColorStop(0.3, '#87CEEB'); // Sky blue
+                gradient.addColorStop(0.7, '#4682B4'); // Steel blue
+                gradient.addColorStop(1, '#2F4F4F'); // Dark slate gray
+                ctx.fillStyle = gradient;
             } else if (terrain >= 0) { // Player owned
                 // Check if this is a general tile
                 const isGeneral = gameState.generals && gameState.generals.includes(i);
@@ -1106,14 +1142,37 @@ function drawGame() {
             
             ctx.fillRect(x, y, tileSize, tileSize);
             
-            // Add shine effect for general tiles
+            // Add shine effect for special tiles
             if (terrain >= 0 && gameState.generals && gameState.generals.includes(i)) {
-                // Add a subtle shine overlay
+                // General tiles shine
                 const shineGradient = ctx.createLinearGradient(x, y, x + tileSize * 0.6, y + tileSize * 0.6);
                 shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
                 shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
                 ctx.fillStyle = shineGradient;
                 ctx.fillRect(x, y, tileSize, tileSize);
+            } else if (terrain === -5 || terrain === -6) {
+                // Tower and city tiles shine
+                const shineGradient = ctx.createLinearGradient(x, y, x + tileSize * 0.6, y + tileSize * 0.6);
+                shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+                shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = shineGradient;
+                ctx.fillRect(x, y, tileSize, tileSize);
+            }
+            
+            // Draw icons for special tiles
+            const iconSize = tileSize * 0.6;
+            const iconX = x + (tileSize - iconSize) / 2;
+            const iconY = y + (tileSize - iconSize) / 2;
+            
+            if (terrain >= 0 && gameState.generals && gameState.generals.includes(i) && specialTileIcons.crown) {
+                // Draw crown icon on general tiles
+                ctx.drawImage(specialTileIcons.crown, iconX, iconY, iconSize, iconSize);
+            } else if (terrain === -5 && specialTileIcons.tower) {
+                // Draw tower icon on lookout towers
+                ctx.drawImage(specialTileIcons.tower, iconX, iconY, iconSize, iconSize);
+            } else if (terrain === -6 && specialTileIcons.city) {
+                // Draw city icon on cities
+                ctx.drawImage(specialTileIcons.city, iconX, iconY, iconSize, iconSize);
             }
             
             // Draw army count or tower defense
@@ -2208,6 +2267,9 @@ socket.on('chat_message', (data) => {
 
 // Initialize animation on page load if no game is active
 document.addEventListener('DOMContentLoaded', () => {
+    // Load special tile icons
+    loadSpecialTileIcons();
+    
     // Start animation if no game is running
     if (!gameStarted && !gameState) {
         startAnimation();
