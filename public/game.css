@@ -716,8 +716,7 @@ body.mobile-chat-active #chatInput {
     color: white;
     font-size: 14px;
     margin-left: auto;
-    margin-right: 8px;
-    text-align: left;
+    text-align: right;
     flex: 1;
     display: inline;
 }
@@ -745,13 +744,13 @@ body.mobile-chat-active #chatInput {
     width: 100%;
     font-size: 11px;
     border-collapse: collapse;
+    border: 1px solid white;
 }
 
 .mobile-stats-table th,
 .mobile-stats-table td {
     padding: 3px 6px;
     text-align: center;
-    border: 1px solid rgba(255,215,0,0.9);
 }
 
 .mobile-stats-table th {

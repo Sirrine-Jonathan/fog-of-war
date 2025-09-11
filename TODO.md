@@ -12,6 +12,8 @@
 	add the public/icons/building-flag-svgrepo-com-dark.svg to display centered on it.
 - #mobileGameStats should not display until there is at least 1 person joined to the game.
   (much like how the .players-list element already works).
+- Use public/icons/triangle-svgrepo-com-dark.svg for the toggle icon on #mobileStatsToggle
+- Use public/icons/triangle-svgrepo-com-dark.svg for the triangle toggle in .accordion-header
 
 ## Tech Debt  
 - Move all inline styles in all html files to css files.
