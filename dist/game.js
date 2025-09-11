@@ -140,7 +140,7 @@ class Game {
         }, 500); // 2 moves per second
     }
     spawnCities() {
-        const cityCount = Math.max(1, Math.floor(this.state.players.length * 3.0));
+        const cityCount = Math.max(1, Math.floor(this.state.players.length * 9.0));
         console.log(`🏙️  Spawning ${cityCount} cities...`);
         for (let i = 0; i < cityCount; i++) {
             try {
