@@ -3,8 +3,17 @@
 ## Defects to fix  
 - Enemy generals spawn to close to each other. Update general spawn logic to
 	balance space between all other generals and edges of the map.
+	Update cities to spawn spread out from other cities. They can be up against
+	walls, mountains, towers, and general tiles.
 - Use public/icons/triangle-svgrepo-com-dark.svg for the toggle icon on #mobileStatsToggle
 - Use public/icons/triangle-svgrepo-com-dark.svg for the triangle toggle in .accordion-header
+- Cities and Lookout towers should keep their shiny appearance when taken over, but
+  be colored using the player's color who took them over.
+- Intent system that uses path finding to move armies from active square to a target square
+	(the non adjacent to the active square that was clicked/touched)
+  needs to be updated to move armies all the way to the target square and the target square should become
+	the active square if the armies arrived safely.
+- The active square's border is currently gold. It should be gray if the active square has only 1 army.
 
 ## Tech Debt  
 - Move all inline styles in all html files to css files.

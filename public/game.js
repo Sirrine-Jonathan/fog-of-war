@@ -257,13 +257,30 @@ function loadSpecialTileIcons() {
         city: 'icons/building-flag-svgrepo-com-dark.svg'
     };
     
+    console.log('Loading special tile icons...');
+    
     Object.keys(iconPaths).forEach(key => {
         const img = new Image();
         img.onload = () => {
             specialTileIcons[key] = img;
+            console.log(`✅ Loaded ${key} icon:`, iconPaths[key]);
+        };
+        img.onerror = () => {
+            console.error(`❌ Failed to load ${key} icon:`, iconPaths[key]);
         };
         img.src = iconPaths[key];
+        console.log(`🔄 Loading ${key} icon from:`, iconPaths[key]);
     });
+}
+
+// Helper function to convert hex color to RGB
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
 }
 
 let isDragging = false;
@@ -1104,24 +1121,63 @@ function drawGame() {
         } else {
             // Draw visible tile
             const terrain = gameState.terrain[i];
+            const isCity = gameState.cities && gameState.cities.includes(i);
+            const isTower = gameState.lookoutTowers && gameState.lookoutTowers.includes(i);
+            
             if (terrain === -2) { // Mountain
                 ctx.fillStyle = mountainColor;
-            } else if (terrain === -6) { // City
-                // Create shiny gradient for city tiles
-                const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
-                gradient.addColorStop(0, '#FF6347'); // Tomato
-                gradient.addColorStop(0.3, '#FFB6C1'); // Light pink
-                gradient.addColorStop(0.7, '#CD5C5C'); // Indian red
-                gradient.addColorStop(1, '#A0522D'); // Sienna
-                ctx.fillStyle = gradient;
-            } else if (terrain === -5) { // Lookout Tower
-                // Create shiny gradient for tower tiles
-                const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
-                gradient.addColorStop(0, '#4169E1'); // Royal blue
-                gradient.addColorStop(0.3, '#87CEEB'); // Sky blue
-                gradient.addColorStop(0.7, '#4682B4'); // Steel blue
-                gradient.addColorStop(1, '#2F4F4F'); // Dark slate gray
-                ctx.fillStyle = gradient;
+            } else if (isCity) { // City (captured or neutral)
+                if (terrain >= 0) {
+                    // Captured city - use player color with shiny effect
+                    const playerColor = playerColors[terrain] || emptyColor;
+                    const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
+                    // Create shiny version of player color
+                    const rgb = hexToRgb(playerColor);
+                    if (rgb) {
+                        gradient.addColorStop(0, `rgb(${Math.min(255, rgb.r + 40)}, ${Math.min(255, rgb.g + 40)}, ${Math.min(255, rgb.b + 40)})`);
+                        gradient.addColorStop(0.3, `rgb(${Math.min(255, rgb.r + 60)}, ${Math.min(255, rgb.g + 60)}, ${Math.min(255, rgb.b + 60)})`);
+                        gradient.addColorStop(0.7, playerColor);
+                        gradient.addColorStop(1, `rgb(${Math.max(0, rgb.r - 40)}, ${Math.max(0, rgb.g - 40)}, ${Math.max(0, rgb.b - 40)})`);
+                    } else {
+                        gradient.addColorStop(0, playerColor);
+                        gradient.addColorStop(1, playerColor);
+                    }
+                    ctx.fillStyle = gradient;
+                } else {
+                    // Neutral city - red gradient
+                    const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
+                    gradient.addColorStop(0, '#FF6347'); // Tomato
+                    gradient.addColorStop(0.3, '#FFB6C1'); // Light pink
+                    gradient.addColorStop(0.7, '#CD5C5C'); // Indian red
+                    gradient.addColorStop(1, '#A0522D'); // Sienna
+                    ctx.fillStyle = gradient;
+                }
+            } else if (isTower) { // Lookout Tower (captured or neutral)
+                if (terrain >= 0) {
+                    // Captured tower - use player color with shiny effect
+                    const playerColor = playerColors[terrain] || emptyColor;
+                    const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
+                    // Create shiny version of player color
+                    const rgb = hexToRgb(playerColor);
+                    if (rgb) {
+                        gradient.addColorStop(0, `rgb(${Math.min(255, rgb.r + 40)}, ${Math.min(255, rgb.g + 40)}, ${Math.min(255, rgb.b + 40)})`);
+                        gradient.addColorStop(0.3, `rgb(${Math.min(255, rgb.r + 60)}, ${Math.min(255, rgb.g + 60)}, ${Math.min(255, rgb.b + 60)})`);
+                        gradient.addColorStop(0.7, playerColor);
+                        gradient.addColorStop(1, `rgb(${Math.max(0, rgb.r - 40)}, ${Math.max(0, rgb.g - 40)}, ${Math.max(0, rgb.b - 40)})`);
+                    } else {
+                        gradient.addColorStop(0, playerColor);
+                        gradient.addColorStop(1, playerColor);
+                    }
+                    ctx.fillStyle = gradient;
+                } else {
+                    // Neutral tower - blue gradient
+                    const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
+                    gradient.addColorStop(0, '#4169E1'); // Royal blue
+                    gradient.addColorStop(0.3, '#87CEEB'); // Sky blue
+                    gradient.addColorStop(0.7, '#4682B4'); // Steel blue
+                    gradient.addColorStop(1, '#2F4F4F'); // Dark slate gray
+                    ctx.fillStyle = gradient;
+                }
             } else if (terrain >= 0) { // Player owned
                 // Check if this is a general tile
                 const isGeneral = gameState.generals && gameState.generals.includes(i);
@@ -1150,8 +1206,8 @@ function drawGame() {
                 shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
                 ctx.fillStyle = shineGradient;
                 ctx.fillRect(x, y, tileSize, tileSize);
-            } else if (terrain === -5 || terrain === -6) {
-                // Tower and city tiles shine
+            } else if (isCity || isTower) {
+                // City and tower tiles shine
                 const shineGradient = ctx.createLinearGradient(x, y, x + tileSize * 0.6, y + tileSize * 0.6);
                 shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
                 shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
@@ -1167,10 +1223,10 @@ function drawGame() {
             if (terrain >= 0 && gameState.generals && gameState.generals.includes(i) && specialTileIcons.crown) {
                 // Draw crown icon on general tiles
                 ctx.drawImage(specialTileIcons.crown, iconX, iconY, iconSize, iconSize);
-            } else if (terrain === -5 && specialTileIcons.tower) {
+            } else if (isTower && specialTileIcons.tower) {
                 // Draw tower icon on lookout towers
                 ctx.drawImage(specialTileIcons.tower, iconX, iconY, iconSize, iconSize);
-            } else if (terrain === -6 && specialTileIcons.city) {
+            } else if (isCity && specialTileIcons.city) {
                 // Draw city icon on cities
                 ctx.drawImage(specialTileIcons.city, iconX, iconY, iconSize, iconSize);
             }
