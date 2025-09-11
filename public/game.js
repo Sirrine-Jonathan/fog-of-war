@@ -57,11 +57,46 @@ function drawTilingAnimation() {
             // Wave effect - horizontal wave with uneven timing and row variation
             const rowSpeed = 1 + (y % 5) * 0.3; // Different speeds per row
             const rowOffset = y * 0.7; // Different start positions per row
-            const waveOffset = Math.sin(time * 2 * rowSpeed + x * 0.3 + y * 0.1 + rowOffset) * 0.5 + 0.5;
-            const scale = 0.4 + waveOffset * 0.6; // Larger min (0.4), max (1.0)
+            let waveOffset = Math.sin(time * 2 * rowSpeed + x * 0.3 + y * 0.1 + rowOffset) * 0.5 + 0.5;
             
             const centerX = xPos + tileSize / 2;
             const centerY = yPos + tileSize / 2;
+            
+            // Apply ripple effects to wave
+            ripples.forEach(ripple => {
+                // Transform ripple position to match tile coordinate system
+                // Inverse of the canvas transform: translate, rotate, scale
+                const canvasCenterX = canvas.width / 2;
+                const canvasCenterY = canvas.height / 2;
+                
+                // Translate to origin
+                let rippleX = ripple.x - canvasCenterX;
+                let rippleY = ripple.y - canvasCenterY;
+                
+                // Inverse scale (divide by 1.6)
+                rippleX /= 1.6;
+                rippleY /= 1.6;
+                
+                // Inverse rotation
+                const rotation = -(0.15 + time * 0.07);
+                const cos = Math.cos(rotation);
+                const sin = Math.sin(rotation);
+                const transformedX = rippleX * cos - rippleY * sin;
+                const transformedY = rippleX * sin + rippleY * cos;
+                
+                // Translate back
+                const finalRippleX = transformedX + canvasCenterX;
+                const finalRippleY = transformedY + canvasCenterY;
+                
+                const distance = Math.sqrt((centerX - finalRippleX) ** 2 + (centerY - finalRippleY) ** 2);
+                if (distance < ripple.radius + 30) {
+                    const influence = Math.max(0, 1 - distance / (ripple.radius + 30));
+                    const rippleEffect = influence * ripple.opacity * 2.0;
+                    waveOffset = Math.min(1, waveOffset + rippleEffect);
+                }
+            });
+            
+            const scale = 0.4 + waveOffset * 0.6; // Larger min (0.4), max (1.0)
             const scaledSize = tileSize * scale;
             
             // Color fading effect for some tiles
@@ -70,8 +105,52 @@ function drawTilingAnimation() {
             const shouldBePlayerColor = (x * 2 + y) % 6 === 0; // More player color tiles (every 6th)
             
             let tileColor = appColors.slate; // Default dark slate
+            let hasRippleShimmer = false;
+            let shimmerIntensity = 0;
             
-            if (shouldBePlayerColor && waveOffset > 0.6) {
+            // Check for ripple shimmer effect
+            ripples.forEach(ripple => {
+                // Transform ripple position to match tile coordinate system
+                const canvasCenterX = canvas.width / 2;
+                const canvasCenterY = canvas.height / 2;
+                
+                let rippleX = ripple.x - canvasCenterX;
+                let rippleY = ripple.y - canvasCenterY;
+                
+                rippleX /= 1.6;
+                rippleY /= 1.6;
+                
+                const rotation = -(0.15 + time * 0.07);
+                const cos = Math.cos(rotation);
+                const sin = Math.sin(rotation);
+                const transformedX = rippleX * cos - rippleY * sin;
+                const transformedY = rippleX * sin + rippleY * cos;
+                
+                const finalRippleX = transformedX + canvasCenterX;
+                const finalRippleY = transformedY + canvasCenterY;
+                
+                const distance = Math.sqrt((centerX - finalRippleX) ** 2 + (centerY - finalRippleY) ** 2);
+                if (distance < ripple.radius + 20) { // Tighter area for shimmer
+                    const influence = Math.max(0, 1 - distance / (ripple.radius + 20));
+                    const currentShimmer = influence * ripple.opacity;
+                    if (currentShimmer > shimmerIntensity) {
+                        shimmerIntensity = currentShimmer;
+                        hasRippleShimmer = true;
+                    }
+                }
+            });
+            
+            if (hasRippleShimmer && shimmerIntensity > 0.1) {
+                // Apply shimmer effect - blend with white
+                const whiteRGB = [255, 255, 255]; // White
+                const slateRGB = [15, 20, 25]; // #0f1419
+                
+                const r = Math.round(slateRGB[0] + (whiteRGB[0] - slateRGB[0]) * shimmerIntensity * 0.8);
+                const g = Math.round(slateRGB[1] + (whiteRGB[1] - slateRGB[1]) * shimmerIntensity * 0.8);
+                const b = Math.round(slateRGB[2] + (whiteRGB[2] - slateRGB[2]) * shimmerIntensity * 0.8);
+                
+                tileColor = `rgb(${r}, ${g}, ${b})`;
+            } else if (shouldBePlayerColor && waveOffset > 0.6) {
                 // Random player color tiles when wave is high
                 const colorIndex = (x + y * 2) % playerColors.length;
                 const playerColor = playerColors[colorIndex];
@@ -135,8 +214,8 @@ function startAnimation() {
     
     function animate() {
         animationTime += 16;
-        drawTilingAnimation();
-        drawRipples(); // Add ripples to animation
+        updateRipples(); // Update ripple data
+        drawTilingAnimation(); // Tiles now react to ripples
         animationId = requestAnimationFrame(animate);
     }
     
@@ -2199,7 +2278,7 @@ function createRipple(x, y, size = 'normal') {
     });
 }
 
-function drawRipples() {
+function updateRipples() {
     ripples = ripples.filter(ripple => {
         const age = animationTime - ripple.startTime;
         const progress = age / 1000; // 1 second duration
@@ -2208,16 +2287,6 @@ function drawRipples() {
         
         ripple.radius = progress * ripple.maxRadius;
         ripple.opacity = 1 - progress;
-        
-        // Draw ripple
-        ctx.save();
-        ctx.globalAlpha = ripple.opacity * 0.4;
-        ctx.strokeStyle = ripple.color;
-        ctx.lineWidth = ripple.lineWidth;
-        ctx.beginPath();
-        ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
         
         return true;
     });
