@@ -891,6 +891,11 @@ body.mobile-game-active #mobileGameStats {
 .empty {
     display: none;
 }
+
+/* Hide mobile game stats when empty (higher specificity needed) */
+body.mobile-game-active #mobileGameStats.empty {
+    display: none !important;
+}
 /* Hide desktop players list on mobile */
 @media (max-width: 768px) {
     .players-list {

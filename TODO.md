@@ -13,7 +13,7 @@
 - #mobileGameStats should not display until there is at least 1 person joined to the game.
   (much like how the .players-list element already works).
 
-## Tech Debt
+## Tech Debt  
 - Move all inline styles in all html files to css files.
 	Organize them in the way that makes most sense WITHOUT altering effective styles at all.
 - Identify the multiple moving parts of public/game.js (animation, ui, game).
@@ -24,6 +24,15 @@
 - Examine the server code in src/
   Identify unit testable portions. Identify areas that could be safely refactored to become unit testable.
 	Write unit tests for unit testable portions of src/
+- Examine the fog of war game server in
+	/Users/jsirrine/dev/user-workspace/prototypes/fog-of-war-server/src/game.ts and
+	/Users/jsirrine/dev/user-workspace/prototypes/fog-of-war-server/server.ts
+	Examine its client usage in public/game.js and src/bot.ts
+	Write a spec named fog-of-war-spec (whatever file type/ext works best for you)
+	that give a extremely detailed outline of how the game functions on a technical level.
+	This isn't developer documentation or a user guide.
+	This is a spec that will be used by engineers wanting to make bots that play the game,
+	and rule officials and judges to be able to officiate regulated battles between bots.
 
 ## New features to implement  
 - A display of the "Tick" or "Turn" that .fullDisplay .header
