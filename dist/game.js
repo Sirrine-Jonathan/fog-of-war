@@ -57,7 +57,7 @@ class Game {
         console.log(`   Player added to array, new length: ${this.state.players.length}`);
         // Place general - this should always succeed with proper map size
         console.log(`   Finding position for general...`);
-        const generalPos = this.findEmptyPosition();
+        const generalPos = this.findOptimalGeneralPosition();
         console.log(`   General position found: ${generalPos}`);
         this.state.generals[playerIndex] = generalPos;
         this.state.terrain[generalPos] = playerIndex;
@@ -95,6 +95,73 @@ class Game {
     }
     getPlayers() {
         return this.state.players;
+    }
+    findOptimalGeneralPosition() {
+        const width = 30;
+        const height = 30;
+        const minEdgeDistance = 3;
+        const existingGenerals = this.state.generals.filter(pos => pos >= 0);
+        // Calculate minimum distance based on number of players
+        const getMinDistance = (playerCount) => {
+            if (playerCount <= 2)
+                return 8;
+            if (playerCount <= 4)
+                return 6;
+            return 4;
+        };
+        const minGeneralDistance = getMinDistance(existingGenerals.length + 1);
+        let bestPosition = -1;
+        let bestScore = -1;
+        let attempts = 0;
+        const maxAttempts = 1000;
+        while (attempts < maxAttempts) {
+            const pos = Math.floor(Math.random() * (width * height));
+            attempts++;
+            // Skip if position is not empty
+            if (this.state.terrain[pos] !== types_1.TILE_EMPTY)
+                continue;
+            const { x, y } = this.positionToCoords(pos, width);
+            // Check edge distance
+            const edgeDistance = Math.min(x, y, width - 1 - x, height - 1 - y);
+            if (edgeDistance < minEdgeDistance)
+                continue;
+            // Check distance from existing generals
+            let minDistanceFromGenerals = Infinity;
+            let validPosition = true;
+            for (const generalPos of existingGenerals) {
+                const distance = this.calculateDistance(pos, generalPos);
+                minDistanceFromGenerals = Math.min(minDistanceFromGenerals, distance);
+                if (distance < minGeneralDistance) {
+                    validPosition = false;
+                    break;
+                }
+            }
+            if (!validPosition)
+                continue;
+            // Calculate score (higher is better)
+            // Favor positions with good edge distance and far from other generals
+            const score = edgeDistance + (minDistanceFromGenerals === Infinity ? 20 : minDistanceFromGenerals);
+            if (score > bestScore) {
+                bestScore = score;
+                bestPosition = pos;
+            }
+            // If we found a really good position, use it
+            if (edgeDistance >= minEdgeDistance + 2 && minDistanceFromGenerals >= minGeneralDistance + 2) {
+                break;
+            }
+        }
+        // Fallback to original method if no optimal position found
+        if (bestPosition === -1) {
+            console.warn('Could not find optimal general position, falling back to random placement');
+            return this.findEmptyPosition();
+        }
+        return bestPosition;
+    }
+    positionToCoords(pos, width) {
+        return {
+            x: pos % width,
+            y: Math.floor(pos / width)
+        };
     }
     findEmptyPosition() {
         let pos;
@@ -140,7 +207,7 @@ class Game {
         }, 500); // 2 moves per second
     }
     spawnCities() {
-        const cityCount = Math.max(1, Math.floor(this.state.players.length * 9.0));
+        const cityCount = Math.max(1, Math.floor(this.state.players.length * 3.0));
         console.log(`🏙️  Spawning ${cityCount} cities...`);
         for (let i = 0; i < cityCount; i++) {
             try {
@@ -175,7 +242,7 @@ class Game {
                     placedTowers.push(pos);
                     this.state.lookoutTowers.push(pos);
                     this.state.terrain[pos] = types_1.TILE_LOOKOUT_TOWER;
-                    this.state.towerDefense[pos] = 10;
+                    this.state.towerDefense[pos] = 25;
                     this.state.armies[pos] = 0;
                     console.log(`   Tower ${placedTowers.length} placed at position ${pos}`);
                 }

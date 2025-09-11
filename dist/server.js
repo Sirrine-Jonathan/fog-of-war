@@ -788,6 +788,14 @@ io.on('connection', (socket) => {
                     const userId = socket.data.userId;
                     const username = socket.data.username;
                     console.log(`🚪 Removing disconnected player ${userId} from game ${roomId}`);
+                    // Check if this is a bot and remove from bot manager
+                    if (userId && userId.startsWith('bot_')) {
+                        const botType = userId.includes('Blob') ? 'blob' : userId.includes('Arrow') ? 'arrow' : null;
+                        if (botType) {
+                            console.log(`🤖 Removing bot ${botType} from bot manager for room ${roomId}`);
+                            botManager.removeBot(botType, roomId);
+                        }
+                    }
                     // Send system message for disconnect
                     if (username) {
                         sendSystemMessage(roomId, `${username} disconnected`);

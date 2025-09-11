@@ -1,7 +1,7 @@
 # TODO
 
 ## Defects to fix  
-- Enemy generals spawn to close to each other. Update general spawn logic to
+- ✅ **COMPLETED**: Enemy generals spawn to close to each other. Update general spawn logic to
 	balance space between all other generals and edges of the map.
 - Cities and Lookout towers should keep their shiny appearance when taken over, but
   be colored using the player's color who took them over.
@@ -18,8 +18,12 @@
 - The active square's border is currently gold. It should be gray if the active square has only 1 army.
 - The text in #mobileStatsTable is white, but the highlight color used on the player's row is too light for
   white text. Let's highlight the players row with a darker color that can use white text.
-- The numbers obscure the icon. Let's leave the numbers off until the city or tower is attacked. When it is attacked, show the defense after the attack but then fade it out after a second. You'll also need to throttle this "showing and fading out" because there may be frequent attacks. Once a city or tower is taken over, you can remove the icon, shiny style it using the capturing players color, and show the number of armies on that tile.
 - Remove the icon from the general tile
+- When a tower or city is attacked, it will display the defense it was lowered to at the time of the attack.
+  The number shows for 1.5 seconds before fading out. Currently the number displayed is always zero.
+	If a user attacks with 5 armies (6 on the tile minus one to leave behind) and the tower starts with a 
+	defense of 25, then the tower should show 20 for a short time before fading out, attacks that happen
+	while the number is being shown do not affect the display.
 
 ## Tech Debt  
 - Move all inline styles in all html files to css files.
