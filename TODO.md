@@ -3,18 +3,16 @@
 ## Defects to fix  
 - ✅ **COMPLETED**: Enemy generals spawn to close to each other. Update general spawn logic to
 	balance space between all other generals and edges of the map.
-- Cities and Lookout towers should keep their shiny appearance when taken over, but
-  be colored using the player's color who took them over.
-	Update cities to spawn spread out from other cities. They can be up against
+- Update cities to spawn spread out from other cities. They can be up against
 	walls, mountains, towers, and general tiles.
-- Use public/icons/triangle-svgrepo-com-dark.svg for the triangle toggle in .accordion-header
-- Cities and Lookout towers should keep their shiny appearance when taken over, but
-  be colored using the player's color who took them over.
+- ✅ **COMPLETED**: Use public/icons/triangle-svgrepo-com-dark.svg for the triangle toggle in .accordion-header
+- ✅ **COMPLETED**: Cities and Lookout towers should keep their shiny appearance when taken over and
+	remain the same color they were, rather than taking on the players color.
 - Intent system that uses path finding to move armies from active square to a target square
 	(the non adjacent to the active square that was clicked/touched)
   needs to be updated to move armies all the way to the target square and the target square should become
 	the active square if the armies arrived safely.
-- The active square's border is currently gold. It should be gray if the active square has only 1 army.
+- ✅ **COMPLETED**: The active square's border is currently gold. It should be gray if the active square has only 1 army.
 - The text in #mobileStatsTable is white, but the highlight color used on the player's row is too light for
   white text. Let's highlight the players row with a darker color that can use white text.
 - Remove the icon from the general tile

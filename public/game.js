@@ -499,12 +499,6 @@ function toggleAccordion(header) {
     
     header.classList.toggle('active');
     content.classList.toggle('active');
-    
-    if (content.classList.contains('active')) {
-        arrow.textContent = '▼';
-    } else {
-        arrow.textContent = '▶';
-    }
 }
 
 function initAccordion() {
@@ -1124,57 +1118,21 @@ function drawGame() {
             if (terrain === -2) { // Mountain
                 ctx.fillStyle = mountainColor;
             } else if (isCity) { // City (captured or neutral)
-                if (terrain >= 0) {
-                    // Captured city - use player color with shiny effect
-                    const playerColor = playerColors[terrain] || emptyColor;
-                    const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
-                    // Create shiny version of player color
-                    const rgb = hexToRgb(playerColor);
-                    if (rgb) {
-                        gradient.addColorStop(0, `rgb(${Math.min(255, rgb.r + 40)}, ${Math.min(255, rgb.g + 40)}, ${Math.min(255, rgb.b + 40)})`);
-                        gradient.addColorStop(0.3, `rgb(${Math.min(255, rgb.r + 60)}, ${Math.min(255, rgb.g + 60)}, ${Math.min(255, rgb.b + 60)})`);
-                        gradient.addColorStop(0.7, playerColor);
-                        gradient.addColorStop(1, `rgb(${Math.max(0, rgb.r - 40)}, ${Math.max(0, rgb.g - 40)}, ${Math.max(0, rgb.b - 40)})`);
-                    } else {
-                        gradient.addColorStop(0, playerColor);
-                        gradient.addColorStop(1, playerColor);
-                    }
-                    ctx.fillStyle = gradient;
-                } else {
-                    // Neutral city - red gradient
-                    const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
-                    gradient.addColorStop(0, '#FF6347'); // Tomato
-                    gradient.addColorStop(0.3, '#FFB6C1'); // Light pink
-                    gradient.addColorStop(0.7, '#CD5C5C'); // Indian red
-                    gradient.addColorStop(1, '#A0522D'); // Sienna
-                    ctx.fillStyle = gradient;
-                }
+                // Cities keep their red gradient appearance whether captured or neutral
+                const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
+                gradient.addColorStop(0, '#FF6347'); // Tomato
+                gradient.addColorStop(0.3, '#FFB6C1'); // Light pink
+                gradient.addColorStop(0.7, '#CD5C5C'); // Indian red
+                gradient.addColorStop(1, '#A0522D'); // Sienna
+                ctx.fillStyle = gradient;
             } else if (isTower) { // Lookout Tower (captured or neutral)
-                if (terrain >= 0) {
-                    // Captured tower - use player color with shiny effect
-                    const playerColor = playerColors[terrain] || emptyColor;
-                    const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
-                    // Create shiny version of player color
-                    const rgb = hexToRgb(playerColor);
-                    if (rgb) {
-                        gradient.addColorStop(0, `rgb(${Math.min(255, rgb.r + 40)}, ${Math.min(255, rgb.g + 40)}, ${Math.min(255, rgb.b + 40)})`);
-                        gradient.addColorStop(0.3, `rgb(${Math.min(255, rgb.r + 60)}, ${Math.min(255, rgb.g + 60)}, ${Math.min(255, rgb.b + 60)})`);
-                        gradient.addColorStop(0.7, playerColor);
-                        gradient.addColorStop(1, `rgb(${Math.max(0, rgb.r - 40)}, ${Math.max(0, rgb.g - 40)}, ${Math.max(0, rgb.b - 40)})`);
-                    } else {
-                        gradient.addColorStop(0, playerColor);
-                        gradient.addColorStop(1, playerColor);
-                    }
-                    ctx.fillStyle = gradient;
-                } else {
-                    // Neutral tower - blue gradient
-                    const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
-                    gradient.addColorStop(0, '#4169E1'); // Royal blue
-                    gradient.addColorStop(0.3, '#87CEEB'); // Sky blue
-                    gradient.addColorStop(0.7, '#4682B4'); // Steel blue
-                    gradient.addColorStop(1, '#2F4F4F'); // Dark slate gray
-                    ctx.fillStyle = gradient;
-                }
+                // Towers keep their blue gradient appearance whether captured or neutral
+                const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
+                gradient.addColorStop(0, '#4169E1'); // Royal blue
+                gradient.addColorStop(0.3, '#87CEEB'); // Sky blue
+                gradient.addColorStop(0.7, '#4682B4'); // Steel blue
+                gradient.addColorStop(1, '#2F4F4F'); // Dark slate gray
+                ctx.fillStyle = gradient;
             } else if (terrain >= 0) { // Player owned
                 // Check if this is a general tile
                 const isGeneral = gameState.generals && gameState.generals.includes(i);
@@ -1217,11 +1175,7 @@ function drawGame() {
             const iconX = x + (tileSize - iconSize) / 2;
             const iconY = y + (tileSize - iconSize) / 2;
             
-            if (terrain >= 0 && gameState.generals && gameState.generals.includes(i)) {
-                // Draw crown icon on general tiles - use contrasting color against gold background
-                const crownColor = getContrastColor(255, 215, 0); // Gold background
-                drawCrownIcon(ctx, iconX, iconY, iconSize, crownColor);
-            } else if (isTower && terrain < 0) {
+            if (isTower && terrain < 0) {
                 // Draw tower icon only on neutral towers
                 const towerColor = getContrastColor(65, 105, 225); // Royal blue background
                 drawTowerIcon(ctx, iconX, iconY, iconSize, towerColor);
@@ -1292,11 +1246,23 @@ function drawGame() {
         
         if (isPlayerGeneral) {
             // Only current player's general gets special border
-            ctx.strokeStyle = isSelected ? '#ffd700' : '#9e8600ff';
+            if (isSelected) {
+                const armyCount = gameState.armies[i];
+                const canMoveArmies = armyCount > 1;
+                ctx.strokeStyle = canMoveArmies ? '#ffd700' : '#888888';
+            } else {
+                ctx.strokeStyle = '#9e8600ff';
+            }
             ctx.lineWidth = isSelected ? 3 * camera.zoom : 2 * camera.zoom;
         } else {
             // Regular tiles (including enemy generals) only get border when selected
-            ctx.strokeStyle = isSelected ? '#ffd700' : '#ccc';
+            if (isSelected) {
+                const armyCount = gameState.armies[i];
+                const canMoveArmies = armyCount > 1;
+                ctx.strokeStyle = canMoveArmies ? '#ffd700' : '#888888';
+            } else {
+                ctx.strokeStyle = '#ccc';
+            }
             ctx.lineWidth = isSelected ? 3 * camera.zoom : 1 * camera.zoom;
         }
         ctx.strokeRect(x, y, tileSize, tileSize);
