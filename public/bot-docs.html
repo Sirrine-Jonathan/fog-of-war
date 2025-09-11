@@ -93,6 +93,10 @@ socket.on('game_update', (data) => {
     gameMap = patch(gameMap, data.map_diff);
     generals = data.generals; // Only shows your general + discovered enemy generals
     
+    // Track current turn
+    const currentTurn = data.turn;
+    console.log(`Turn ${currentTurn}: Processing game update`);
+    
     // Check for newly discovered enemy generals
     for (let i = 0; i < generals.length; i++) {
         if (i !== playerIndex && generals[i] !== -1) {
@@ -220,6 +224,7 @@ console.log(`Bot ${botName} connecting to game ${gameRoom}...`);</code></pre>
     // data.lookoutTowers_diff - differential tower updates
     // data.generals - general positions array
     // data.players - player info array
+    // data.turn - current game turn/tick number
 });</code></pre>
             
             <h4><code>game_won</code></h4>

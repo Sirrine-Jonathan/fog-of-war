@@ -754,6 +754,12 @@ socket.on('game_update', (data) => {
             gameState.players = data.players;
         }
         
+        // Update turn if provided
+        if (data.turn !== undefined) {
+            gameState.turn = data.turn;
+            updateTurnDisplay();
+        }
+        
         // Update cities and lookout towers if provided
         if (data.cities_diff) {
             gameState.cities = patch(gameState.cities || [], data.cities_diff);
@@ -880,6 +886,13 @@ socket.on('game_end', (data) => {
     updateVisibleTiles();
     drawGame();
 });
+
+function updateTurnDisplay() {
+    const turnElement = document.getElementById('turnNumber');
+    if (turnElement && gameState && gameState.turn !== undefined) {
+        turnElement.textContent = gameState.turn;
+    }
+}
 
 function updateVisibleTiles() {
     if (!gameState) return;

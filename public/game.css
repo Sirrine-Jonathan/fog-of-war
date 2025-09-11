@@ -630,6 +630,7 @@ body.mobile-controls-active #chatSection {
     display: flex;
     flex-direction: row;
     align-items: center;
+    flex: 1;
 }
 
 #gameCanvas #gameOverOverlay {
@@ -752,6 +753,17 @@ body.mobile-chat-active #chatInput {
 
 #mobileStatsToggle.collapsed img {
     transform: rotate(180deg);
+}
+
+#turnDisplay {
+    font-size: 16px;
+    color: #FFF;
+    margin: 0 10px;
+}
+
+#turnNumber {
+    font-family: 'Orbitron', monospace;
+    color: rgba(255,215,0,0.9);
 }
 
 .mobile-stats-table {

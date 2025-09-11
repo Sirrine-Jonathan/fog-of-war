@@ -643,7 +643,8 @@ io.on('connection', (socket) => {
             cities_diff: [0, gameState.cities.length, ...gameState.cities],
             map_diff: [0, mapData.length, ...mapData],
             generals: personalizedGenerals,
-            players: gameState.players
+            players: gameState.players,
+            turn: gameState.turn
           });
         }
       });
@@ -657,7 +658,8 @@ io.on('connection', (socket) => {
           cities_diff: [0, gameState.cities.length, ...gameState.cities],
           map_diff: [0, mapData.length, ...mapData],
           generals: gameState.generals, // Viewers see all generals
-          players: gameState.players
+          players: gameState.players,
+          turn: gameState.turn
         });
       });
 
@@ -743,7 +745,8 @@ io.on('connection', (socket) => {
               lookoutTowers_diff: [0, gameState.lookoutTowers.length, ...gameState.lookoutTowers],
               map_diff: [0, mapData.length, ...mapData],
               generals: personalizedGenerals,
-              players: gameState.players
+              players: gameState.players,
+              turn: gameState.turn
             });
           }
         });
@@ -758,7 +761,8 @@ io.on('connection', (socket) => {
             lookoutTowers_diff: [0, gameState.lookoutTowers.length, ...gameState.lookoutTowers],
             map_diff: [0, mapData.length, ...mapData],
             generals: gameState.generals, // Viewers see all generals
-            players: gameState.players
+            players: gameState.players,
+            turn: gameState.turn
           });
         });
       }, 100);

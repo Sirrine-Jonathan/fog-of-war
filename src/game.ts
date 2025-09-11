@@ -251,17 +251,31 @@ export class Game {
 
   private spawnCities(): void {
     const cityCount = Math.max(1, Math.floor(this.state.players.length * 3.0));
-    console.log(`🏙️  Spawning ${cityCount} cities...`);
+    const MIN_CITY_DISTANCE = 8; // Cities must be at least 8 tiles apart
+    console.log(`🏙️  Spawning ${cityCount} cities with ${MIN_CITY_DISTANCE} tile separation...`);
     
-    for (let i = 0; i < cityCount; i++) {
+    const placedCities: number[] = [];
+    const maxAttempts = this.state.width * this.state.height;
+    
+    for (let attempt = 0; attempt < maxAttempts && placedCities.length < cityCount; attempt++) {
       try {
         const pos = this.findEmptyPosition();
-        this.state.cities.push(pos);
-        this.state.terrain[pos] = TILE_CITY;
-        this.state.armies[pos] = 40;
-        console.log(`   City ${i} placed at position ${pos}`);
+        
+        // Check if this position conflicts with existing cities
+        const conflicts = placedCities.some(existingPos => {
+          const distance = this.calculateDistance(pos, existingPos);
+          return distance < MIN_CITY_DISTANCE;
+        });
+        
+        if (!conflicts) {
+          placedCities.push(pos);
+          this.state.cities.push(pos);
+          this.state.terrain[pos] = TILE_CITY;
+          this.state.armies[pos] = 40;
+          console.log(`   City ${placedCities.length} placed at position ${pos}`);
+        }
       } catch (error) {
-        console.warn(`   Could not place city ${i}, map may be full`);
+        console.warn(`   Could not find more valid city positions after ${attempt} attempts`);
         break;
       }
     }
