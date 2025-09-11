@@ -242,7 +242,6 @@ let camera = {
     smoothing: 0.1
 };
 
-let isDragging = false;
 function drawCrownIcon(ctx, x, y, size) {
     const centerX = x + size / 2;
     const centerY = y + size / 2;
