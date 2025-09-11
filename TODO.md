@@ -3,6 +3,8 @@
 ## Defects to fix  
 - Enemy generals spawn to close to each other. Update general spawn logic to
 	balance space between all other generals and edges of the map.
+- Cities and Lookout towers should keep their shiny appearance when taken over, but
+  be colored using the player's color who took them over.
 	Update cities to spawn spread out from other cities. They can be up against
 	walls, mountains, towers, and general tiles.
 - Use public/icons/triangle-svgrepo-com-dark.svg for the toggle icon on #mobileStatsToggle
