@@ -50,6 +50,39 @@
                 <div class="info">
                     <div class="game-info">
                         <h3 style="margin-top: 0; color: #333;">Game Info</h3>
+                        
+                        <!-- How to play section (always open) -->
+                        <div class="accordion-section">
+                            <div class="accordion-header active" onclick="toggleAccordion(this)">
+                                <span>How to play</span>
+                                <span class="accordion-arrow">▼</span>
+                            </div>
+                            <div class="accordion-content active">
+                                <div id="desktopControls" class="controls-section">
+                                    <ul style="margin: 8px 0; padding-left: 20px; font-size: 13px;">
+                                        <li><strong>Click:</strong> Click visible tile to move armies there from the active territory</li>
+                                        <li><strong>Shift+Click:</strong> Activate territory without moving armies</li>
+                                        <li><strong>Keyboard:</strong> Arrow keys or WASD to move, Spacebar to select base territory</li>
+                                        <li><strong>Map:</strong> Shift+drag to pan, scroll to zoom</li>
+                                    </ul>
+                                </div>
+                                <div id="mobileControls" class="controls-section" style="display: none;">
+                                    <ul style="margin: 8px 0; padding-left: 20px; font-size: 13px;">
+                                        <li><strong>Tap:</strong> Tap territory to activate, tap visible tile to move</li>
+                                        <li><strong>Pan:</strong> Drag to move map view</li>
+                                        <li><strong>Zoom:</strong> Pinch to zoom in/out</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Game details section (collapsible) -->
+                        <div class="accordion-section">
+                            <div class="accordion-header" onclick="toggleAccordion(this)">
+                                <span>Game Details</span>
+                                <span class="accordion-arrow">▶</span>
+                            </div>
+                            <div class="accordion-content">
                         <p><strong>Room:</strong> <span id="roomId"></span></p>
                         <p><strong>Status:</strong> <span id="gameStarted">Waiting</span></p>
                         <p><strong>Host:</strong> <span id="hostName">-</span></p>
@@ -73,6 +106,8 @@
                                 </button>
                             </div>
                         </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -90,11 +125,13 @@
                 
                 <div class="info">
                     <div id="joinControls">
-                        <input type="text" id="usernameInput" placeholder="Enter your username" style="padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px;">
+                        <input type="text" id="usernameInput" placeholder="Enter your username">
                         <button id="joinBtn" class="btn">Join</button>
                         <button id="leaveBtn" class="btn" style="background: #dc3545; display: none;">Leave Game</button>
                     </div>
-                    <button id="startBtn" class="btn">Start Game</button>
+                    <div id="startControls">
+                        <button id="startBtn" class="btn">Start Game</button>
+                    </div>
                 </div>
             </div>
         </div>

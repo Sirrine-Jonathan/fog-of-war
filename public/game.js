@@ -357,6 +357,68 @@ setTimeout(attemptAutoRejoin, 100); // Small delay to ensure connection
 // Initialize mobile tabs
 initMobileTabs();
 
+// Initialize accordion and mobile/desktop controls
+initAccordion();
+
+function toggleAccordion(header) {
+    const content = header.nextElementSibling;
+    const arrow = header.querySelector('.accordion-arrow');
+    
+    header.classList.toggle('active');
+    content.classList.toggle('active');
+    
+    if (content.classList.contains('active')) {
+        arrow.textContent = '▼';
+    } else {
+        arrow.textContent = '▶';
+    }
+}
+
+function initAccordion() {
+    // Show appropriate controls based on device type
+    const desktopControls = document.getElementById('desktopControls');
+    const mobileControls = document.getElementById('mobileControls');
+    
+    if (isMobile) {
+        desktopControls.style.display = 'none';
+        mobileControls.style.display = 'block';
+    } else {
+        desktopControls.style.display = 'block';
+        mobileControls.style.display = 'none';
+    }
+}
+
+// Initialize accordion and mobile/desktop controls
+initAccordion();
+
+function toggleAccordion(header) {
+    const content = header.nextElementSibling;
+    const arrow = header.querySelector('.accordion-arrow');
+    
+    header.classList.toggle('active');
+    content.classList.toggle('active');
+    
+    if (content.classList.contains('active')) {
+        arrow.textContent = '▼';
+    } else {
+        arrow.textContent = '▶';
+    }
+}
+
+function initAccordion() {
+    // Show appropriate controls based on device type
+    const desktopControls = document.getElementById('desktopControls');
+    const mobileControls = document.getElementById('mobileControls');
+    
+    if (isMobile) {
+        desktopControls.style.display = 'none';
+        mobileControls.style.display = 'block';
+    } else {
+        desktopControls.style.display = 'block';
+        mobileControls.style.display = 'none';
+    }
+}
+
 socket.on('game_start', (data) => {
     console.log('🎮 Game started!', data);
     console.log('   Player index:', data.playerIndex);
@@ -433,7 +495,7 @@ function updateButtonVisibility() {
         document.getElementById('usernameInput').style.display = 'none';
     } else {
         // Not joined and game not started - show join controls, hide leave button
-        joinControls.style.display = 'block';
+        joinControls.style.display = 'flex';
         joinBtn.style.display = 'inline-block';
         leaveBtn.style.display = 'none';
         document.getElementById('usernameInput').style.display = 'block';
@@ -1963,15 +2025,23 @@ document.addEventListener('keydown', (e) => {
     
     switch(e.key) {
         case 'ArrowUp':
+        case 'w':
+        case 'W':
             if (row > 0) targetTile = selectedTile - gameState.width;
             break;
         case 'ArrowDown':
+        case 's':
+        case 'S':
             if (row < gameState.height - 1) targetTile = selectedTile + gameState.width;
             break;
         case 'ArrowLeft':
+        case 'a':
+        case 'A':
             if (col > 0) targetTile = selectedTile - 1;
             break;
         case 'ArrowRight':
+        case 'd':
+        case 'D':
             if (col < gameState.width - 1) targetTile = selectedTile + 1;
             break;
     }
