@@ -16,6 +16,8 @@
   needs to be updated to move armies all the way to the target square and the target square should become
 	the active square if the armies arrived safely.
 - The active square's border is currently gold. It should be gray if the active square has only 1 army.
+- The text in #mobileStatsTable is white, but the highlight color used on the player's row is too light for
+  white text. Let's highlight the players row with a darker color that can use white text.
 
 ## Tech Debt  
 - Move all inline styles in all html files to css files.

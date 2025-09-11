@@ -242,35 +242,69 @@ let camera = {
     smoothing: 0.1
 };
 
-// Special tile icons
-const specialTileIcons = {
-    crown: null,
-    tower: null,
-    city: null
-};
+let isDragging = false;
+function drawCrownIcon(ctx, x, y, size) {
+    const centerX = x + size / 2;
+    const centerY = y + size / 2;
+    const crownHeight = size * 0.6;
+    const crownWidth = size * 0.8;
+    
+    ctx.fillStyle = '#FFD700';
+    ctx.strokeStyle = '#B8860B';
+    ctx.lineWidth = 1;
+    
+    // Crown base
+    ctx.fillRect(centerX - crownWidth/2, centerY + crownHeight/4, crownWidth, crownHeight/4);
+    
+    // Crown points
+    ctx.beginPath();
+    ctx.moveTo(centerX - crownWidth/2, centerY + crownHeight/4);
+    ctx.lineTo(centerX - crownWidth/4, centerY - crownHeight/4);
+    ctx.lineTo(centerX, centerY);
+    ctx.lineTo(centerX + crownWidth/4, centerY - crownHeight/4);
+    ctx.lineTo(centerX + crownWidth/2, centerY + crownHeight/4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+}
 
-// Load special tile icons
-function loadSpecialTileIcons() {
-    const iconPaths = {
-        crown: 'icons/crown-svgrepo-com-dark.svg',
-        tower: 'icons/tower-observation-svgrepo-com-dark.svg',
-        city: 'icons/building-flag-svgrepo-com-dark.svg'
-    };
+function drawTowerIcon(ctx, x, y, size) {
+    const centerX = x + size / 2;
+    const centerY = y + size / 2;
+    const towerWidth = size * 0.4;
+    const towerHeight = size * 0.7;
     
-    console.log('Loading special tile icons...');
+    ctx.fillStyle = '#4169E1';
+    ctx.strokeStyle = '#2F4F4F';
+    ctx.lineWidth = 1;
     
-    Object.keys(iconPaths).forEach(key => {
-        const img = new Image();
-        img.onload = () => {
-            specialTileIcons[key] = img;
-            console.log(`✅ Loaded ${key} icon:`, iconPaths[key]);
-        };
-        img.onerror = () => {
-            console.error(`❌ Failed to load ${key} icon:`, iconPaths[key]);
-        };
-        img.src = iconPaths[key];
-        console.log(`🔄 Loading ${key} icon from:`, iconPaths[key]);
-    });
+    // Tower body
+    ctx.fillRect(centerX - towerWidth/2, centerY - towerHeight/2, towerWidth, towerHeight);
+    ctx.strokeRect(centerX - towerWidth/2, centerY - towerHeight/2, towerWidth, towerHeight);
+    
+    // Tower top
+    const topWidth = towerWidth * 1.2;
+    ctx.fillRect(centerX - topWidth/2, centerY - towerHeight/2, topWidth, towerHeight/4);
+    ctx.strokeRect(centerX - topWidth/2, centerY - towerHeight/2, topWidth, towerHeight/4);
+}
+
+function drawCityIcon(ctx, x, y, size) {
+    const centerX = x + size / 2;
+    const centerY = y + size / 2;
+    const buildingWidth = size * 0.2;
+    const buildingHeight = size * 0.6;
+    
+    ctx.fillStyle = '#FF6347';
+    ctx.strokeStyle = '#A0522D';
+    ctx.lineWidth = 1;
+    
+    // Three buildings
+    for (let i = 0; i < 3; i++) {
+        const offsetX = (i - 1) * buildingWidth * 0.8;
+        const height = buildingHeight * (0.7 + i * 0.15);
+        ctx.fillRect(centerX + offsetX - buildingWidth/2, centerY + buildingHeight/2 - height, buildingWidth, height);
+        ctx.strokeRect(centerX + offsetX - buildingWidth/2, centerY + buildingHeight/2 - height, buildingWidth, height);
+    }
 }
 
 // Helper function to convert hex color to RGB
@@ -1220,15 +1254,15 @@ function drawGame() {
             const iconX = x + (tileSize - iconSize) / 2;
             const iconY = y + (tileSize - iconSize) / 2;
             
-            if (terrain >= 0 && gameState.generals && gameState.generals.includes(i) && specialTileIcons.crown) {
+            if (terrain >= 0 && gameState.generals && gameState.generals.includes(i)) {
                 // Draw crown icon on general tiles
-                ctx.drawImage(specialTileIcons.crown, iconX, iconY, iconSize, iconSize);
-            } else if (isTower && specialTileIcons.tower) {
+                drawCrownIcon(ctx, iconX, iconY, iconSize);
+            } else if (isTower) {
                 // Draw tower icon on lookout towers
-                ctx.drawImage(specialTileIcons.tower, iconX, iconY, iconSize, iconSize);
-            } else if (isCity && specialTileIcons.city) {
+                drawTowerIcon(ctx, iconX, iconY, iconSize);
+            } else if (isCity) {
                 // Draw city icon on cities
-                ctx.drawImage(specialTileIcons.city, iconX, iconY, iconSize, iconSize);
+                drawCityIcon(ctx, iconX, iconY, iconSize);
             }
             
             // Draw army count or tower defense
@@ -2323,9 +2357,6 @@ socket.on('chat_message', (data) => {
 
 // Initialize animation on page load if no game is active
 document.addEventListener('DOMContentLoaded', () => {
-    // Load special tile icons
-    loadSpecialTileIcons();
-    
     // Start animation if no game is running
     if (!gameStarted && !gameState) {
         startAnimation();
