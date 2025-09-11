@@ -761,8 +761,6 @@ socket.on('attack_result', (data) => {
         const now = Date.now();
         const existing = specialTileDefenseDisplay.get(data.to);
         
-        console.log('ATTACK:', data.to, 'def:', gameState.towerDefense?.[data.to]);
-        
         // Throttle: only update if it's been at least 500ms since last attack
         if (!existing || now - existing.lastAttack > 500) {
             specialTileDefenseDisplay.set(data.to, {
@@ -1262,7 +1260,7 @@ function drawGame() {
                 
                 if (shouldShowDefense) {
                     const defense = gameState.towerDefense?.[i];
-                    if (defense > 0) {
+                    if (defense !== undefined && defense >= 0) {
                         // Calculate fade opacity
                         const timeLeft = defenseDisplay.showUntil - now;
                         const opacity = Math.min(1, timeLeft / 300); // Fade in last 300ms
