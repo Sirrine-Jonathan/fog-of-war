@@ -456,12 +456,6 @@ function checkIsMobile() {
 const isMobile = checkIsMobile();
 let currentMobileTab = 'game';
 
-    windowWidth: window.innerWidth,
-    isMobile: isMobile,
-    hasTouch: 'ontouchstart' in window,
-    userAgent: navigator.userAgent
-});
-
 function initMobileTabs() {
     
     if (!isMobile) {
@@ -473,12 +467,6 @@ function initMobileTabs() {
     const gameTab = document.getElementById('gameTab');
     const controlsTab = document.getElementById('controlsTab');
     const chatTab = document.getElementById('chatTab');
-    
-        tabBar: !!tabBar,
-        gameTab: !!gameTab,
-        controlsTab: !!controlsTab,
-        chatTab: !!chatTab
-    });
     
     document.body.classList.add('mobile-game-active');
     
@@ -578,12 +566,6 @@ socket.on('game_start', (data) => {
     
     if (data.mapData) {
         gameState = parseMapData(data.mapData);
-            width: gameState.width,
-            height: gameState.height,
-            armiesLength: gameState.armies?.length,
-            terrainLength: gameState.terrain?.length,
-            towerDefenseLength: gameState.towerDefense?.length
-        });
         
         // Log all player positions
         gameState.terrain.forEach((terrain, index) => {
@@ -799,12 +781,6 @@ socket.on('game_update', (data) => {
         const patchedMap = patch([], data.map_diff);
         
         gameState = parseMapData(patchedMap);
-            width: gameState.width,
-            height: gameState.height,
-            armiesLength: gameState.armies?.length,
-            terrainLength: gameState.terrain?.length,
-            towerDefenseLength: gameState.towerDefense?.length
-        });
         
         // Log all player positions
         gameState.terrain.forEach((terrain, index) => {
