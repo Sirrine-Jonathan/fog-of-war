@@ -2551,6 +2551,82 @@ function updateRipples() {
     });
 }
 
+// Canvas resizing functionality - Works with flexbox layout
+function resizeCanvas() {
+    const canvas = document.getElementById('gameBoard');
+    const container = canvas.parentElement;
+    
+    if (!container) return;
+    
+    // Let the container size itself via flexbox first
+    const containerRect = container.getBoundingClientRect();
+    const containerWidth = containerRect.width - 6; // Account for border
+    const containerHeight = containerRect.height - 6; // Account for border
+    
+    // Only update if container has meaningful size
+    if (containerWidth > 0 && containerHeight > 0) {
+        // Update canvas display size to match container
+        canvas.style.width = containerWidth + 'px';
+        canvas.style.height = containerHeight + 'px';
+        
+        // Update canvas internal resolution for crisp rendering
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = containerWidth * dpr;
+        canvas.height = containerHeight * dpr;
+        
+        // Scale the drawing context
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        
+        // Redraw if game is active
+        if (gameState) {
+            drawGame();
+        }
+    }
+}
+
+// Initialize canvas sizing
+window.addEventListener('load', resizeCanvas);
+window.addEventListener('resize', resizeCanvas);
+
+// Sidebar toggle and tab functions
+function toggleSidebar() {
+    const headerGearButton = document.getElementById('headerGearButton');
+    const gameControls = document.getElementById('gameControls');
+    
+    // Toggle visibility between header gear icon and gameControls
+    if (gameControls.style.display === 'none') {
+        // Show sidebar, hide header gear
+        gameControls.style.display = 'flex';
+        headerGearButton.style.display = 'none';
+    } else {
+        // Hide sidebar, show header gear
+        gameControls.style.display = 'none';
+        headerGearButton.style.display = 'flex';
+    }
+    
+    // Resize canvas after sidebar animation completes
+    setTimeout(resizeCanvas, 300);
+}
+
+function switchSidebarTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.sidebar-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelector(`[onclick="switchSidebarTab('${tabName}')"]`).classList.add('active');
+    
+    // Update tab content
+    document.querySelectorAll('.sidebar-tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    document.getElementById(tabName + 'Tab').classList.add('active');
+}
+
+// Make functions globally accessible
+window.toggleControls = toggleControls;
+window.toggleChat = toggleChat;
+
 // Add mouse and touch event listeners for ripples
 function addRippleListeners() {
     // Only add listeners when animation is active (no game running)

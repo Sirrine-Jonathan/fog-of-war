@@ -12,6 +12,7 @@ body {
 .mainRow {
     display: flex;
     gap: 12px;
+    height: calc(100vh - 120px);
 }
 
 h1 {
@@ -45,27 +46,211 @@ h3, h4 {
     font-size: 24px;
 }
 
+.fullDisplay {
+    width: 100svw;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+/* Game controls collapsible */
+/* Sidebar styles */
 #gameControls { 
     display: flex;
     flex-direction: column;
-    gap: 12px; 
     background: rgba(255,255,255,0.95);
-    padding: 20px;
     border-radius: 8px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     backdrop-filter: blur(10px);
-    max-width: 800px;
-    width: 100%;
     border: 2px solid #ffd700;
-    max-height: 606px;
-    overflow-y: auto;
+    height: 100%;
     box-sizing: border-box;
+    position: relative;
+    transition: width 0.3s ease;
+    width: 350px;
+}
+
+#gameControls.collapsed {
+    width: 50px !important;
+    overflow: hidden;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+}
+
+.header-gear-button {
+    background: #ffd700;
+    color: #121920;
+    border: none;
+    border-radius: 4px;
+    padding: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 10px;
+}
+
+.header-gear-button:hover {
+    background: #ffed4e;
+    transform: scale(1.1);
+}
+
+#gameControls.collapsed .sidebar-toggle {
+    position: static;
+    margin: auto;
+    width: 40px;
+    height: 40px;
+}
+
+#gameControls.collapsed .sidebar-toggle svg {
+    width: 24px;
+    height: 24px;
+}
+
+.sidebar-toggle {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #ffd700;
+    color: #121920;
+    border: none;
+    border-radius: 4px;
+    padding: 4px;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.3s ease;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar-toggle svg {
+    width: 16px;
+    height: 16px;
+}
+
+.sidebar-toggle:hover {
+    background: #ffed4e;
+    transform: scale(1.1);
+}
+
+#sidebarContent {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 50px 20px 20px;
+    box-sizing: border-box;
+}
+
+#gameControls.collapsed #sidebarContent {
+    display: none;
+}
+
+.sidebar-tabs {
+    display: flex;
+    border-bottom: 2px solid #ddd;
+    margin-bottom: 15px;
+}
+
+.sidebar-tab {
+    flex: 1;
+    padding: 10px;
+    background: #f5f5f5;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    color: #666;
+    transition: all 0.3s ease;
+}
+
+.sidebar-tab.active {
+    background: #ffd700;
+    color: #121920;
+}
+
+.sidebar-tab:hover:not(.active) {
+    background: #e9e9e9;
+}
+
+.sidebar-tab-content {
+    display: none;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.sidebar-tab-content.active {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Chat tab styles */
+#chatTab {
+    gap: 10px;
+}
+
+#chatMessages {
+    flex: 1;
+    border: 1px solid #ccc;
+    padding: 8px;
+    overflow-y: auto;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    min-height: 200px;
+}
+
+.chat-input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#chatInput {
+    width: 100%;
+    height: 80px;
+    resize: none;
+    padding: 6px;
+    font-size: 14px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+}
+
+#sendChatBtn {
+    height: 35px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#gameCanvas { 
+    position: relative;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-width: 806px;
+    min-height: 606px;
+}
+
+#gameCanvas > div:first-child {
+    flex: 1 1 auto;
+    display: flex;
+    min-height: 0;
+    min-width: 0;
 }
 
 #gameBoard { 
     border: 3px solid #ffd700; 
     border-radius: 8px;
     box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+    box-sizing: border-box;
 }
 
 .info {
@@ -117,6 +302,11 @@ ul.game-stats li {
     margin: 5px;
     transition: all 0.3s ease;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.pill {
+    font-size: 10px;
+    padding: 6px 12px;
 }
 
 .transfer-btn {
@@ -541,10 +731,6 @@ body.mobile-chat-active .mainRow {
     margin: 0 !important;
 }
 
-#gameCanvas {
-    position: relative;
-}
-
 #gameCanvas > div {
     display: flex;
 }
@@ -566,12 +752,7 @@ body.mobile-game-active #gameControls {
     display: none !important;
 }
 
-#chatSection {
-    margin: 15px 0 0 0;
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-}
+/* Remove old chat positioning */
 
 body.mobile-game-active #chatSection {
     display: none !important;
@@ -949,7 +1130,6 @@ body.mobile-game-active #mobileGameStats.empty {
 }
 /* Chat input styling */
 #chatInput {
-    width: 400px;
     height: 80px;
     resize: none;
     padding: 6px;
@@ -973,6 +1153,8 @@ body.mobile-game-active #mobileGameStats.empty {
     background-color: #f9f9f9;
     border-radius: 4px;
 }
+/* Remove old toggle button styles */
+
 /* Toast System */
 #toastContainer {
   position: fixed;

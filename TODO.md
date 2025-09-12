@@ -22,13 +22,15 @@
 	If a user attacks with 5 armies (6 on the tile minus one to leave behind) and the tower starts with a 
 	defense of 25, then the tower should show 20 for a short time before fading out, attacks that happen
 	while the number is being shown do not affect the display.
-⚠️ ** NOT STARTED ** ⚠️
+- Enemy generals should be styled the same as the player's general (gold and shiny). The only difference is that they should
+  have a border. Gold when active as already implemented, but colored the same color as the player color of the player that owns the general.
+✅ **COMPLETED**
 - The chat system is taking up too much vertical space on desktop. It's fine on mobile since it is in a separate tab.
   On desktop, move the chat down to the bottom right hand corner and make it collapsible. This should allow us to take
 	up more space with the game canvas, vertically.
 - The #gameControls element should be made collapsible which will allow the game canvas to take up more space horizontally.
-- Enemy generals should be styled the same as the player's general (gold and shiny). The only difference is that they should
-  have a border. Gold when active as already implemented, but colored the same color as the player color of the player that owns the general.
+⚠️ ** NOT STARTED ** ⚠️
+
 
 ## Tech Debt  
 - Move all inline styles in all html files to css files.
