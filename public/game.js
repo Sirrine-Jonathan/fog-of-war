@@ -709,36 +709,15 @@ socket.on('game_won', (data) => {
     // Start animation when game ends
     startAnimation();
     
-    // Show game over overlay
-    showGameOverOverlay(winnerName);
+    // Show consolidated game over overlay with stats
+    showGameOverWithStats(winnerName, data);
     
     // Reset player state for humans (bots will auto-rejoin)
     playerIndex = -1;
     selectedTile = null;
     document.getElementById('gameStarted').textContent = 'Game Ended';
     
-    // Show in-game notification instead of modal
-    const notification = document.getElementById('gameEndNotification');
-    const gameEndText = document.getElementById('gameEndText');
-    
-    // Check if current player won by comparing usernames
-    const didIWin = (winnerName === lastUsername);
-    
-    if (didIWin) {
-        gameEndText.textContent = '🎉 Victory! You won the game! 🎉';
-        gameEndText.style.color = '#4CAF50';
-    } else {
-        gameEndText.textContent = `💀 Game Over - ${winnerName} won! 💀`;
-        gameEndText.style.color = '#f44336';
-    }
-    
-    notification.style.display = 'block';
-    
-    // Pre-populate username input with last used username
-    document.getElementById('usernameInput').value = lastUsername;
-    
-    // Clear saved state when game ends
-    clearState();
+    updateButtonVisibility();
 });
 
 socket.on('attack_result', (data) => {
@@ -924,6 +903,8 @@ socket.on('game_end', (data) => {
 
 function updateTurnDisplay() {
     const turnElement = document.getElementById('turnNumber');
+    const countdownElement = document.getElementById('armyCountdown');
+    
     if (turnElement && gameState && gameState.turn !== undefined) {
         turnElement.textContent = gameState.turn;
         
@@ -934,7 +915,67 @@ function updateTurnDisplay() {
                 turnElement.classList.remove('flash-bonus');
             }, 2000); // Flash for 2 seconds
         }
+        
+        // Calculate countdown to next army bonus turn
+        if (countdownElement) {
+            const nextBonusTurn = Math.ceil((gameState.turn + 1) / 25) * 25;
+            const turnsUntilBonus = nextBonusTurn - gameState.turn;
+            countdownElement.textContent = turnsUntilBonus > 0 ? `(+${turnsUntilBonus})` : '';
+        }
     }
+}
+
+function updateTerritoryProgressBar() {
+    const progressBar = document.getElementById('territoryProgressBar');
+    if (!progressBar) {
+        return;
+    }
+    
+    if (!players || players.length === 0 || !gameState) {
+        progressBar.innerHTML = '';
+        return;
+    }
+    
+    const stats = calculatePlayerStats();
+    const totalTerritories = Object.values(stats).reduce((sum, stat) => sum + stat.tiles, 0);
+    
+    if (totalTerritories === 0) {
+        progressBar.innerHTML = '';
+        return;
+    }
+    
+    // Create segments for players with territories
+    const segments = players
+        .map((player, index) => ({
+            ...player,
+            index,
+            territories: stats[index]?.tiles || 0,
+            percentage: ((stats[index]?.tiles || 0) / totalTerritories) * 100
+        }))
+        .filter(player => player.territories > 0)
+        .sort((a, b) => b.territories - a.territories);
+    
+    progressBar.innerHTML = '';
+    
+    segments.forEach(player => {
+        const segment = document.createElement('div');
+        segment.className = 'territory-segment';
+        segment.style.backgroundColor = playerColors[player.index];
+        segment.style.width = `${player.percentage}%`;
+        
+        // Truncate username based on segment width
+        let displayName = player.username;
+        if (player.percentage < 15) {
+            displayName = player.username.substring(0, 3);
+        } else if (player.percentage < 25) {
+            displayName = player.username.substring(0, 6);
+        }
+        
+        segment.textContent = displayName;
+        segment.title = `${player.username}: ${player.territories} territories (${player.percentage.toFixed(1)}%)`;
+        
+        progressBar.appendChild(segment);
+    });
 }
 
 function updateVisibleTiles() {
@@ -1444,17 +1485,45 @@ function closeGameEndModal() {
     document.getElementById('gameEndModal').style.display = 'none';
 }
 
-function showGameOverOverlay(winnerName) {
-    const overlay = document.getElementById('gameOverOverlay');
+function showGameOverWithStats(winnerName, gameData) {
+    const overlay = document.getElementById('gameOverlay');
+    const preGameContent = document.getElementById('preGameContent');
+    const gameOverContent = document.getElementById('gameOverContent');
     const winnerText = document.getElementById('overlayWinnerText');
+    const gameStats = document.getElementById('gameStats');
+    
+    // Hide pre-game content, show game over content
+    preGameContent.style.display = 'none';
+    gameOverContent.style.display = 'block';
     
     winnerText.textContent = `The winner is ${winnerName}`;
-    overlay.style.display = 'flex';
     
-    // Hide after 5 seconds
-    setTimeout(() => {
-        overlay.style.display = 'none';
-    }, 5000);
+    // Generate game statistics
+    const stats = calculatePlayerStats();
+    const finalStats = players.map((player, index) => ({
+        ...player,
+        index,
+        ...stats[index]
+    })).sort((a, b) => (b.tiles + b.armies) - (a.tiles + a.armies));
+    
+    gameStats.innerHTML = `
+        <h3>Final Statistics</h3>
+        <div class="stats-grid">
+            ${finalStats.map((player, rank) => `
+                <div class="player-final-stats" style="border-left: 4px solid ${playerColors[player.index]}">
+                    <div class="rank">#${rank + 1}</div>
+                    <div class="player-name">${player.username}</div>
+                    <div class="player-score">${player.tiles} territories • ${player.armies} armies</div>
+                </div>
+            `).join('')}
+        </div>
+        <div class="game-info">
+            <p>Game Duration: ${gameState?.turn || 0} turns</p>
+            <p>Total Territories: ${Object.values(stats).reduce((sum, stat) => sum + stat.tiles, 0)}</p>
+        </div>
+    `;
+    
+    overlay.style.display = 'flex';
 }
 
 function showGameEndModal(winnerName, winnerIndex) {

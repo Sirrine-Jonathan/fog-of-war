@@ -76,6 +76,112 @@ h3, h4 {
     padding: 0;
 }
 
+.territory-progress-bar {
+    display: flex;
+    height: 24px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 0 10px;
+    flex: 1;
+    min-width: 200px;
+}
+
+.territory-segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 4px;
+    min-width: 0;
+}
+
+.territory-segment:first-child {
+    border-radius: 12px 0 0 12px;
+}
+
+.territory-segment:last-child {
+    border-radius: 0 12px 12px 0;
+}
+
+.territory-segment:only-child {
+    border-radius: 12px;
+}
+
+.army-countdown {
+    color: white;
+    margin-left: 8px;
+    font-size: 16px;
+}
+
+.game-stats {
+    margin-top: 20px;
+    text-align: left;
+    background: rgba(47, 79, 79, 0.9);
+    border: 2px solid #ffd700;
+    border-radius: 8px;
+    padding: 20px;
+    color: white;
+}
+
+.game-stats h3 {
+    color: #ffd700;
+    margin-top: 0;
+    text-align: center;
+}
+
+.stats-grid {
+    margin: 15px 0;
+}
+
+.player-final-stats {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    margin: 5px 0;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+}
+
+.rank {
+    font-weight: bold;
+    margin-right: 10px;
+    min-width: 30px;
+    color: #ffd700;
+}
+
+.player-name {
+    font-weight: bold;
+    margin-right: 10px;
+    flex: 1;
+    color: white;
+}
+
+.player-score {
+    font-size: 14px;
+    opacity: 0.9;
+    color: white;
+}
+
+.game-info {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255,215,0,0.3);
+}
+
+.game-info p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: white;
+}
+
 .header-gear-button {
     background: #ffd700;
     color: #121920;
@@ -809,6 +915,13 @@ body.mobile-controls-active #chatSection {
 
 #gameOverlay * {
     pointer-events: auto;
+}
+
+#preGameContent, #gameOverContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
 }
 
 #gameTitle {
