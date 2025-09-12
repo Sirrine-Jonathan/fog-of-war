@@ -242,6 +242,54 @@ let camera = {
     smoothing: 0.1
 };
 
+// Auto-center camera when canvas is larger than game
+function centerCameraIfNeeded() {
+    if (!gameState) return;
+    
+    const mapPixelWidth = gameState.width * 35 * camera.zoom;
+    const mapPixelHeight = gameState.height * 35 * camera.zoom;
+    
+    // If canvas is wider than map, center horizontally
+    if (canvas.width > mapPixelWidth) {
+        camera.x = -(canvas.width - mapPixelWidth) / 2;
+        camera.targetX = camera.x;
+    }
+    
+    // If canvas is taller than map, center vertically  
+    if (canvas.height > mapPixelHeight) {
+        camera.y = -(canvas.height - mapPixelHeight) / 2;
+        camera.targetY = camera.y;
+    }
+}
+
+// Initialize camera position for new games
+function initializeCamera() {
+    if (!gameState) return;
+    
+    // Set initial zoom to fit the entire map
+    camera.zoom = calculateMinZoom();
+    
+    // Center the camera
+    centerCameraIfNeeded();
+    
+    // Update targets
+    camera.targetX = camera.x;
+    camera.targetY = camera.y;
+}
+
+// Calculate dynamic minimum zoom to fit entire map
+function calculateMinZoom() {
+    if (!gameState) return 0.5;
+    
+    const mapPixelWidth = gameState.width * 35;
+    const mapPixelHeight = gameState.height * 35;
+    const minZoomX = canvas.width / mapPixelWidth;
+    const minZoomY = canvas.height / mapPixelHeight;
+    
+    // Use the smaller ratio to ensure entire map fits
+    return Math.min(minZoomX, minZoomY);
+}
+
 // Special tile defense display tracking
 const specialTileDefenseDisplay = new Map(); // tileIndex -> { startTime: timestamp, defense: number }
 
@@ -556,6 +604,9 @@ socket.on('game_start', (data) => {
     document.getElementById('gameBoard').style.display = 'block'; // Show canvas
     playerIndex = data.playerIndex !== undefined ? data.playerIndex : -1;
     gameStarted = true;
+    
+    // Initialize camera for new game
+    initializeCamera();
     
     // Stop animation when game starts
     stopAnimation();
@@ -1145,32 +1196,64 @@ function updateCamera() {
     const tileWorldX = (col * 35 + 17.5) * camera.zoom;
     const tileWorldY = (row * 35 + 17.5) * camera.zoom;
     
-    // Screen position of tile if camera doesn't move
-    const tileScreenX = tileWorldX - camera.x;
-    const tileScreenY = tileWorldY - camera.y;
-    
-    // Define edge margins (how close to edge before camera starts following)
-    const marginX = canvas.width * 0.25; // 25% from edge
-    const marginY = canvas.height * 0.25;
-    
-    // Calculate target camera position to center tile
-    const targetCameraX = tileWorldX - canvas.width / 2;
-    const targetCameraY = tileWorldY - canvas.height / 2;
-    
-    // Only update target if tile is near screen edges
-    if (tileScreenX < marginX || tileScreenX > canvas.width - marginX) {
-        camera.targetX = targetCameraX;
-    }
-    if (tileScreenY < marginY || tileScreenY > canvas.height - marginY) {
-        camera.targetY = targetCameraY;
-    }
-    
-    // Clamp target to map bounds
     const mapWidth = gameState.width * 35 * camera.zoom;
     const mapHeight = gameState.height * 35 * camera.zoom;
     
-    camera.targetX = Math.max(0, Math.min(camera.targetX, mapWidth - canvas.width));
-    camera.targetY = Math.max(0, Math.min(camera.targetY, mapHeight - canvas.height));
+    // Calculate the effective viewport (the area where the game is actually displayed)
+    let effectiveViewportX, effectiveViewportY, effectiveViewportWidth, effectiveViewportHeight;
+    
+    if (canvas.width > mapWidth) {
+        // Canvas is wider than map - game is centered horizontally
+        effectiveViewportX = (canvas.width - mapWidth) / 2;
+        effectiveViewportWidth = mapWidth;
+    } else {
+        // Map is wider than canvas - use full canvas width
+        effectiveViewportX = 0;
+        effectiveViewportWidth = canvas.width;
+    }
+    
+    if (canvas.height > mapHeight) {
+        // Canvas is taller than map - game is centered vertically
+        effectiveViewportY = (canvas.height - mapHeight) / 2;
+        effectiveViewportHeight = mapHeight;
+    } else {
+        // Map is taller than canvas - use full canvas height
+        effectiveViewportY = 0;
+        effectiveViewportHeight = canvas.height;
+    }
+    
+    // Screen position of tile relative to the effective viewport
+    const tileScreenX = tileWorldX - camera.x - effectiveViewportX;
+    const tileScreenY = tileWorldY - camera.y - effectiveViewportY;
+    
+    // Define edge margins relative to effective viewport
+    const marginX = effectiveViewportWidth * 0.25;
+    const marginY = effectiveViewportHeight * 0.25;
+    
+    // Calculate target camera position to center tile in effective viewport
+    const targetCameraX = tileWorldX - effectiveViewportX - effectiveViewportWidth / 2;
+    const targetCameraY = tileWorldY - effectiveViewportY - effectiveViewportHeight / 2;
+    
+    // Only update target if tile is near edges of effective viewport
+    if (tileScreenX < marginX || tileScreenX > effectiveViewportWidth - marginX) {
+        camera.targetX = targetCameraX;
+    }
+    if (tileScreenY < marginY || tileScreenY > effectiveViewportHeight - marginY) {
+        camera.targetY = targetCameraY;
+    }
+    
+    // Apply bounds checking that respects auto-centering
+    if (canvas.width > mapWidth) {
+        camera.targetX = -(canvas.width - mapWidth) / 2;
+    } else {
+        camera.targetX = Math.max(0, Math.min(camera.targetX, mapWidth - canvas.width));
+    }
+    
+    if (canvas.height > mapHeight) {
+        camera.targetY = -(canvas.height - mapHeight) / 2;
+    } else {
+        camera.targetY = Math.max(0, Math.min(camera.targetY, mapHeight - canvas.height));
+    }
     
     // Smooth interpolation toward target
     const deltaX = camera.targetX - camera.x;
@@ -1604,26 +1687,28 @@ canvas.addEventListener('click', (e) => {
 
 // Camera controls
 canvas.addEventListener('mousedown', (e) => {
-    // Only allow panning when Shift is pressed
-    if (e.shiftKey) {
+    // Allow panning with right-click, middle-click, or Shift+left-click
+    if (e.button === 2 || e.button === 1 || (e.button === 0 && e.shiftKey)) {
         isDragging = true;
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
         canvas.style.cursor = 'grabbing';
-        e.preventDefault(); // Prevent any default behavior
+        e.preventDefault(); // Prevent context menu and selection
     }
 });
 
 canvas.addEventListener('mousemove', (e) => {
-    // Update cursor based on shift key state
-    if (e.shiftKey && !isDragging) {
+    // Update cursor based on dragging state or shift key
+    if (isDragging) {
+        canvas.style.cursor = 'grabbing';
+    } else if (e.shiftKey) {
         canvas.style.cursor = 'grab';
-    } else if (!e.shiftKey && !isDragging) {
+    } else {
         canvas.style.cursor = 'default';
     }
     
-    // Only pan if we're dragging AND shift is still held
-    if (isDragging && e.shiftKey) {
+    // Pan if we're dragging
+    if (isDragging) {
         const deltaX = e.clientX - lastMouseX;
         const deltaY = e.clientY - lastMouseY;
         
@@ -1634,14 +1719,24 @@ canvas.addEventListener('mousemove', (e) => {
         camera.targetX = camera.x;
         camera.targetY = camera.y;
         
-        // Clamp camera to map bounds
-        const mapWidth = gameState ? gameState.width * 35 * camera.zoom : 1050;
-        const mapHeight = gameState ? gameState.height * 35 * camera.zoom : 1050;
+        // Auto-center if canvas is larger than map
+        centerCameraIfNeeded();
         
-        camera.x = Math.max(0, Math.min(camera.x, mapWidth - canvas.width));
-        camera.y = Math.max(0, Math.min(camera.y, mapHeight - canvas.height));
-        camera.targetX = camera.x;
-        camera.targetY = camera.y;
+        // Clamp camera to map bounds only if map is larger than canvas
+        if (gameState) {
+            const mapWidth = gameState.width * 35 * camera.zoom;
+            const mapHeight = gameState.height * 35 * camera.zoom;
+            
+            if (mapWidth > canvas.width) {
+                camera.x = Math.max(0, Math.min(camera.x, mapWidth - canvas.width));
+            }
+            if (mapHeight > canvas.height) {
+                camera.y = Math.max(0, Math.min(camera.y, mapHeight - canvas.height));
+            }
+            
+            camera.targetX = camera.x;
+            camera.targetY = camera.y;
+        }
         
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
@@ -1660,6 +1755,11 @@ canvas.addEventListener('mouseup', () => {
     canvas.style.cursor = 'default';
 });
 
+// Prevent context menu on right-click
+canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+});
+
 document.addEventListener('keyup', (e) => {
     if (e.key === 'Shift' && !isDragging) {
         canvas.style.cursor = 'default';
@@ -1671,12 +1771,8 @@ canvas.addEventListener('wheel', (e) => {
     
     if (!gameState) return;
     
-    // Calculate minimum zoom to fit entire map
-    const mapPixelWidth = gameState.width * 35;
-    const mapPixelHeight = gameState.height * 35;
-    const minZoomX = canvas.width / mapPixelWidth;
-    const minZoomY = canvas.height / mapPixelHeight;
-    const calculatedMinZoom = Math.max(minZoomX, minZoomY);
+    // Calculate dynamic minimum zoom to fit entire map
+    const calculatedMinZoom = calculateMinZoom();
     
     const rect = canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
@@ -1701,12 +1797,20 @@ canvas.addEventListener('wheel', (e) => {
         camera.targetX = camera.x;
         camera.targetY = camera.y;
         
-        // Clamp camera to map bounds
+        // Auto-center if canvas is larger than map
+        centerCameraIfNeeded();
+        
+        // Clamp camera to map bounds only if map is larger than canvas
         const mapWidth = gameState.width * 35 * camera.zoom;
         const mapHeight = gameState.height * 35 * camera.zoom;
         
-        camera.x = Math.max(0, Math.min(camera.x, mapWidth - canvas.width));
-        camera.y = Math.max(0, Math.min(camera.y, mapHeight - canvas.height));
+        if (mapWidth > canvas.width) {
+            camera.x = Math.max(0, Math.min(camera.x, mapWidth - canvas.width));
+        }
+        if (mapHeight > canvas.height) {
+            camera.y = Math.max(0, Math.min(camera.y, mapHeight - canvas.height));
+        }
+        
         camera.targetX = camera.x;
         camera.targetY = camera.y;
         
@@ -1798,8 +1902,18 @@ canvas.addEventListener('touchmove', (e) => {
             // Clamp to bounds
             const mapWidth = gameState.width * 35 * camera.zoom;
             const mapHeight = gameState.height * 35 * camera.zoom;
-            camera.x = Math.max(0, Math.min(camera.x, mapWidth - canvas.width));
-            camera.y = Math.max(0, Math.min(camera.y, mapHeight - canvas.height));
+            
+            // Auto-center if canvas is larger than map
+            centerCameraIfNeeded();
+            
+            // Only clamp if map is larger than canvas
+            if (mapWidth > canvas.width) {
+                camera.x = Math.max(0, Math.min(camera.x, mapWidth - canvas.width));
+            }
+            if (mapHeight > canvas.height) {
+                camera.y = Math.max(0, Math.min(camera.y, mapHeight - canvas.height));
+            }
+            
             camera.targetX = camera.x;
             camera.targetY = camera.y;
             
@@ -1824,11 +1938,7 @@ canvas.addEventListener('touchmove', (e) => {
         );
         
         const zoomFactor = newDistance / oldDistance;
-        const mapPixelWidth = gameState.width * 35;
-        const mapPixelHeight = gameState.height * 35;
-        const minZoomX = canvas.width / mapPixelWidth;
-        const minZoomY = canvas.height / mapPixelHeight;
-        const calculatedMinZoom = Math.max(minZoomX, minZoomY);
+        const calculatedMinZoom = calculateMinZoom();
         
         camera.zoom = Math.max(calculatedMinZoom, Math.min(camera.maxZoom, camera.zoom * zoomFactor));
         drawGame();

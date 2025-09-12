@@ -27,9 +27,21 @@ Update your bot to connect to `http://localhost:3001`.
 1. Visit `http://localhost:3001/game/your-room-name`
 
 ### Game Controls
+
+#### Basic Controls
 - Click owned tile with >1 army to select
 - Click adjacent tile to attack/move
 - Press 'j' to join game as human player
+
+#### Camera Controls
+- **Pan**: Right-click and drag, or Shift+left-click and drag
+- **Zoom**: Mouse wheel to zoom in/out
+- **Auto-center**: Game centers automatically on wide screens
+- **Fit to screen**: Zoom out enough to see entire map without panning
+
+#### Advanced Controls
+- Alt+click or Shift+click: Select tile without launching intent
+- Long press (mobile): Select tile for movement
 
 ## API Compatibility
 
