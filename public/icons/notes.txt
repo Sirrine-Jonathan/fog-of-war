@@ -1,1 +1,2 @@
-icons are coming from https://www.svgrepo.com/collection/dazzle-line-icons/
+Icons are sourced from https://www.svgrepo.com/collection/dazzle-line-icons/
+Licensed under CC Attribution - see ATTRIBUTIONS.md for full details and compliance information.
