@@ -1187,7 +1187,9 @@ function drawGame() {
             ctx.fillRect(x, y, tileSize, tileSize);
             
             // Add shine effect for special tiles
-            if (gameState.generals && gameState.generals.includes(i)) {
+            const isServerGeneral = gameState.generals && gameState.generals.includes(i);
+            const isLocalGeneral = Array.from(playerGenerals.values()).includes(i);
+            if (isServerGeneral || isLocalGeneral) {
                 // All general tiles shine (client's and enemy)
                 const shineGradient = ctx.createLinearGradient(x, y, x + tileSize * 0.6, y + tileSize * 0.6);
                 shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
@@ -2204,18 +2206,37 @@ function inviteBot(botType) {
     socket.emit('invite_bot', roomId, botType);
 }
 
+// Toast notification system
+function showToast(message, type = 'info', duration = 3000) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    
+    container.appendChild(toast);
+    
+    // Auto-remove after duration
+    setTimeout(() => {
+        toast.classList.add('slideOut');
+        setTimeout(() => {
+            if (container.contains(toast)) {
+                container.removeChild(toast);
+            }
+        }, 300);
+    }, duration);
+}
+
 // Bot invite result handlers
 socket.on('bot_invite_result', (message) => {
     console.log('Bot invite result:', message);
-    // Only show alert for actual errors, not "already in room" messages
     if (!message.includes('already in room')) {
-        alert(`Bot invited successfully: ${message}`);
+        showToast(message, 'success');
     }
 });
 
 socket.on('bot_invite_error', (error) => {
     console.error('Bot invite error:', error);
-    alert(`Failed to invite bot: ${error}`);
+    showToast(`Failed to invite bot: ${error}`, 'error');
 });
 
 // Keyboard controls
