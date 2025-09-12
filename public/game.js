@@ -655,6 +655,7 @@ socket.on('player_joined', (data) => {
     }
     
     updatePlayersList();
+    updateTerritoryProgressBar();
 });
 
 socket.on('disconnect', () => {
@@ -892,6 +893,7 @@ socket.on('game_update', (data) => {
         
         drawGame();
         updatePlayersList(); // Update stats display
+        updateTerritoryProgressBar(); // Update header territory bar
         saveState(); // Save state on each game update
     }
 });
@@ -924,6 +926,14 @@ function updateTurnDisplay() {
     const turnElement = document.getElementById('turnNumber');
     if (turnElement && gameState && gameState.turn !== undefined) {
         turnElement.textContent = gameState.turn;
+        
+        // Flash on turn 25 and multiples of 25 (army bonus turns)
+        if (gameState.turn > 0 && gameState.turn % 25 === 0) {
+            turnElement.classList.add('flash-bonus');
+            setTimeout(() => {
+                turnElement.classList.remove('flash-bonus');
+            }, 2000); // Flash for 2 seconds
+        }
     }
 }
 

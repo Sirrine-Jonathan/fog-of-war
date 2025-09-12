@@ -66,7 +66,6 @@ h3, h4 {
     box-sizing: border-box;
     position: relative;
     transition: width 0.3s ease;
-    width: 350px;
 }
 
 #gameControls.collapsed {
@@ -831,6 +830,7 @@ body.mobile-controls-active #chatSection {
     flex-direction: row;
     align-items: center;
     flex: 1;
+    gap: 12px;
 }
 
 #gameCanvas #gameOverOverlay {
@@ -959,6 +959,17 @@ body.mobile-chat-active #chatInput {
     font-size: 16px;
     color: #FFF;
     margin: 0 10px;
+}
+
+@keyframes flashBonus {
+    0%, 100% { background-color: #ffd700; color: #121920; }
+    50% { background-color: #ff6b35; color: white; }
+}
+
+.flash-bonus {
+    animation: flashBonus 0.5s ease-in-out 4;
+    border-radius: 4px;
+    padding: 2px 6px;
 }
 
 #turnNumber {
