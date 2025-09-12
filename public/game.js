@@ -142,7 +142,7 @@ function drawTilingAnimation() {
             
             if (hasRippleShimmer && shimmerIntensity > 0.1) {
                 // Apply shimmer effect - blend with white
-                const whiteRGB = [255, 255, 255]; // White
+                const whiteRGB = [200, 200, 200]; // White
                 const slateRGB = [15, 20, 25]; // #0f1419
                 
                 const r = Math.round(slateRGB[0] + (whiteRGB[0] - slateRGB[0]) * shimmerIntensity * 0.8);
@@ -616,6 +616,7 @@ function updateButtonVisibility() {
     // Show start button only when there are 2+ players and user is host
     const playerCount = players ? players.length : 0;
     const canStart = isHost && !gameStarted && playerCount >= 2;
+    console.log(`Button visibility: isHost=${isHost}, gameStarted=${gameStarted}, playerCount=${playerCount}, canStart=${canStart}`);
     if (overlayStartBtn) {
         overlayStartBtn.style.display = canStart ? 'block' : 'none';
     }
@@ -825,10 +826,10 @@ socket.on('game_update', (data) => {
             const currentTile = activeIntent.currentStep === 0 ? activeIntent.fromTile : activeIntent.path[activeIntent.currentStep - 1];
             const nextTile = activeIntent.currentStep < activeIntent.path.length ? activeIntent.path[activeIntent.currentStep] : activeIntent.targetTile;
             
-            console.log(`Intent step ${activeIntent.currentStep}/${activeIntent.path.length}: from ${currentTile} to ${nextTile}, armies: ${gameState.armies[currentTile]}, adjacent: ${isAdjacent(currentTile, nextTile)}`);
+            console.log(`[Intent] step ${activeIntent.currentStep}/${activeIntent.path.length}: from ${currentTile} to ${nextTile}, armies: ${gameState.armies[currentTile]}, adjacent: ${isAdjacent(currentTile, nextTile)}`);
             
             if (gameState.armies[currentTile] > 1 && isAdjacent(currentTile, nextTile)) {
-                console.log(`Executing move from ${currentTile} to ${nextTile}`);
+                console.log(`[Intent] Executing move from ${currentTile} to ${nextTile}`);
                 
                 // Capture defense value before attack for special tiles
                 if (gameState.lookoutTowers?.includes(nextTile) || gameState.cities?.includes(nextTile)) {
@@ -852,7 +853,7 @@ socket.on('game_update', (data) => {
                     activeIntent = null; // Clear completed intent
                 }
             } else {
-                console.log(`Intent failed: armies=${gameState.armies[currentTile]}, adjacent=${isAdjacent(currentTile, nextTile)}`);
+                console.log(`[Intent] Failed: armies=${gameState.armies[currentTile]}, adjacent=${isAdjacent(currentTile, nextTile)}`);
                 activeIntent = null; // Clear invalid intent
             }
         }
@@ -1167,8 +1168,8 @@ function drawGame() {
             } else if (terrain >= 0) { // Player owned
                 // Check if this is a general tile
                 const isGeneral = gameState.generals && gameState.generals.includes(i);
-                if (isGeneral) {
-                    // Create gold gradient for general tiles
+                if (isGeneral && terrain === playerIndex) {
+                    // Create gold gradient for client's general only
                     const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
                     gradient.addColorStop(0, '#FFD700'); // Gold
                     gradient.addColorStop(0.3, '#FFF8DC'); // Cornsilk (lighter)
@@ -1176,6 +1177,7 @@ function drawGame() {
                     gradient.addColorStop(1, '#B8860B'); // Dark goldenrod
                     ctx.fillStyle = gradient;
                 } else {
+                    // Enemy generals and regular tiles use player color
                     ctx.fillStyle = playerColors[terrain] || emptyColor;
                 }
             } else { // Empty
@@ -1185,15 +1187,26 @@ function drawGame() {
             ctx.fillRect(x, y, tileSize, tileSize);
             
             // Add shine effect for special tiles
-            if (terrain >= 0 && gameState.generals && gameState.generals.includes(i)) {
-                // General tiles shine
+            if (gameState.generals && gameState.generals.includes(i)) {
+                // All general tiles shine (client's and enemy)
                 const shineGradient = ctx.createLinearGradient(x, y, x + tileSize * 0.6, y + tileSize * 0.6);
                 shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
                 shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
                 ctx.fillStyle = shineGradient;
                 ctx.fillRect(x, y, tileSize, tileSize);
+            } else if ((isCity || isTower) && terrain >= 0) {
+                // Captured city/tower tiles shine with owner's color
+                const ownerColor = playerColors[terrain];
+                if (ownerColor) {
+                    const rgb = hexToRgb(ownerColor);
+                    const shineGradient = ctx.createLinearGradient(x, y, x + tileSize * 0.6, y + tileSize * 0.6);
+                    shineGradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)`);
+                    shineGradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`);
+                    ctx.fillStyle = shineGradient;
+                    ctx.fillRect(x, y, tileSize, tileSize);
+                }
             } else if (isCity || isTower) {
-                // City and tower tiles shine
+                // Neutral city/tower tiles shine with white
                 const shineGradient = ctx.createLinearGradient(x, y, x + tileSize * 0.6, y + tileSize * 0.6);
                 shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
                 shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
@@ -1271,7 +1284,6 @@ function drawGame() {
         }
         
         // Draw border - only current player's general gets persistent border
-        const tileTerrain = gameState.terrain[i];
         const isPlayerGeneral = playerGenerals.has(playerIndex) && playerGenerals.get(playerIndex) === i;
         const isSelected = selectedTile === i;
         
@@ -1280,9 +1292,9 @@ function drawGame() {
             if (isSelected) {
                 const armyCount = gameState.armies[i];
                 const canMoveArmies = armyCount > 1;
-                ctx.strokeStyle = canMoveArmies ? '#ffd700' : '#888888';
+                ctx.strokeStyle = canMoveArmies || isPlayerGeneral ? '#ffd700' : '#888888';
             } else {
-                ctx.strokeStyle = '#9e8600ff';
+                ctx.strokeStyle = '#FFF';
             }
             ctx.lineWidth = isSelected ? 3 * camera.zoom : 2 * camera.zoom;
         } else {
@@ -1292,7 +1304,7 @@ function drawGame() {
                 const canMoveArmies = armyCount > 1;
                 ctx.strokeStyle = canMoveArmies ? '#ffd700' : '#888888';
             } else {
-                ctx.strokeStyle = '#ccc';
+                ctx.strokeStyle = '#FFF';
             }
             ctx.lineWidth = isSelected ? 3 * camera.zoom : 1 * camera.zoom;
         }
@@ -1302,10 +1314,10 @@ function drawGame() {
         if (selectedTile === i) {
             const armyCount = gameState.armies[i];
             const canMoveArmies = armyCount > 1;
-            if (canMoveArmies) {
+            if (isPlayerGeneral) {
                 // Bright gold for tiles that can move armies
                 ctx.shadowColor = '#ffed4e'; // Brighter gold
-            } else {
+            } else if (!canMoveArmies) {
                 // Gray for tiles that cannot move armies
                 ctx.shadowColor = '#888888'; // Clear gray
             }
@@ -2188,11 +2200,17 @@ function copyGameUrl() {
 }
 
 function inviteBot(botType) {
+    console.log(`Inviting bot of type: ${botType}`);
     socket.emit('invite_bot', roomId, botType);
 }
 
 // Bot invite result handlers
 socket.on('bot_invite_result', (message) => {
+    console.log('Bot invite result:', message);
+    // Only show alert for actual errors, not "already in room" messages
+    if (!message.includes('already in room')) {
+        alert(`Bot invited successfully: ${message}`);
+    }
 });
 
 socket.on('bot_invite_error', (error) => {

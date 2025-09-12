@@ -2,7 +2,7 @@ body {
     margin: 0;
     padding: 0 20px;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: linear-gradient(135deg, #1f2a36 0%, #1a1a1a 100%);
+    background: linear-gradient(135deg, #121920 0%, #1a1a1a 100%);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -27,7 +27,7 @@ h1 {
 h3, h4 {
     font-family: 'Orbitron', monospace;
     font-weight: 700;
-    color: #1f2a36;
+    color: #121920;
     border-bottom: 2px solid #ffd700;
     padding-bottom: 5px;
 }
@@ -101,7 +101,7 @@ ul.game-stats li {
 
 .btn {
     font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #34495e 0%, #1f2a36 100%);
+    background: linear-gradient(135deg, #34495e 0%, #121920 100%);
     color: white;
     border: 2px solid #ffd700;
     padding: 12px 24px;
@@ -116,7 +116,7 @@ ul.game-stats li {
 
 .transfer-btn {
     font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #34495e 0%, #1f2a36 100%);
+    background: linear-gradient(135deg, #34495e 0%, #121920 100%);
     color: white;
     border: 2px solid #ffd700;
     padding: 6px 12px;
@@ -299,7 +299,7 @@ input[type="text"]:focus {
 
 .player-name {
     font-weight: 600;
-    color: #1f2a36;
+    color: #121920;
 }
 
 .player-stats {
@@ -449,7 +449,7 @@ input[type="text"]:focus {
 .mobile-tab {
     flex: 1;
     padding: 0 12px;
-    background: linear-gradient(135deg, #34495e 0%, #1f2a36 100%);
+    background: linear-gradient(135deg, #34495e 0%, #121920 100%);
     color: white;
     border: 2px solid #ffd700;
     border-bottom: none; /* Remove bottom border to be flush */
@@ -480,7 +480,7 @@ input[type="text"]:focus {
 
 .mobile-tab.active {
     background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-    color: #1f2a36;
+    color: #121920;
 }
 
 /* Force mobile styles when mobile classes are present */
@@ -735,7 +735,7 @@ body.mobile-chat-active #chatInput {
     cursor: pointer;
     padding: 4px 8px;
     background: rgba(255,215,0,0.9);
-    color: #1f2a36;
+    color: #121920;
     font-weight: bold;
     margin-left: auto;
     border-radius: 3px;

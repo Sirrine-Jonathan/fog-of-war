@@ -3,7 +3,7 @@
   <rect width="32" height="32" fill="#0f1419"/>
   
   <!-- 9x9 grid of tiles -->
-  <g stroke="#1f2a36" stroke-width="0.5">
+  <g stroke="#121920" stroke-width="0.5">
     <!-- Row 1 -->
     <rect x="2" y="2" width="3" height="3" fill="#0f1419"/>
     <rect x="6" y="2" width="3" height="3" fill="#0f1419"/>

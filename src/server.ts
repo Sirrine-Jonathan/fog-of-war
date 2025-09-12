@@ -721,6 +721,10 @@ io.on('connection', (socket) => {
           game.reset();
           console.log(`   🔄 Game state reset - players list cleared`);
           
+          // Remove all bots from this room
+          botManager.removeAllBotsFromRoom(gameId);
+          console.log(`   🤖 All bots removed from room ${gameId}`);
+          
           // Clear host when game resets
           gameHosts.delete(gameId);
           console.log(`   👑 Host cleared for game ${gameId}`);

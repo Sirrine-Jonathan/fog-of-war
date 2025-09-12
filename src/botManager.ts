@@ -37,6 +37,11 @@ export class BotManager {
     }
   }
 
+  removeAllBotsFromRoom(gameRoom: string) {
+    this.removeBot('blob', gameRoom);
+    this.removeBot('arrow', gameRoom);
+  }
+
   cleanup() {
     for (const bot of this.bots.values()) {
       bot.disconnect();
