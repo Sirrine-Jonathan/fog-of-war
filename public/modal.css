@@ -1,0 +1,89 @@
+/* Modal styles */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    max-width: 400px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #eee;
+    background: #f8f9fa;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.modal-close:hover {
+    background: #e9ecef;
+    color: #333;
+}
+
+.modal-body {
+    padding: 20px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #555;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 8px;
+    padding: 16px 20px;
+    border-top: 1px solid #eee;
+    background: #f8f9fa;
+    justify-content: flex-end;
+}
+
+.modal-footer .btn {
+    min-width: 80px;
+}
+
+.modal-confirm.danger {
+    background: #dc3545;
+    border-color: #dc3545;
+}
+
+.modal-confirm.danger:hover {
+    background: #c82333;
+    border-color: #bd2130;
+}

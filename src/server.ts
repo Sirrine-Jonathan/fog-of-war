@@ -550,6 +550,67 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle bot kick
+  socket.on('kick_bot', async (gameId: string, botUserId: string) => {
+    console.log(`🎯 KICK_BOT START: gameId=${gameId}, botUserId=${botUserId}, host=${socket.data.username}`);
+    
+    if (!socket.data.isHost || gameHosts.get(gameId) !== socket.id) {
+      console.log(`❌ Non-host ${socket.data.username} tried to kick bot from game ${gameId}`);
+      return;
+    }
+
+    const game = games.get(gameId);
+    if (!game || game.isStarted()) {
+      console.log(`❌ Cannot kick bot - game not found or already started`);
+      return;
+    }
+
+    const gameState = game.getState();
+    const botPlayer = gameState.players.find(p => p.id === botUserId && p.isBot);
+    
+    console.log({ players: gameState.players, botUserId })
+    if (!botPlayer || typeof botUserId !== 'string' || !botUserId) {
+      console.log(`❌ Bot ${botUserId} not found in game ${gameId} or invalid botUserId`);
+      return;
+    }
+
+    console.log(`🤖 Host ${socket.data.username} kicking bot ${botPlayer.username} from game ${gameId}`);
+    
+    // Remove bot from game
+    const removed = game.removePlayer(botUserId);
+    console.log(`🎯 GAME.removePlayer result: ${removed}`);
+    
+    if (removed) {
+      // Remove bot from bot manager
+      let botType: 'blob' | 'arrow' | null = null;
+      if (typeof botUserId === 'string') {
+        if (botUserId.toLowerCase().includes('blob')) botType = 'blob';
+        else if (botUserId.toLowerCase().includes('arrow')) botType = 'arrow';
+      }
+      console.log(`🎯 KICK_BOT determined botType: ${botType} from botUserId: ${botUserId}`);
+      
+      if (!botType) {
+        console.log(`❌ Could not determine botType for botUserId: ${botUserId}. Skipping botManager.removeBot.`);
+      } else {
+        console.log(`🎯 KICK_BOT calling botManager.removeBot(${botType}, ${gameId})`);
+        botManager.removeBot(botType as 'blob' | 'arrow', gameId);
+        console.log(`🎯 KICK_BOT botManager.removeBot completed`);
+      }
+      
+      // Send system message
+      sendSystemMessage(gameId, `${botPlayer.username} was removed from the game`);
+      
+      // Broadcast updated player list
+      console.log(`   Broadcasting player_joined to room ${gameId}`, { players: game.getState().players });
+      io.to(gameId).emit('player_joined', {
+        players: game.getState().players
+      });
+      
+      await sendGameInfo(gameId);
+    }
+    console.log(`🎯 KICK_BOT END`);
+  });
+
   // Helper function to send game info
   async function sendGameInfo(gameId: string) {
     const sockets = await io.in(gameId).fetchSockets();
@@ -722,6 +783,9 @@ io.on('connection', (socket) => {
           io.to(gameId).emit('player_joined', { players: [] });
           await sendGameInfo(gameId);
           
+          // Assign new host after game cleanup
+          await assignHostAfterGameEnd(gameId);
+          
           clearInterval(updateInterval);
           return;
         }
@@ -886,6 +950,33 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
     });
   });
 
+  socket.on('end_bot_game', (gameId: string) => {
+    console.log(`🤖 Viewer requesting to end bot-only game ${gameId}`);
+    
+    const game = games.get(gameId);
+    if (!game || !game.isStarted() || game.isEnded()) {
+      console.log(`❌ Cannot end game - invalid state`);
+      return;
+    }
+    
+    const gameState = game.getState();
+    const activePlayers = gameState.players.filter(p => !p.eliminated);
+    const humanPlayers = activePlayers.filter(p => !p.isBot);
+    
+    if (humanPlayers.length > 0) {
+      console.log(`❌ Cannot end game - ${humanPlayers.length} human players still active`);
+      socket.emit('end_game_error', 'Cannot end game while human players are active');
+      return;
+    }
+    
+    console.log(`✅ Ending bot-only game with ${activePlayers.length} bots remaining`);
+    sendSystemMessage(gameId, `Game ended by viewer - only bots remaining`);
+    
+    setTimeout(() => {
+      game.endGame(-1); // No winner
+    }, 1000);
+  });
+
   socket.on('abandon_game', (gameId: string, userId: string) => {
     console.log(`🏃 Player ${userId} abandoning game ${gameId}`);
     
@@ -959,35 +1050,32 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
     
     if (removed && player) {
       console.log(`✅ Player ${userId} removed from game ${gameId}`);
-      
+
       // Send system message for player leave
       sendSystemMessage(gameId, `${player.username} left the game`);
-      
+
       // Reset player data
       socket.data.playerIndex = -1;
       socket.data.isViewer = true;
-      
+
       // Transfer host if leaving player was host
       if (socket.data.isHost && gameHosts.get(gameId) === socket.id) {
         transferHostToNextPlayer(gameId);
       }
-      
+
       // Broadcast updated player list
       io.to(gameId).emit('player_joined', {
-        players: game.getPlayers().map(p => ({
-          username: p.username,
-          index: p.index,
-          isBot: p.isBot,
-          eliminated: p.eliminated
-        }))
+        players: game.getPlayers()
       });
-      
+
       sendGameInfo(gameId);
     }
   });
 
   socket.on('disconnect', () => {
     const roomId = playerRooms.get(socket.id);
+    console.log(`🎯 DISCONNECT START: socketId=${socket.id}, roomId=${roomId}, userId=${socket.data.userId}, username=${socket.data.username}`);
+    
     if (roomId) {
       console.log(`🚪 Player ${socket.id} disconnected from room ${roomId}`);
       
@@ -999,12 +1087,25 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
           const username = socket.data.username;
           console.log(`🚪 Removing disconnected player ${userId} from game ${roomId}`);
           
-          // Check if this is a bot and remove from bot manager
+          // Check if this is a bot and remove from bot manager (only if not already removed)
           if (userId && userId.startsWith('bot_')) {
-            const botType = userId.includes('Blob') ? 'blob' : userId.includes('Arrow') ? 'arrow' : null;
+            console.log(`🎯 DISCONNECT detected bot: ${userId}`);
+            const botType = userId.toLowerCase().includes('blob') ? 'blob' : 
+                           userId.toLowerCase().includes('arrow') ? 'arrow' : null;
+            console.log(`🎯 DISCONNECT determined botType: ${botType}`);
+            
             if (botType) {
-              console.log(`🤖 Removing bot ${botType} from bot manager for room ${roomId}`);
-              botManager.removeBot(botType, roomId);
+              // Check if bot still exists in bot manager before trying to remove
+              const hasBot = botManager.hasBot(botType, roomId);
+              console.log(`🎯 DISCONNECT botManager.hasBot(${botType}, ${roomId}): ${hasBot}`);
+              
+              if (hasBot) {
+                console.log(`🤖 Removing bot ${botType} from bot manager for room ${roomId}`);
+                botManager.removeBot(botType, roomId);
+                console.log(`🎯 DISCONNECT botManager.removeBot completed`);
+              } else {
+                console.log(`🤖 Bot ${botType} already removed from bot manager for room ${roomId}`);
+              }
             }
           }
           
@@ -1037,6 +1138,7 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
           playerRooms.delete(socket.id);
           socket.leave(roomId);
           sendGameInfo(roomId);
+          console.log(`🎯 DISCONNECT END (game started, tracked for cleanup)`);
           return;
         }
       }
@@ -1054,6 +1156,7 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
     } else {
       console.log(`🚪 Player ${socket.id} disconnected (no room)`);
     }
+    console.log(`🎯 DISCONNECT END`);
   });
 
   // Helper to transfer host when current host disconnects
@@ -1067,6 +1170,7 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
       
       // Send system message for host transfer
       sendSystemMessage(gameId, `👑 ${nextHost.data.username} is now the host`);
+      await sendGameInfo(gameId);
     } else {
       gameHosts.delete(gameId);
       console.log(`👑 No eligible host found for game ${gameId} - game may be abandoned`);
@@ -1089,6 +1193,18 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
           }, 1000);
         }
       }
+    }
+  }
+
+  // Helper to assign host after game ends and bots are cleared
+  async function assignHostAfterGameEnd(gameId: string) {
+    const nextHost = await findBestHost(gameId);
+    
+    if (nextHost) {
+      gameHosts.set(gameId, nextHost.id);
+      nextHost.data.isHost = true;
+      console.log(`👑 Host assigned to ${nextHost.data.username} after game end`);
+      await sendGameInfo(gameId);
     }
   }
 });

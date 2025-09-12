@@ -27,14 +27,32 @@ export class BotManager {
     return `${botType} bot invited to ${gameRoom}`;
   }
 
+  hasBot(botType: 'blob' | 'arrow', gameRoom: string): boolean {
+    const botKey = `${botType}_${gameRoom}`;
+    const exists = this.bots.has(botKey);
+    console.log(`🎯 BOTMANAGER.hasBot(${botType}, ${gameRoom}): key=${botKey}, exists=${exists}`);
+    return exists;
+  }
+
   removeBot(botType: 'blob' | 'arrow', gameRoom: string) {
     const botKey = `${botType}_${gameRoom}`;
     const bot = this.bots.get(botKey);
     
+    console.log(`🎯 BOTMANAGER.removeBot START: ${botType} from ${gameRoom}`);
+    console.log(`   Bot key: ${botKey}, Bot found: ${!!bot}`);
+    console.log(`   Current bots:`, Array.from(this.bots.keys()));
+    
     if (bot) {
+      console.log(`🎯 BOTMANAGER calling bot.disconnect()`);
       bot.disconnect();
+      console.log(`🎯 BOTMANAGER calling this.bots.delete(${botKey})`);
       this.bots.delete(botKey);
+      console.log(`   ✅ Bot ${botKey} removed successfully`);
+      console.log(`   Remaining bots:`, Array.from(this.bots.keys()));
+    } else {
+      console.log(`   ❌ Bot ${botKey} not found in manager`);
     }
+    console.log(`🎯 BOTMANAGER.removeBot END`);
   }
 
   removeAllBotsFromRoom(gameRoom: string) {

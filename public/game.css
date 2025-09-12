@@ -736,6 +736,16 @@ input[type="text"]:focus {
     padding: 4px 8px;
 }
 
+.kick-bot-btn {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    border-color: #dc3545;
+}
+
+.kick-bot-btn:hover {
+    background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+    border-color: #bd2130;
+}
+
 /* Mobile Tab Navigation */
 .mobile-tab-bar {
     display: none;
@@ -969,15 +979,23 @@ body.mobile-controls-active #chatSection {
     font-family: 'Orbitron', monospace;
 }
 
-#gameCanvas #gameOverOverlay .game-over-text {
+#gameOverContent .game-over-text {
+    font-family: 'Orbitron', monospace;
     font-size: 36px;
     font-weight: 900;
+    color: #ffd700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
     margin-bottom: 15px;
+    text-align: center;
+    letter-spacing: 2px;
 }
 
-#gameCanvas #gameOverOverlay .winner-text {
-    font-size: 20px;
-    font-weight: 400;
+#gameOverContent .winner-text {
+    font-size: 24px;
+    font-weight: 600;
+    color: white;
+    text-align: center;
+    margin-bottom: 20px;
 }
 
 /* Chat Tab - Show only chat */

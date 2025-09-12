@@ -648,6 +648,7 @@ function updateButtonVisibility() {
     const joinBtn = document.getElementById('joinBtn');
     const leaveBtn = document.getElementById('leaveBtn');
     const abandonBtn = document.getElementById('abandonBtn');
+    const endBotGameBtn = document.getElementById('endBotGameBtn');
     
     if (gameStarted) {
         // Game is active - hide join/leave controls and overlay, show abandon for players
@@ -660,11 +661,21 @@ function updateButtonVisibility() {
         } else if (abandonBtn) {
             abandonBtn.style.display = 'none';
         }
+        
+        // Show end bot game button for viewers when only bots remain
+        if (endBotGameBtn && playerIndex < 0 && players) {
+            const activePlayers = players.filter(p => !p.eliminated);
+            const humanPlayers = activePlayers.filter(p => !p.isBot);
+            endBotGameBtn.style.display = humanPlayers.length === 0 ? 'inline-block' : 'none';
+        } else if (endBotGameBtn) {
+            endBotGameBtn.style.display = 'none';
+        }
     } else if (playerIndex >= 0) {
         // Joined but game not started - show leave button, hide join controls, show overlay
         joinBtn.style.display = 'none';
         leaveBtn.style.display = 'inline-block';
         if (abandonBtn) abandonBtn.style.display = 'none';
+        if (endBotGameBtn) endBotGameBtn.style.display = 'none';
         document.getElementById('usernameInput').style.display = 'none';
         if (gameOverlay) gameOverlay.style.display = 'flex';
     } else {
@@ -673,6 +684,7 @@ function updateButtonVisibility() {
         joinBtn.style.display = 'inline-block';
         leaveBtn.style.display = 'none';
         if (abandonBtn) abandonBtn.style.display = 'none';
+        if (endBotGameBtn) endBotGameBtn.style.display = 'none';
         document.getElementById('usernameInput').style.display = 'block';
         if (gameOverlay) gameOverlay.style.display = 'flex';
     }
@@ -693,6 +705,7 @@ socket.on('joined_as_player', (data) => {
 });
 
 socket.on('player_joined', (data) => {
+    console.log('player_joined', data);
     players = data.players;
     
     // Check if current player is eliminated
@@ -802,6 +815,7 @@ socket.on('game_update', (data) => {
         
         // Update players data if provided
         if (data.players) {
+            console.log('game_update updating players', data);
             gameState.players = data.players;
         }
         
@@ -1579,7 +1593,7 @@ function showGameOverWithStats(winnerName, gameData) {
     preGameContent.style.display = 'none';
     gameOverContent.style.display = 'block';
     
-    winnerText.textContent = `The winner is ${winnerName}`;
+    winnerText.textContent = `The winner is ${winnerName}!`;
     
     // Generate game statistics
     const stats = calculatePlayerStats();
@@ -2104,6 +2118,7 @@ function calculatePlayerStats() {
 }
 
 function updatePlayersList() {
+    console.log('updatePlayersList', { players });
     const playersDiv = document.getElementById('players');
     const playersList = document.querySelector('.players-list');
     const mobileGameStats = document.getElementById('mobileGameStats');
@@ -2221,7 +2236,15 @@ function updatePlayersList() {
         // Actions cell (only for host viewing non-bot human players when game not started)
         if (isHost && !gameStarted) {
             const actionsCell = document.createElement('td');
-            if (player.isBot === false && player.index !== playerIndex) {
+            if (player.isBot) {
+                console.log('bot player', player);
+                const kickBtn = document.createElement('button');
+                kickBtn.textContent = 'Kick';
+                kickBtn.className = 'transfer-btn kick-bot-btn';
+                kickBtn.title = 'Remove this bot from the game';
+                kickBtn.onclick = ((botId) => () => kickBot(botId))(player.id);
+                actionsCell.appendChild(kickBtn);
+            } else if (player.index !== playerIndex) {
                 const transferBtn = document.createElement('button');
                 transferBtn.textContent = 'Make Host';
                 transferBtn.className = 'transfer-btn';
@@ -2374,12 +2397,25 @@ function transferHost(targetPlayerIndex) {
     }
 }
 
+function kickBot(botUserId) {
+    showModal({
+        title: 'Kick Bot',
+        message: 'Are you sure you want to remove this bot from the game?',
+        confirmText: 'Kick Bot',
+        confirmClass: 'danger',
+        onConfirm: () => {
+            socket.emit('kick_bot', roomId, botUserId);
+        }
+    });
+}
+
 // Button handlers
 document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('joinBtn').addEventListener('click', joinAsPlayer);
     document.getElementById('leaveBtn').addEventListener('click', leaveGame);
     document.getElementById('abandonBtn').addEventListener('click', abandonGame);
+    document.getElementById('endBotGameBtn').addEventListener('click', endBotGame);
     document.getElementById('overlayStartBtn').addEventListener('click', startGame);
     document.getElementById('copyUrlBtn').addEventListener('click', copyGameUrl);
     
@@ -2436,9 +2472,27 @@ function leaveGame() {
 function abandonGame() {
     if (playerIndex < 0 || !gameStarted) return;
     
-    if (confirm('Are you sure you want to abandon the game? This will eliminate you and make you a viewer.')) {
-        socket.emit('abandon_game', roomId, currentUserId);
-    }
+    showModal({
+        title: 'Abandon Game',
+        message: 'Are you sure you want to abandon the game? This will eliminate you and make you a viewer.',
+        confirmText: 'Abandon',
+        confirmClass: 'danger',
+        onConfirm: () => {
+            socket.emit('abandon_game', roomId, currentUserId);
+        }
+    });
+}
+
+function endBotGame() {
+    showModal({
+        title: 'End Bot Game',
+        message: 'Are you sure you want to end this bot-only game?',
+        confirmText: 'End Game',
+        confirmClass: 'danger',
+        onConfirm: () => {
+            socket.emit('end_bot_game', roomId);
+        }
+    });
 }
 
 function startGame() {
@@ -2476,26 +2530,6 @@ function inviteBot(botType) {
     socket.emit('invite_bot', roomId, botType);
 }
 
-// Toast notification system
-function showToast(message, type = 'info', duration = 3000) {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    
-    container.appendChild(toast);
-    
-    // Auto-remove after duration
-    setTimeout(() => {
-        toast.classList.add('slideOut');
-        setTimeout(() => {
-            if (container.contains(toast)) {
-                container.removeChild(toast);
-            }
-        }, 300);
-    }, duration);
-}
-
 // Bot invite result handlers
 socket.on('bot_invite_result', (message) => {
     console.log('Bot invite result:', message);
@@ -2507,6 +2541,11 @@ socket.on('bot_invite_result', (message) => {
 socket.on('bot_invite_error', (error) => {
     console.error('Bot invite error:', error);
     showToast(`Failed to invite bot: ${error}`, 'error');
+});
+
+socket.on('end_game_error', (error) => {
+    console.error('End game error:', error);
+    showToast(`Cannot end game: ${error}`, 'error');
 });
 
 // Keyboard controls
@@ -2813,8 +2852,8 @@ function switchSidebarTab(tabName) {
 }
 
 // Make functions globally accessible
-window.toggleControls = toggleControls;
-window.toggleChat = toggleChat;
+window.toggleSidebar = toggleSidebar;
+window.switchSidebarTab = switchSidebarTab;
 
 // Add mouse and touch event listeners for ripples
 function addRippleListeners() {
