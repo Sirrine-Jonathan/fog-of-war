@@ -89,6 +89,11 @@ ul.game-stats {
     border-bottom: 1px solid rgb(238, 238, 238);
 }
 
+.mobile-player-item.eliminated-player {
+    opacity: 0.6;
+    text-decoration: line-through;
+}
+
 .mobile-player-item:last-of-type {
     border-bottom: none;
 }
@@ -423,6 +428,16 @@ input[type="text"]:focus {
 }
 
 .players-table tr.eliminated-player {
+    opacity: 0.6;
+    text-decoration: line-through;
+}
+
+.mobile-stats-table tr.eliminated-player {
+    opacity: 0.6;
+    text-decoration: line-through;
+}
+
+.player-stat.eliminated-player {
     opacity: 0.6;
     text-decoration: line-through;
 }

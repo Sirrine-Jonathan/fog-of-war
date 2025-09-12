@@ -1011,8 +1011,9 @@ function parseMapData(mapData) {
     const armies = mapData.slice(2, size + 2);
     const terrain = mapData.slice(size + 2, size + 2 + size);
     const towerDefense = mapData.slice(size + 2 + size, size + 2 + size + size);
+    const ghostTerrain = mapData.slice(size + 2 + size + size, size + 2 + size + size + size);
     
-    return { width, height, armies, terrain, towerDefense, generals: [] };
+    return { width, height, armies, terrain, towerDefense, ghostTerrain, generals: [] };
 }
 
 function setSelectedTile(tileIndex) {
@@ -1144,6 +1145,7 @@ function drawGame() {
         } else {
             // Draw visible tile
             const terrain = gameState.terrain[i];
+            const ghostTerrain = gameState.ghostTerrain ? gameState.ghostTerrain[i] : -1;
             const isCity = gameState.cities && gameState.cities.includes(i);
             const isTower = gameState.lookoutTowers && gameState.lookoutTowers.includes(i);
             
@@ -1180,6 +1182,15 @@ function drawGame() {
                     // Enemy generals and regular tiles use player color
                     ctx.fillStyle = playerColors[terrain] || emptyColor;
                 }
+            } else if (ghostTerrain >= 0) { // Ghost territory from eliminated player
+                // Use faded player color for ghost territory
+                const ghostColor = playerColors[ghostTerrain];
+                if (ghostColor) {
+                    const rgb = hexToRgb(ghostColor);
+                    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)`;
+                } else {
+                    ctx.fillStyle = emptyColor;
+                }
             } else { // Empty
                 ctx.fillStyle = emptyColor;
             }
@@ -1190,9 +1201,13 @@ function drawGame() {
             const isServerGeneral = gameState.generals && gameState.generals.includes(i);
             const isLocalGeneral = Array.from(playerGenerals.values()).includes(i);
             if (isServerGeneral || isLocalGeneral) {
-                // All general tiles shine (client's and enemy)
+                // All general tiles shine with same intensity
+                // Client's general gets gold background + shine, so enemy generals need stronger shine to match
+                const isClientGeneral = terrain === playerIndex;
+                const shineOpacity = isClientGeneral ? 0.4 : 0.6; // Enemy generals get stronger shine
+                
                 const shineGradient = ctx.createLinearGradient(x, y, x + tileSize * 0.6, y + tileSize * 0.6);
-                shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+                shineGradient.addColorStop(0, `rgba(255, 255, 255, ${shineOpacity})`);
                 shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
                 ctx.fillStyle = shineGradient;
                 ctx.fillRect(x, y, tileSize, tileSize);
@@ -2024,6 +2039,10 @@ function updatePlayersList() {
                     playerStat.classList.add('current-player');
                 }
                 
+                if (player.eliminated) {
+                    playerStat.classList.add('eliminated-player');
+                }
+                
                 const playerName = document.createElement('span');
                 playerName.textContent = player.username + (player.isBot ? ' [BOT]' : '');
                 playerName.style.color = playerColors[player.index] || 'black';
@@ -2068,6 +2087,10 @@ function updateMobileGameStats(sortedPlayers) {
         
         if (player.index === playerIndex) {
             row.classList.add('current-player');
+        }
+        
+        if (player.eliminated) {
+            row.classList.add('eliminated-player');
         }
         
         const nameCell = document.createElement('td');
@@ -2404,6 +2427,10 @@ function updateMobilePlayersAccordion() {
     players.forEach((player, index) => {
         const playerDiv = document.createElement('div');
         playerDiv.className = 'mobile-player-item';
+        
+        if (player.eliminated) {
+            playerDiv.classList.add('eliminated-player');
+        }
         
         const stats = calculatePlayerStats();
         const playerStats = stats[player.index] || { tiles: 0, armies: 0 };

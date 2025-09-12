@@ -41,6 +41,7 @@ export class Game {
       height,
       armies,
       terrain,
+      ghostTerrain: new Array(size).fill(TILE_EMPTY),
       generals: [],
       cities: [],
       lookoutTowers: [],
@@ -485,11 +486,12 @@ export class Game {
     // Remove their general
     this.state.generals[playerIndex] = -1;
     
-    // Convert all their territory to neutral
+    // Convert their territory to ghost territory (keep player color but make it neutral)
     for (let i = 0; i < this.state.terrain.length; i++) {
       if (this.state.terrain[i] === playerIndex) {
-        this.state.terrain[i] = TILE_EMPTY;
-        // Keep half the armies as neutral defense
+        this.state.ghostTerrain[i] = playerIndex; // Remember the eliminated player
+        this.state.terrain[i] = TILE_EMPTY; // Make it neutral
+        // Halve the armies as ghost defense
         this.state.armies[i] = Math.floor(this.state.armies[i] / 2);
       }
     }
@@ -510,7 +512,8 @@ export class Game {
       this.state.height,
       ...this.state.armies,
       ...this.state.terrain,
-      ...this.state.towerDefense
+      ...this.state.towerDefense,
+      ...this.state.ghostTerrain
     ];
   }
 
