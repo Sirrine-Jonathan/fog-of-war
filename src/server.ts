@@ -9,26 +9,6 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server);
 
-function parseMapData(mapData: number[]): any {
-  const width = 30; // Default width, should match game initialization
-  const height = 30; // Default height, should match game initialization
-  
-  const terrain: number[] = [];
-  const armies: number[] = [];
-  
-  for (let i = 0; i < mapData.length; i += 2) {
-    terrain.push(mapData[i]);
-    armies.push(mapData[i + 1] || 0);
-  }
-  
-  return {
-    width,
-    height,
-    terrain,
-    armies
-  };
-}
-
 function getPersonalizedGenerals(allGenerals: number[], playerIndex: number, gameState: any): number[] {
   const personalizedGenerals = new Array(allGenerals.length).fill(-1);
   
@@ -42,6 +22,10 @@ function getPersonalizedGenerals(allGenerals: number[], playerIndex: number, gam
     const enemyGeneralPos = allGenerals[i];
     if (enemyGeneralPos === -1) continue; // General doesn't exist or is eliminated
     
+    // Validate general position is not a mountain and is within bounds
+    if (enemyGeneralPos < 0 || enemyGeneralPos >= gameState.terrain.length) continue;
+    if (gameState.terrain[enemyGeneralPos] === -2) continue; // Skip mountains
+    
     // Check if enemy general is visible (on player's territory or adjacent to it)
     if (isPositionVisibleToPlayer(enemyGeneralPos, playerIndex, gameState)) {
       personalizedGenerals[i] = enemyGeneralPos;
@@ -54,34 +38,39 @@ function getPersonalizedGenerals(allGenerals: number[], playerIndex: number, gam
 function isPositionVisibleToPlayer(position: number, playerIndex: number, gameState: any): boolean {
   // Enemy general is visible if:
   // 1. It's on player's territory (captured)
-  // 2. It's adjacent to player's territory (discovered through combat/vision)
+  // 2. It's adjacent to player's territory (normal vision)
+  // 3. It's within lookout tower vision range
   
   if (gameState.terrain[position] === playerIndex) {
     return true; // On player's territory
   }
   
-  // Check adjacent tiles for player's territory
+  // Check if position is within normal vision range (adjacent to any player tile)
   const width = gameState.width;
   const height = gameState.height;
   const x = position % width;
   const y = Math.floor(position / width);
   
-  const adjacent = [
-    position - 1,     // Left
-    position + 1,     // Right  
-    position - width, // Up
-    position + width  // Down
-  ];
-  
-  for (const adj of adjacent) {
-    if (adj >= 0 && adj < gameState.terrain.length) {
-      const adjX = adj % width;
-      const adjY = Math.floor(adj / width);
+  // Check all tiles for player ownership and if they provide vision to this position
+  for (let i = 0; i < gameState.terrain.length; i++) {
+    if (gameState.terrain[i] === playerIndex) {
+      const tileX = i % width;
+      const tileY = Math.floor(i / width);
       
-      // Check bounds
-      if (Math.abs(adjX - x) <= 1 && Math.abs(adjY - y) <= 1) {
-        if (gameState.terrain[adj] === playerIndex) {
-          return true; // Adjacent to player's territory
+      // Check if this player tile provides vision to the general position
+      // Normal tiles provide adjacent vision (8-directional)
+      const dx = Math.abs(tileX - x);
+      const dy = Math.abs(tileY - y);
+      
+      if (dx <= 1 && dy <= 1) {
+        return true; // Within normal adjacent vision
+      }
+      
+      // Check if this is a lookout tower providing extended vision
+      if (gameState.lookoutTowers && gameState.lookoutTowers.includes(i)) {
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance <= 5) {
+          return true; // Within lookout tower vision (5-tile radius)
         }
       }
     }
@@ -744,6 +733,16 @@ io.on('connection', (socket) => {
           const playerSocket = [...io.sockets.sockets.values()].find(s => s.data.userId === player.id);
           if (playerSocket) {
             const personalizedGenerals = getPersonalizedGenerals(gameState.generals, playerIndex, gameState);
+            
+            // Debug logging for general data integrity
+            if (gameState.turn % 50 === 0) { // Log every 50 turns
+              console.log(`🔍 General data for ${player.username}:`, {
+                allGenerals: gameState.generals,
+                personalizedGenerals,
+                visibleCount: personalizedGenerals.filter(g => g >= 0).length
+              });
+            }
+            
             playerSocket.emit('game_update', {
               cities_diff: [0, gameState.cities.length, ...gameState.cities],
               lookoutTowers_diff: [0, gameState.lookoutTowers.length, ...gameState.lookoutTowers],
@@ -885,6 +884,65 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
       timestamp: Date.now(),
       isSystem: true
     });
+  });
+
+  socket.on('abandon_game', (gameId: string, userId: string) => {
+    console.log(`🏃 Player ${userId} abandoning game ${gameId}`);
+    
+    if (!games.has(gameId)) {
+      console.log(`❌ Game ${gameId} not found`);
+      return;
+    }
+    
+    const game = games.get(gameId)!;
+    const gameState = game.getState();
+    const player = gameState.players.find(p => p.id === userId);
+    
+    if (!player || player.eliminated) {
+      console.log(`❌ Player ${userId} not found or already eliminated`);
+      return;
+    }
+    
+    // Mark player as eliminated
+    player.eliminated = true;
+    console.log(`✅ Player ${userId} (${player.username}) marked as eliminated`);
+    
+    // Send system message
+    sendSystemMessage(gameId, `${player.username} abandoned the game`);
+    
+    // Convert player to viewer
+    socket.data.playerIndex = -1;
+    socket.data.isViewer = true;
+    
+    // Check for victory condition
+    const remainingPlayers = gameState.players.filter(p => !p.eliminated);
+    console.log(`   Remaining players after abandonment: ${remainingPlayers.length}`);
+    
+    if (remainingPlayers.length === 1) {
+      const winner = remainingPlayers[0];
+      sendSystemMessage(gameId, `🎉 ${winner.username} wins the game!`);
+      
+      // End the game after a short delay
+      setTimeout(() => {
+        console.log(`   Ending game ${gameId} - winner: ${winner.username}`);
+        game.endGame(winner.index || 0);
+      }, 2000);
+    } else if (remainingPlayers.length === 0) {
+      // No players left - end game with no winner
+      sendSystemMessage(gameId, `Game ended - no players remaining`);
+      setTimeout(() => {
+        console.log(`   Ending game ${gameId} - no players remaining`);
+        game.endGame(-1);
+      }, 2000);
+    }
+    
+    // Broadcast updated player list
+    io.to(gameId).emit('player_joined', {
+      players: gameState.players
+    });
+    
+    // Send game info update
+    sendGameInfo(gameId);
   });
 
   socket.on('leave_game', (gameId: string, userId: string) => {

@@ -3,8 +3,10 @@ import { GameState, Player, TILE_EMPTY, TILE_MOUNTAIN, TILE_LOOKOUT_TOWER, TILE_
 export class Game {
   private state: GameState;
   private gameInterval?: NodeJS.Timeout;
+  private roomId: string;
 
   constructor(roomId: string) {
+    this.roomId = roomId;
     this.state = this.initializeGame();
   }
 
@@ -120,6 +122,32 @@ export class Game {
   }
 
   private findOptimalGeneralPosition(): number {
+    // Special testing layout: place generals exactly 5 tiles apart
+    if (this.roomId === 'testing') {
+      const existingGenerals = this.state.generals.filter(pos => pos >= 0);
+      
+      if (existingGenerals.length === 0) {
+        // First general: place in center-left area
+        const centerRow = Math.floor(this.state.height / 2);
+        const centerCol = Math.floor(this.state.width / 2) - 3;
+        return centerRow * this.state.width + centerCol;
+      } else if (existingGenerals.length === 1) {
+        // Second general: place exactly 5 tiles to the right
+        const firstGeneral = existingGenerals[0];
+        const secondGeneral = firstGeneral + 5;
+        
+        // Validate position is within bounds and empty
+        if (secondGeneral < this.state.terrain.length && 
+            this.state.terrain[secondGeneral] === TILE_EMPTY) {
+          return secondGeneral;
+        }
+      }
+      
+      // Fallback for additional players in testing mode
+      return this.findEmptyPosition();
+    }
+    
+    // Normal general placement logic
     const width = 30;
     const height = 30;
     const minEdgeDistance = 3;
@@ -239,8 +267,13 @@ export class Game {
       console.log(`   General ${index}: position=${pos}, terrain[${pos}]=${this.state.terrain[pos]}, armies[${pos}]=${this.state.armies[pos]}`);
     });
     
-    this.spawnCities();
-    this.spawnLookoutTowers();
+    if (this.roomId === 'testing') {
+      this.createTestingLayout();
+    } else {
+      this.spawnCities();
+      this.spawnLookoutTowers();
+    }
+    
     this.state.gameStarted = true;
     
     console.log(`   Game started with ${this.state.players.length} players`);
@@ -248,6 +281,78 @@ export class Game {
     this.gameInterval = setInterval(() => {
       this.processTurn();
     }, 500); // 2 moves per second
+  }
+
+  private createTestingLayout(): void {
+    console.log(`🧪 Creating testing layout for room: ${this.roomId}`);
+    
+    // Clear existing terrain (keep generals)
+    for (let i = 0; i < this.state.terrain.length; i++) {
+      if (this.state.terrain[i] !== TILE_EMPTY && !this.state.generals.includes(i)) {
+        this.state.terrain[i] = TILE_EMPTY;
+        this.state.armies[i] = 0;
+      }
+    }
+    
+    // Clear existing cities and towers
+    this.state.cities = [];
+    this.state.lookoutTowers = [];
+    
+    if (this.state.generals.length >= 2) {
+      const gen1 = this.state.generals[0];
+      const gen2 = this.state.generals[1];
+      
+      // Calculate center point between generals
+      const gen1Row = Math.floor(gen1 / this.state.width);
+      const gen1Col = gen1 % this.state.width;
+      const gen2Row = Math.floor(gen2 / this.state.width);
+      const gen2Col = gen2 % this.state.width;
+      
+      const centerRow = Math.floor((gen1Row + gen2Row) / 2);
+      const centerCol = Math.floor((gen1Col + gen2Col) / 2);
+      const centerPos = centerRow * this.state.width + centerCol;
+      
+      // Place towers 1 tile away from each general
+      const tower1 = gen1 + 2; // Right of gen1
+      const tower2 = gen2 - 2; // Left of gen2
+      
+      // Place cities 1 tile away from each general (different direction)
+      const city1 = gen1 + (this.state.width * 2); // Below gen1
+      const city2 = gen2 - (this.state.width * 2); // Above gen2
+      
+      // Place mountains 1 tile away from each general (third direction)
+      const mountain1 = gen1 - 2; // Left of gen1
+      const mountain2 = gen2 + 2; // Right of gen2
+      
+      // Validate and place elements
+      const elements = [
+        { pos: city1, type: TILE_CITY, armies: 40, name: 'City 1' },
+        { pos: city2, type: TILE_CITY, armies: 40, name: 'City 2' },
+        { pos: tower1, type: TILE_LOOKOUT_TOWER, armies: 0, name: 'Tower 1' },
+        { pos: tower2, type: TILE_LOOKOUT_TOWER, armies: 0, name: 'Tower 2' },
+        { pos: mountain1, type: TILE_MOUNTAIN, armies: 0, name: 'Mountain 1' },
+        { pos: mountain2, type: TILE_MOUNTAIN, armies: 0, name: 'Mountain 2' }
+      ];
+      
+      elements.forEach(element => {
+        if (element.pos >= 0 && element.pos < this.state.terrain.length && 
+            this.state.terrain[element.pos] === TILE_EMPTY) {
+          this.state.terrain[element.pos] = element.type;
+          this.state.armies[element.pos] = element.armies;
+          
+          if (element.type === TILE_CITY) {
+            this.state.cities.push(element.pos);
+          } else if (element.type === TILE_LOOKOUT_TOWER) {
+            this.state.lookoutTowers.push(element.pos);
+            this.state.towerDefense[element.pos] = 40;
+          }
+          
+          console.log(`   ${element.name} placed at position ${element.pos}`);
+        }
+      });
+    }
+    
+    console.log(`🧪 Testing layout complete: ${this.state.cities.length} cities, ${this.state.lookoutTowers.length} towers`);
   }
 
   private spawnCities(): void {

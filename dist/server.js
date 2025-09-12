@@ -39,6 +39,11 @@ function getPersonalizedGenerals(allGenerals, playerIndex, gameState) {
         const enemyGeneralPos = allGenerals[i];
         if (enemyGeneralPos === -1)
             continue; // General doesn't exist or is eliminated
+        // Validate general position is not a mountain and is within bounds
+        if (enemyGeneralPos < 0 || enemyGeneralPos >= gameState.terrain.length)
+            continue;
+        if (gameState.terrain[enemyGeneralPos] === -2)
+            continue; // Skip mountains
         // Check if enemy general is visible (on player's territory or adjacent to it)
         if (isPositionVisibleToPlayer(enemyGeneralPos, playerIndex, gameState)) {
             personalizedGenerals[i] = enemyGeneralPos;
@@ -628,6 +633,14 @@ io.on('connection', (socket) => {
                     const playerSocket = [...io.sockets.sockets.values()].find(s => s.data.userId === player.id);
                     if (playerSocket) {
                         const personalizedGenerals = getPersonalizedGenerals(gameState.generals, playerIndex, gameState);
+                        // Debug logging for general data integrity
+                        if (gameState.turn % 50 === 0) { // Log every 50 turns
+                            console.log(`🔍 General data for ${player.username}:`, {
+                                allGenerals: gameState.generals,
+                                personalizedGenerals,
+                                visibleCount: personalizedGenerals.filter(g => g >= 0).length
+                            });
+                        }
                         playerSocket.emit('game_update', {
                             cities_diff: [0, gameState.cities.length, ...gameState.cities],
                             lookoutTowers_diff: [0, gameState.lookoutTowers.length, ...gameState.lookoutTowers],
@@ -751,6 +764,54 @@ io.on('connection', (socket) => {
             timestamp: Date.now(),
             isSystem: true
         });
+    });
+    socket.on('abandon_game', (gameId, userId) => {
+        console.log(`🏃 Player ${userId} abandoning game ${gameId}`);
+        if (!games.has(gameId)) {
+            console.log(`❌ Game ${gameId} not found`);
+            return;
+        }
+        const game = games.get(gameId);
+        const gameState = game.getState();
+        const player = gameState.players.find(p => p.id === userId);
+        if (!player || player.eliminated) {
+            console.log(`❌ Player ${userId} not found or already eliminated`);
+            return;
+        }
+        // Mark player as eliminated
+        player.eliminated = true;
+        console.log(`✅ Player ${userId} (${player.username}) marked as eliminated`);
+        // Send system message
+        sendSystemMessage(gameId, `${player.username} abandoned the game`);
+        // Convert player to viewer
+        socket.data.playerIndex = -1;
+        socket.data.isViewer = true;
+        // Check for victory condition
+        const remainingPlayers = gameState.players.filter(p => !p.eliminated);
+        console.log(`   Remaining players after abandonment: ${remainingPlayers.length}`);
+        if (remainingPlayers.length === 1) {
+            const winner = remainingPlayers[0];
+            sendSystemMessage(gameId, `🎉 ${winner.username} wins the game!`);
+            // End the game after a short delay
+            setTimeout(() => {
+                console.log(`   Ending game ${gameId} - winner: ${winner.username}`);
+                game.endGame(winner.index || 0);
+            }, 2000);
+        }
+        else if (remainingPlayers.length === 0) {
+            // No players left - end game with no winner
+            sendSystemMessage(gameId, `Game ended - no players remaining`);
+            setTimeout(() => {
+                console.log(`   Ending game ${gameId} - no players remaining`);
+                game.endGame(-1);
+            }, 2000);
+        }
+        // Broadcast updated player list
+        io.to(gameId).emit('player_joined', {
+            players: gameState.players
+        });
+        // Send game info update
+        sendGameInfo(gameId);
     });
     socket.on('leave_game', (gameId, userId) => {
         console.log(`🚪 Player ${userId} leaving game ${gameId}`);

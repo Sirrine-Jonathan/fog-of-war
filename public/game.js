@@ -501,6 +501,9 @@ function toggleAccordion(header) {
     content.classList.toggle('active');
 }
 
+// Make function globally accessible
+window.toggleAccordion = toggleAccordion;
+
 function initAccordion() {
     // Show appropriate controls based on device type
     const desktopControls = document.getElementById('desktopControls');
@@ -593,15 +596,24 @@ function updateButtonVisibility() {
     const overlayStartBtn = document.getElementById('overlayStartBtn');
     const joinBtn = document.getElementById('joinBtn');
     const leaveBtn = document.getElementById('leaveBtn');
+    const abandonBtn = document.getElementById('abandonBtn');
     
     if (gameStarted) {
-        // Game is active - hide all join/leave controls and overlay
+        // Game is active - hide join/leave controls and overlay, show abandon for players
         joinControls.style.display = 'none';
         if (gameOverlay) gameOverlay.style.display = 'none';
+        
+        // Show abandon button only for active players (not viewers or eliminated)
+        if (abandonBtn && playerIndex >= 0 && !isEliminated) {
+            abandonBtn.style.display = 'inline-block';
+        } else if (abandonBtn) {
+            abandonBtn.style.display = 'none';
+        }
     } else if (playerIndex >= 0) {
         // Joined but game not started - show leave button, hide join controls, show overlay
         joinBtn.style.display = 'none';
         leaveBtn.style.display = 'inline-block';
+        if (abandonBtn) abandonBtn.style.display = 'none';
         document.getElementById('usernameInput').style.display = 'none';
         if (gameOverlay) gameOverlay.style.display = 'flex';
     } else {
@@ -609,6 +621,7 @@ function updateButtonVisibility() {
         joinControls.style.display = 'flex';
         joinBtn.style.display = 'inline-block';
         leaveBtn.style.display = 'none';
+        if (abandonBtn) abandonBtn.style.display = 'none';
         document.getElementById('usernameInput').style.display = 'block';
         if (gameOverlay) gameOverlay.style.display = 'flex';
     }
@@ -634,7 +647,10 @@ socket.on('player_joined', (data) => {
     // Check if current player is eliminated
     if (playerIndex >= 0 && players[playerIndex]?.eliminated) {
         isEliminated = true;
+        playerIndex = -1; // Convert to viewer
+        selectedTile = null;
         updateVisibleTiles(); // Update visibility to show full map
+        updateButtonVisibility(); // Update button visibility
         drawGame();
     }
     
@@ -685,6 +701,9 @@ socket.on('game_already_started', () => {
 socket.on('game_won', (data) => {
     gameStarted = false;
     const winnerName = players[data.winner]?.username || 'Unknown';
+    
+    // Clear stale general data to prevent data integrity issues
+    playerGenerals.clear();
     
     // Start animation when game ends
     startAnimation();
@@ -769,9 +788,22 @@ socket.on('game_update', (data) => {
             gameState.lookoutTowers = patch(gameState.lookoutTowers || [], data.lookoutTowers_diff);
         }
         
-        // Update generals if provided
+        // Update generals if provided (with validation)
         if (data.generals) {
-            gameState.generals = data.generals;
+            // Validate received general data
+            const validatedGenerals = data.generals.map((pos, index) => {
+                if (pos >= 0 && pos < gameState.terrain.length && gameState.terrain[pos] !== -2) {
+                    return pos;
+                }
+                return -1; // Invalid position
+            });
+            gameState.generals = validatedGenerals;
+            
+            // Debug log for data integrity issues
+            const invalidCount = data.generals.filter((pos, i) => pos !== validatedGenerals[i]).length;
+            if (invalidCount > 0) {
+                console.warn(`🚨 Data integrity issue: ${invalidCount} invalid general positions received`);
+            }
         }
         
         // Auto-select player's general on first update if no tile selected
@@ -1171,15 +1203,23 @@ function drawGame() {
                 // Check if this is a general tile
                 const isGeneral = gameState.generals && gameState.generals.includes(i);
                 if (isGeneral && terrain === playerIndex) {
-                    // Create gold gradient for client's general only
+                    // Player's general gets gold gradient
                     const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
                     gradient.addColorStop(0, '#FFD700'); // Gold
                     gradient.addColorStop(0.3, '#FFF8DC'); // Cornsilk (lighter)
                     gradient.addColorStop(0.7, '#DAA520'); // Goldenrod
                     gradient.addColorStop(1, '#B8860B'); // Dark goldenrod
                     ctx.fillStyle = gradient;
+                } else if (isGeneral) {
+                    // Enemy generals get silver gradient
+                    const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
+                    gradient.addColorStop(0, '#C0C0C0'); // Silver
+                    gradient.addColorStop(0.3, '#F5F5F5'); // White smoke (lighter)
+                    gradient.addColorStop(0.7, '#A9A9A9'); // Dark gray
+                    gradient.addColorStop(1, '#808080'); // Gray
+                    ctx.fillStyle = gradient;
                 } else {
-                    // Enemy generals and regular tiles use player color
+                    // Regular tiles use player color
                     ctx.fillStyle = playerColors[terrain] || emptyColor;
                 }
             } else if (ghostTerrain >= 0) { // Ghost territory from eliminated player
@@ -1197,12 +1237,9 @@ function drawGame() {
             
             ctx.fillRect(x, y, tileSize, tileSize);
             
-            // Add shine effect for special tiles
-            const isServerGeneral = gameState.generals && gameState.generals.includes(i);
-            const isLocalGeneral = Array.from(playerGenerals.values()).includes(i);
-            if (isServerGeneral || isLocalGeneral) {
-                // All general tiles shine with same intensity
-                // Client's general gets gold background + shine, so enemy generals need stronger shine to match
+            // Add shine effect for generals only (validate terrain and general data)
+            const isServerGeneral = gameState.generals && gameState.generals[terrain] === i && terrain >= 0;
+            if (isServerGeneral && terrain !== -2) { // Never shine mountains
                 const isClientGeneral = terrain === playerIndex;
                 
                 if (isClientGeneral) {
@@ -2153,6 +2190,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('joinBtn').addEventListener('click', joinAsPlayer);
     document.getElementById('leaveBtn').addEventListener('click', leaveGame);
+    document.getElementById('abandonBtn').addEventListener('click', abandonGame);
     document.getElementById('overlayStartBtn').addEventListener('click', startGame);
     document.getElementById('copyUrlBtn').addEventListener('click', copyGameUrl);
     
@@ -2204,6 +2242,14 @@ function leaveGame() {
     clearState(); // This clears localStorage
     
     updateButtonVisibility();
+}
+
+function abandonGame() {
+    if (playerIndex < 0 || !gameStarted) return;
+    
+    if (confirm('Are you sure you want to abandon the game? This will eliminate you and make you a viewer.')) {
+        socket.emit('abandon_game', roomId, currentUserId);
+    }
 }
 
 function startGame() {
