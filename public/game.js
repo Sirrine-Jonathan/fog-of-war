@@ -1204,13 +1204,25 @@ function drawGame() {
                 // All general tiles shine with same intensity
                 // Client's general gets gold background + shine, so enemy generals need stronger shine to match
                 const isClientGeneral = terrain === playerIndex;
-                const shineOpacity = isClientGeneral ? 0.4 : 0.6; // Enemy generals get stronger shine
                 
-                const shineGradient = ctx.createLinearGradient(x, y, x + tileSize * 0.6, y + tileSize * 0.6);
-                shineGradient.addColorStop(0, `rgba(255, 255, 255, ${shineOpacity})`);
-                shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-                ctx.fillStyle = shineGradient;
-                ctx.fillRect(x, y, tileSize, tileSize);
+                if (isClientGeneral) {
+                    // Client general: moderate white shine (has gold background)
+                    const shineGradient = ctx.createLinearGradient(x, y, x + tileSize * 0.6, y + tileSize * 0.6);
+                    shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+                    shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                    ctx.fillStyle = shineGradient;
+                    ctx.fillRect(x, y, tileSize, tileSize);
+                } else {
+                    // Enemy general: very strong shine with pulsing effect
+                    const time = Date.now() * 0.003; // Slow pulse
+                    const pulseIntensity = 0.8 + Math.sin(time) * 0.2; // Pulse between 0.6 and 1.0
+                    
+                    const shineGradient = ctx.createLinearGradient(x, y, x + tileSize * 0.6, y + tileSize * 0.6);
+                    shineGradient.addColorStop(0, `rgba(255, 255, 255, ${pulseIntensity})`);
+                    shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                    ctx.fillStyle = shineGradient;
+                    ctx.fillRect(x, y, tileSize, tileSize);
+                }
             } else if ((isCity || isTower) && terrain >= 0) {
                 // Captured city/tower tiles shine with owner's color
                 const ownerColor = playerColors[terrain];

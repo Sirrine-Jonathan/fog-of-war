@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#0f1419"/>
+  
+  <!-- 9x9 grid of tiles (scaled up) -->
+  <g stroke="#121920" stroke-width="4">
+    <!-- Row 1 -->
+    <rect x="32" y="32" width="48" height="48" fill="#0f1419"/>
+    <rect x="96" y="32" width="48" height="48" fill="#0f1419"/>
+    <rect x="160" y="32" width="48" height="48" fill="#e74c3c"/>
+    <rect x="224" y="32" width="48" height="48" fill="#0f1419"/>
+    <rect x="288" y="32" width="48" height="48" fill="#0f1419"/>
+    <rect x="352" y="32" width="48" height="48" fill="#0f1419"/>
+    <rect x="416" y="32" width="48" height="48" fill="#0f1419"/>
+    
+    <!-- Row 2 -->
+    <rect x="32" y="96" width="48" height="48" fill="#0f1419"/>
+    <rect x="96" y="96" width="48" height="48" fill="#0f1419"/>
+    <rect x="160" y="96" width="48" height="48" fill="#0f1419"/>
+    <rect x="224" y="96" width="48" height="48" fill="#0f1419"/>
+    <rect x="288" y="96" width="48" height="48" fill="#3498db"/>
+    <rect x="352" y="96" width="48" height="48" fill="#0f1419"/>
+    <rect x="416" y="96" width="48" height="48" fill="#0f1419"/>
+    
+    <!-- Row 3 -->
+    <rect x="32" y="160" width="48" height="48" fill="#0f1419"/>
+    <rect x="96" y="160" width="48" height="48" fill="#0f1419"/>
+    <rect x="160" y="160" width="48" height="48" fill="#0f1419"/>
+    <rect x="224" y="160" width="48" height="48" fill="#0f1419"/>
+    <rect x="288" y="160" width="48" height="48" fill="#0f1419"/>
+    <rect x="352" y="160" width="48" height="48" fill="#0f1419"/>
+    <rect x="416" y="160" width="48" height="48" fill="#2ecc71"/>
+    
+    <!-- Row 4 -->
+    <rect x="32" y="224" width="48" height="48" fill="#0f1419"/>
+    <rect x="96" y="224" width="48" height="48" fill="#0f1419"/>
+    <rect x="160" y="224" width="48" height="48" fill="#0f1419"/>
+    <rect x="224" y="224" width="48" height="48" fill="#0f1419"/>
+    <rect x="288" y="224" width="48" height="48" fill="#0f1419"/>
+    <rect x="352" y="224" width="48" height="48" fill="#0f1419"/>
+    <rect x="416" y="224" width="48" height="48" fill="#0f1419"/>
+    
+    <!-- Row 5 -->
+    <rect x="32" y="288" width="48" height="48" fill="#9b59b6"/>
+    <rect x="96" y="288" width="48" height="48" fill="#0f1419"/>
+    <rect x="160" y="288" width="48" height="48" fill="#0f1419"/>
+    <rect x="224" y="288" width="48" height="48" fill="#0f1419"/>
+    <rect x="288" y="288" width="48" height="48" fill="#0f1419"/>
+    <rect x="352" y="288" width="48" height="48" fill="#0f1419"/>
+    <rect x="416" y="288" width="48" height="48" fill="#0f1419"/>
+    
+    <!-- Row 6 -->
+    <rect x="32" y="352" width="48" height="48" fill="#0f1419"/>
+    <rect x="96" y="352" width="48" height="48" fill="#0f1419"/>
+    <rect x="160" y="352" width="48" height="48" fill="#0f1419"/>
+    <rect x="224" y="352" width="48" height="48" fill="#f39c12"/>
+    <rect x="288" y="352" width="48" height="48" fill="#0f1419"/>
+    <rect x="352" y="352" width="48" height="48" fill="#0f1419"/>
+    <rect x="416" y="352" width="48" height="48" fill="#0f1419"/>
+    
+    <!-- Row 7 -->
+    <rect x="32" y="416" width="48" height="48" fill="#0f1419"/>
+    <rect x="96" y="416" width="48" height="48" fill="#0f1419"/>
+    <rect x="160" y="416" width="48" height="48" fill="#0f1419"/>
+    <rect x="224" y="416" width="48" height="48" fill="#0f1419"/>
+    <rect x="288" y="416" width="48" height="48" fill="#0f1419"/>
+    <rect x="352" y="416" width="48" height="48" fill="#e67e22"/>
+    <rect x="416" y="416" width="48" height="48" fill="#0f1419"/>
+  </g>
+  
+  <!-- FOV text in white capital letters -->
+  <text x="256" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="120" font-weight="bold" fill="white">FOV</text>
+</svg>
