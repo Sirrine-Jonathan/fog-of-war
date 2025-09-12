@@ -23,17 +23,17 @@
 	while the number is being shown do not affect the display.
 
 ## Tech Debt  
-- Move all inline styles in all html files to css files.
+- ✅ **COMPLETED**: Move all inline styles in all html files to css files.
 	Organize them in the way that makes most sense WITHOUT altering effective styles at all.
-- Identify the multiple moving parts of public/game.js (animation, ui, game).
+- ✅ **COMPLETED**: Identify the multiple moving parts of public/game.js (animation, ui, game).
   Break functionality out into modular pieces, breaking out similar functionality
 	where possible into helpful utils/classes (DOM utility for manipulations, UI class for updating/initializing UI, etc).
 	Refactor the game.js so that it is more maintainable (and likely is spread over multiple files/modules).
 	Do this WITHOUT breaking anything.
-- Examine the server code in src/
+- ✅ **COMPLETED**: Examine the server code in src/
   Identify unit testable portions. Identify areas that could be safely refactored to become unit testable.
 	Write unit tests for unit testable portions of src/
-- Examine the fog of war game server in
+- ✅ **COMPLETED**: Examine the fog of war game server in
 	/Users/jsirrine/dev/user-workspace/prototypes/fog-of-war-server/src/game.ts and
 	/Users/jsirrine/dev/user-workspace/prototypes/fog-of-war-server/server.ts
 	Examine its client usage in public/game.js and src/bot.ts
@@ -42,7 +42,7 @@
 	This isn't developer documentation or a user guide.
 	This is a spec that will be used by engineers wanting to make bots that play the game,
 	and rule officials and judges to be able to officiate regulated battles between bots.
-- Correctly attribute icons in public/icons according to https://www.svgrepo.com/page/licensing/#CC%20Attribution
+- ✅ **COMPLETED**: Correctly attribute icons in public/icons according to https://www.svgrepo.com/page/licensing/#CC%20Attribution
 
 ## New features to implement  
 - ✅ **COMPLETED**: A display of the "Tick" or "Turn" that .fullDisplay .header
