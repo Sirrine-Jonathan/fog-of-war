@@ -97,6 +97,15 @@
 		<a href="https://freesound.org/people/AceOfSpadesProduc100/sounds/333785/">8-bit "failure" sound</a> by <a href="https://freesound.org/people/AceOfSpadesProduc100/">AceOfSpadesProduc100</a> | License: <a href="https://creativecommons.org/licenses/by/4.0/">Attribution 4.0</a>
 		JSON:
 		{"sound_url": "https://freesound.org/people/AceOfSpadesProduc100/sounds/333785/", "sound_name": "8-bit \"failure\" sound", "author_url": "https://freesound.org/people/AceOfSpadesProduc100/", "author_name": "AceOfSpadesProduc100", "license_url": "https://creativecommons.org/licenses/by/4.0/", "license_name": "Attribution 4.0"}
+	- on player's territory tile captured
+		686365__faircashew__au.mp3
+		Attribution:
+		Plain text:
+		au.mp3 by FairCashew -- https://freesound.org/s/686365/ -- License: Creative Commons 0
+		HTML:
+		<a href="https://freesound.org/people/FairCashew/sounds/686365/">au.mp3</a> by <a href="https://freesound.org/people/FairCashew/">FairCashew</a> | License: <a href="http://creativecommons.org/publicdomain/zero/1.0/">Creative Commons 0</a>
+		JSON:
+		{"sound_url": "https://freesound.org/people/FairCashew/sounds/686365/", "sound_name": "au.mp3", "author_url": "https://freesound.org/people/FairCashew/", "author_name": "FairCashew", "license_url": "http://creativecommons.org/publicdomain/zero/1.0/", "license_name": "Creative Commons 0"}
 	- on game end
 	- on game start
 	- on turn 25 and multiples of turn 25 when armies are awarded to all owned territories.

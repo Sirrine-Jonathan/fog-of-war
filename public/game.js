@@ -1014,6 +1014,10 @@ socket.on('generalCaptured', () => {
     soundManager.play('generalLost');
 });
 
+socket.on('territoryCaptured', () => {
+    soundManager.play('territoryLost');
+});
+
 socket.on('game_end', (data) => {
     gameEnded = true;
     

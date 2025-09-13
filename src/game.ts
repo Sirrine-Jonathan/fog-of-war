@@ -463,7 +463,7 @@ export class Game {
     }
   }
 
-  attack(playerIndex: number, from: number, to: number): { success: boolean, events: string[], attackInfo?: { attackForce: number, defenderLoss: number, isPlayerVsPlayer: boolean, territoryType: string, generalCaptured?: number } } {
+  attack(playerIndex: number, from: number, to: number): { success: boolean, events: string[], attackInfo?: { attackForce: number, defenderLoss: number, isPlayerVsPlayer: boolean, territoryType: string, generalCaptured?: number, territoryCaptured?: number } } {
     // Validate move
     if (!this.isValidMove(playerIndex, from, to)) {
       return { success: false, events: [] };
@@ -479,7 +479,7 @@ export class Game {
     this.state.armies[from] = 1;
 
     // Track attack info for player vs player attacks
-    let attackInfo: { attackForce: number, defenderLoss: number, isPlayerVsPlayer: boolean, territoryType: string, generalCaptured?: number } | undefined;
+    let attackInfo: { attackForce: number, defenderLoss: number, isPlayerVsPlayer: boolean, territoryType: string, generalCaptured?: number, territoryCaptured?: number } | undefined;
 
     if (defenderOwner === playerIndex) {
       // Moving to own territory - transfer armies
@@ -592,6 +592,9 @@ export class Game {
       if (remaining <= 0) {
         this.state.terrain[to] = playerIndex;
         this.state.armies[to] = Math.abs(remaining);
+        
+        // Mark territory capture for the defender
+        attackInfo.territoryCaptured = defenderOwner;
         
         // Check if general was captured
         if (this.state.generals[defenderOwner] === to) {

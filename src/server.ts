@@ -890,6 +890,20 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
           capturedSocket.emit('generalCaptured');
         }
       }
+      
+      // Handle territory capture notification
+      if (result.attackInfo?.territoryCaptured !== undefined) {
+        const capturedPlayerIndex = result.attackInfo.territoryCaptured;
+        const gameState = game.getState();
+        const capturedPlayer = gameState.players[capturedPlayerIndex];
+        
+        // Find the socket for the player who lost territory and notify them
+        const sockets = await io.in(roomId || '').fetchSockets();
+        const capturedSocket = sockets.find(s => s.data.playerIndex === capturedPlayerIndex);
+        if (capturedSocket) {
+          capturedSocket.emit('territoryCaptured');
+        }
+      }
     } else {
       console.log(`   Attack failed: game=${!!game}, playerIndex=${socket.data.playerIndex}, roomId=${roomId}`);
     }

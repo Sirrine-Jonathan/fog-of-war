@@ -51,6 +51,8 @@ class SoundManager {
         this.loadSound('captureGeneral', '/sounds/253177__suntemple__retro-accomplished-sfx.wav');
         // Load player's general captured sound (failure)
         this.loadSound('generalLost', '/sounds/333785__aceofspadesproduc100__8-bit-failure-sound.wav');
+        // Load player's territory captured sound
+        this.loadSound('territoryLost', '/sounds/686365__faircashew__au.mp3');
     }
 
     loadSound(name, path) {
@@ -68,7 +70,6 @@ class SoundManager {
             console.log('🔊', soundName);
             sound.currentTime = 0;
             sound.play().catch(e => console.log('Sound failed:', soundName));
-            this.showAttribution();
         }
     }
 
