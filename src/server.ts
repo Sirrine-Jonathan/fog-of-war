@@ -817,7 +817,7 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
   });
 });
 
-  socket.on('attack', (from: number, to: number) => {
+  socket.on('attack', async (from: number, to: number) => {
     const roomId = playerRooms.get(socket.id);
     const game = games.get(roomId || '');
     const playerIndex = socket.data.playerIndex;
@@ -876,6 +876,20 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
       
       // Send attack result back to client
       socket.emit('attack_result', { from, to, success: result.success, attackInfo: result.attackInfo });
+      
+      // Handle general capture notification
+      if (result.attackInfo?.generalCaptured !== undefined) {
+        const capturedPlayerIndex = result.attackInfo.generalCaptured;
+        const gameState = game.getState();
+        const capturedPlayer = gameState.players[capturedPlayerIndex];
+        
+        // Find the socket for the captured player and notify them
+        const sockets = await io.in(roomId || '').fetchSockets();
+        const capturedSocket = sockets.find(s => s.data.playerIndex === capturedPlayerIndex);
+        if (capturedSocket) {
+          capturedSocket.emit('generalCaptured');
+        }
+      }
     } else {
       console.log(`   Attack failed: game=${!!game}, playerIndex=${socket.data.playerIndex}, roomId=${roomId}`);
     }

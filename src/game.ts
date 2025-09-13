@@ -463,7 +463,7 @@ export class Game {
     }
   }
 
-  attack(playerIndex: number, from: number, to: number): { success: boolean, events: string[], attackInfo?: { attackForce: number, defenderLoss: number, isPlayerVsPlayer: boolean, territoryType: string } } {
+  attack(playerIndex: number, from: number, to: number): { success: boolean, events: string[], attackInfo?: { attackForce: number, defenderLoss: number, isPlayerVsPlayer: boolean, territoryType: string, generalCaptured?: number } } {
     // Validate move
     if (!this.isValidMove(playerIndex, from, to)) {
       return { success: false, events: [] };
@@ -479,7 +479,7 @@ export class Game {
     this.state.armies[from] = 1;
 
     // Track attack info for player vs player attacks
-    let attackInfo: { attackForce: number, defenderLoss: number, isPlayerVsPlayer: boolean, territoryType: string } | undefined;
+    let attackInfo: { attackForce: number, defenderLoss: number, isPlayerVsPlayer: boolean, territoryType: string, generalCaptured?: number } | undefined;
 
     if (defenderOwner === playerIndex) {
       // Moving to own territory - transfer armies
@@ -597,6 +597,9 @@ export class Game {
         if (this.state.generals[defenderOwner] === to) {
           this.eliminatePlayer(defenderOwner);
           events.push(`${this.state.players[playerIndex]?.username || `Player ${playerIndex}`} eliminated ${this.state.players[defenderOwner]?.username || `Player ${defenderOwner}`}!`);
+          
+          // Mark that a general was captured for the server to handle
+          attackInfo.generalCaptured = defenderOwner;
           
           // Check for victory
           const remainingPlayers = this.state.players.filter(p => !p.eliminated);

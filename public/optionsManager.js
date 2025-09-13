@@ -6,12 +6,29 @@ class OptionsManager {
     loadOptions() {
         const saved = localStorage.getItem('gameOptions');
         const defaults = {
-            sound: false
+            sound: false,
+            sounds: {
+                captureUnowned: true,
+                moveToOwned: true,
+                mountainAdjacent: true,
+                insufficientArmies: true,
+                attackSpecial: true,
+                captureSpecial: true,
+                attackEnemy: true,
+                attackGeneral: true,
+                captureGeneral: true,
+                generalLost: true
+            }
         };
         
         if (saved) {
             try {
-                return { ...defaults, ...JSON.parse(saved) };
+                const parsed = JSON.parse(saved);
+                return { 
+                    ...defaults, 
+                    ...parsed,
+                    sounds: { ...defaults.sounds, ...parsed.sounds }
+                };
             } catch (e) {
                 console.log('Failed to parse saved options, using defaults');
                 return defaults;

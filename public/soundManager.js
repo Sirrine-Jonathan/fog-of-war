@@ -39,16 +39,18 @@ class SoundManager {
         this.loadSound('mountainAdjacent', '/sounds/652499__krokulator__error2.wav');
         // Load move to owned territory sound
         this.loadSound('moveToOwned', '/sounds/41633__datasoundsample__littleclick.wav');
-        // Load capture city/tower sound
-        this.loadSound('captureSpecial', '/sounds/54408__korgms2000b__phone-beep-1.wav');
+        // Load attack city/tower sound
+        this.loadSound('attackSpecial', '/sounds/54408__korgms2000b__phone-beep-1.wav');
         // Load capture enemy territory sound
-        this.loadSound('captureEnemy', '/sounds/101271__wouterhisschemoller__noisy_sound_1.wav');
-        // Load capture enemy general sound
-        this.loadSound('captureGeneral', '/sounds/610280__brickdeveloper171__retro-hit-sound.wav');
+        this.loadSound('attackEnemy', '/sounds/101271__wouterhisschemoller__noisy_sound_1.wav');
+        // Load attack enemy general sound
+        this.loadSound('attackGeneral', '/sounds/610280__brickdeveloper171__retro-hit-sound.wav');
         // Load successful city/tower capture sound
-        this.loadSound('captureSuccess', '/sounds/318968__djm62__successarpeggio.flac');
+        this.loadSound('captureSpecial', '/sounds/318968__djm62__successarpeggio.flac');
         // Load successful general capture sound
-        this.loadSound('generalSuccess', '/sounds/253177__suntemple__retro-accomplished-sfx.wav');
+        this.loadSound('captureGeneral', '/sounds/253177__suntemple__retro-accomplished-sfx.wav');
+        // Load player's general captured sound (failure)
+        this.loadSound('generalLost', '/sounds/333785__aceofspadesproduc100__8-bit-failure-sound.wav');
     }
 
     loadSound(name, path) {
@@ -59,7 +61,7 @@ class SoundManager {
     }
 
     play(soundName) {
-        if (!optionsManager.get('sound')) return;
+        if (!optionsManager.get('sound') || !optionsManager.get('sounds')[soundName]) return;
         
         const sound = this.sounds.get(soundName);
         if (sound) {

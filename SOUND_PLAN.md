@@ -39,11 +39,16 @@
 			<a href="https://freesound.org/people/willy_ineedthatapp_com/sounds/167338/">pup_fat.mp3</a> by <a href="https://freesound.org/people/willy_ineedthatapp_com/">willy_ineedthatapp_com</a> | License: <a href="http://creativecommons.org/publicdomain/zero/1.0/">Creative Commons 0</a>
 			JSON:
 			{"sound_url": "https://freesound.org/people/willy_ineedthatapp_com/sounds/167338/", "sound_name": "pup_fat.mp3", "author_url": "https://freesound.org/people/willy_ineedthatapp_com/", "author_name": "willy_ineedthatapp_com", "license_url": "http://creativecommons.org/publicdomain/zero/1.0/", "license_name": "Creative Commons 0"}
-		- when player attacks 
-			- enemy territory
-			- city
-			- tower
-			- enemy general
+		- when player captures a city or tower
+			318968__djm62__successarpeggio.flac
+			Attribution:
+			successarpeggio.flac by djm62 -- https://freesound.org/s/318968/ -- License: Creative Commons 0
+			Plain text:
+			successarpeggio.flac by djm62 -- https://freesound.org/s/318968/ -- License: Creative Commons 0
+			HTML:
+			<a href="https://freesound.org/people/djm62/sounds/318968/">successarpeggio.flac</a> by <a href="https://freesound.org/people/djm62/">djm62</a> | License: <a href="http://creativecommons.org/publicdomain/zero/1.0/">Creative Commons 0</a>
+			JSON:
+			{"sound_url": "https://freesound.org/people/djm62/sounds/318968/", "sound_name": "successarpeggio.flac", "author_url": "https://freesound.org/people/djm62/", "author_name": "djm62", "license_url": "http://creativecommons.org/publicdomain/zero/1.0/", "license_name": "Creative Commons 0"}
 		- when player attacks a city or tower
 			54408__korgms2000b__phone-beep-1.wav
 			Attribution:
@@ -72,8 +77,26 @@
 			HTML:
 			<a href="https://freesound.org/people/BrickDeveloper171/sounds/610280/">Retro Hit Sound</a> by <a href="https://freesound.org/people/BrickDeveloper171/">BrickDeveloper171</a> | License: <a href="http://creativecommons.org/publicdomain/zero/1.0/">Creative Commons 0</a>
 			{"sound_url": "https://freesound.org/people/BrickDeveloper171/sounds/610280/", "sound_name": "Retro Hit Sound", "author_url": "https://freesound.org/people/BrickDeveloper171/", "author_name": "BrickDeveloper171", "license_url": "http://creativecommons.org/publicdomain/zero/1.0/", "license_name": "Creative Commons 0"}
+		- when player captures an enemy general tile
+			253177__suntemple__retro-accomplished-sfx.wav
+			Attribution:
+			Plain text:
+			Retro "Accomplished" SFX by suntemple -- https://freesound.org/s/253177/ -- License: Creative Commons 0
+			HTML:
+			<a href="https://freesound.org/people/suntemple/sounds/253177/">Retro "Accomplished" SFX</a> by <a href="https://freesound.org/people/suntemple/">suntemple</a> | License: <a href="http://creativecommons.org/publicdomain/zero/1.0/">Creative Commons 0</a>
+			JSON:
+			{"sound_url": "https://freesound.org/people/suntemple/sounds/253177/", "sound_name": "Retro \"Accomplished\" SFX", "author_url": "https://freesound.org/people/suntemple/", "author_name": "suntemple", "license_url": "http://creativecommons.org/publicdomain/zero/1.0/", "license_name": "Creative Commons 0"}
 		- when player activates their general square
 	- on general captured (plays for all game players when anyone's general is captured)
+	- on player's general captured
+		333785__aceofspadesproduc100__8-bit-failure-sound.wav
+		Attribution:
+		Plain text:
+		8-bit "failure" sound by AceOfSpadesProduc100 -- https://freesound.org/s/333785/ -- License: Attribution 4.0
+		HTML:
+		<a href="https://freesound.org/people/AceOfSpadesProduc100/sounds/333785/">8-bit "failure" sound</a> by <a href="https://freesound.org/people/AceOfSpadesProduc100/">AceOfSpadesProduc100</a> | License: <a href="https://creativecommons.org/licenses/by/4.0/">Attribution 4.0</a>
+		JSON:
+		{"sound_url": "https://freesound.org/people/AceOfSpadesProduc100/sounds/333785/", "sound_name": "8-bit \"failure\" sound", "author_url": "https://freesound.org/people/AceOfSpadesProduc100/", "author_name": "AceOfSpadesProduc100", "license_url": "https://creativecommons.org/licenses/by/4.0/", "license_name": "Attribution 4.0"}
 	- on game end
 	- on game start
 	- on turn 25 and multiples of turn 25 when armies are awarded to all owned territories.

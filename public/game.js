@@ -843,19 +843,19 @@ socket.on('attack_result', (data) => {
                 break;
             case 'city':
             case 'tower':
-                soundManager.play('captureSpecial'); // Always play attack sound
+                soundManager.play('attackSpecial'); // Always play attack sound
                 if (data.success) {
-                    soundManager.play('captureSuccess'); // Also play success sound
+                    soundManager.play('captureSpecial'); // Also play capture sound
                 }
                 break;
             case 'enemy':
-                soundManager.play('captureEnemy');
+                soundManager.play('attackEnemy');
                 break;
             case 'general':
                 if (data.success) {
-                    soundManager.play('generalSuccess');
-                } else {
                     soundManager.play('captureGeneral');
+                } else {
+                    soundManager.play('attackGeneral');
                 }
                 break;
         }
@@ -1008,6 +1008,10 @@ socket.on('game_update', (data) => {
         updatePlayersList(); // Update stats display
         updateTerritoryProgressBar(); // Update header territory bar
     }
+});
+
+socket.on('generalCaptured', () => {
+    soundManager.play('generalLost');
 });
 
 socket.on('game_end', (data) => {
@@ -3013,17 +3017,67 @@ function switchSidebarTab(tabName) {
 function toggleSoundOption() {
     const checkbox = document.getElementById('soundToggle');
     optionsManager.set('sound', checkbox.checked);
+    updateGranularSoundControls();
 }
 
 function initializeOptionsTab() {
     const soundToggle = document.getElementById('soundToggle');
     soundToggle.checked = optionsManager.get('sound');
+    
+    // Initialize granular sound checkboxes
+    const soundOptions = optionsManager.get('sounds');
+    document.querySelectorAll('[data-sound]').forEach(checkbox => {
+        const soundName = checkbox.getAttribute('data-sound');
+        checkbox.checked = soundOptions[soundName];
+        checkbox.addEventListener('change', () => {
+            const sounds = optionsManager.get('sounds');
+            sounds[soundName] = checkbox.checked;
+            optionsManager.set('sounds', sounds);
+            
+            // Play the sound when enabled (if master sound is on)
+            if (checkbox.checked && optionsManager.get('sound')) {
+                soundManager.play(soundName);
+            }
+        });
+    });
+    
+    updateGranularSoundControls();
+}
+
+function updateGranularSoundControls() {
+    const masterEnabled = optionsManager.get('sound');
+    document.querySelectorAll('[data-sound]').forEach(checkbox => {
+        checkbox.disabled = !masterEnabled;
+    });
+    document.querySelectorAll('.btn-small').forEach(btn => {
+        btn.disabled = !masterEnabled;
+    });
+}
+
+function selectAllSounds() {
+    const sounds = optionsManager.get('sounds');
+    Object.keys(sounds).forEach(key => sounds[key] = true);
+    optionsManager.set('sounds', sounds);
+    document.querySelectorAll('[data-sound]').forEach(checkbox => {
+        checkbox.checked = true;
+    });
+}
+
+function deselectAllSounds() {
+    const sounds = optionsManager.get('sounds');
+    Object.keys(sounds).forEach(key => sounds[key] = false);
+    optionsManager.set('sounds', sounds);
+    document.querySelectorAll('[data-sound]').forEach(checkbox => {
+        checkbox.checked = false;
+    });
 }
 
 // Make functions globally accessible
 window.toggleSidebar = toggleSidebar;
 window.switchSidebarTab = switchSidebarTab;
 window.toggleSoundOption = toggleSoundOption;
+window.selectAllSounds = selectAllSounds;
+window.deselectAllSounds = deselectAllSounds;
 
 // Add mouse and touch event listeners for ripples
 function addRippleListeners() {
