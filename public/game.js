@@ -653,6 +653,12 @@ function updateButtonVisibility() {
     if (overlayStartBtn) {
         overlayStartBtn.style.display = canStart ? 'block' : 'none';
     }
+    
+    // Show "Start New Game" button with same conditions
+    const overlayStartBtn2 = document.getElementById('overlayStartBtn2');
+    if (overlayStartBtn2) {
+        overlayStartBtn2.style.display = canStart ? 'block' : 'none';
+    }
 }
 
 socket.on('joined_as_player', (data) => {

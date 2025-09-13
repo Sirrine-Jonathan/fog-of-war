@@ -352,6 +352,15 @@ h3, h4 {
     box-sizing: border-box;
 }
 
+/* Button icons - hidden by default on desktop */
+.btn-icon {
+    display: none;
+}
+
+.btn-text {
+    display: inline;
+}
+
 .info {
     min-width: 200px;
 }
@@ -1181,6 +1190,30 @@ body.mobile-game-active #mobileGameStats {
     #gameCanvas {
         width: 100vw;
         margin: 0 -20px;
+    }
+    
+    /* Mobile header buttons - circular with icons only */
+    #copyUrlBtn, #installBtn {
+        width: 40px !important;
+        height: 40px !important;
+        border-radius: 50% !important;
+        padding: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        min-width: 40px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    #copyUrlBtn .btn-text, #installBtn .btn-text {
+        display: none !important;
+    }
+    
+    #copyUrlBtn .btn-icon, #installBtn .btn-icon {
+        display: block !important;
+        width: 20px !important;
+        height: 20px !important;
     }
     
     #gameBoard {
