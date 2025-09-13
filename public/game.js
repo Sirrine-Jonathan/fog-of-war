@@ -563,6 +563,9 @@ socket.on('game_start', (data) => {
     playerIndex = data.playerIndex !== undefined ? data.playerIndex : -1;
     gameStarted = true;
     
+    // Hide PWA install button when game starts
+    document.getElementById('installBtn').style.display = 'none';
+    
     // Initialize camera for new game
     initializeCamera();
     
@@ -570,6 +573,11 @@ socket.on('game_start', (data) => {
     stopAnimation();
     
     updateButtonVisibility(); // Update button visibility
+
+    resizeCanvas();
+    selectGeneral();
+    drawGame();
+
 });
 
 socket.on('game_info', (data) => {
@@ -728,6 +736,11 @@ socket.on('game_already_started', () => {
 socket.on('game_won', (data) => {
     gameStarted = false;
     const winnerName = players[data.winner]?.username || 'Unknown';
+    
+    // Show PWA install button again when game ends (if not already prompted)
+    if (!localStorage.getItem('pwa-install-prompted')) {
+        document.getElementById('installBtn').style.display = 'inline-block';
+    }
     
     // Clear stale general data to prevent data integrity issues
     playerGenerals.clear();
@@ -2384,6 +2397,39 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         console.error('Arrow button not found');
     }
+    
+    // Chat functionality
+    document.getElementById('sendChatBtn').addEventListener('click', sendChatMessage);
+    document.getElementById('chatInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendChatMessage();
+        }
+    });
+    
+    // PWA Install functionality
+    let deferredPrompt;
+    
+    // Handle install prompt
+    window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+
+        // Only show prompt if game not started and not already prompted for any game
+        if (!gameStarted && !localStorage.getItem("pwa-install-prompted")) {
+            document.getElementById("installBtn").style.display = "inline-block";
+        }
+    });
+
+    document.getElementById("installBtn").addEventListener("click", async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const result = await deferredPrompt.userChoice;
+            localStorage.setItem("pwa-install-prompted", "true");
+            document.getElementById("installBtn").style.display = "none";
+            deferredPrompt = null;
+        }
+    });
 });
 
 function joinAsPlayer() {
@@ -2450,12 +2496,7 @@ function startGame() {
 
 function copyGameUrl() {
     navigator.clipboard.writeText(window.location.href).then(() => {
-        const btn = document.getElementById('copyUrlBtn');
-        const originalText = btn.textContent;
-        btn.textContent = 'Copied!';
-        setTimeout(() => {
-            btn.textContent = originalText;
-        }, 2000);
+        showToast('URL copied!', 'success');
     }).catch(() => {
         // Fallback for older browsers
         const textArea = document.createElement('textarea');
@@ -2465,12 +2506,7 @@ function copyGameUrl() {
         document.execCommand('copy');
         document.body.removeChild(textArea);
         
-        const btn = document.getElementById('copyUrlBtn');
-        const originalText = btn.textContent;
-        btn.textContent = 'Copied!';
-        setTimeout(() => {
-            btn.textContent = originalText;
-        }, 2000);
+        showToast('URL copied!', 'success');
     });
 }
 
@@ -2497,6 +2533,13 @@ socket.on('end_game_error', (error) => {
     showToast(`Cannot end game: ${error}`, 'error');
 });
 
+function selectGeneral() {
+    const generalPos = gameState.generals[playerIndex];
+    if (generalPos >= 0) {
+        setSelectedTile(generalPos);
+    }
+}
+
 // Keyboard controls
 document.addEventListener('keydown', (e) => {
     // Shift key cursor feedback
@@ -2516,10 +2559,7 @@ document.addEventListener('keydown', (e) => {
         
         // Only handle spacebar for game controls if not typing in an input
         if (!isTypingInInput && gameState && playerIndex >= 0) {
-            const generalPos = gameState.generals[playerIndex];
-            if (generalPos >= 0) {
-                setSelectedTile(generalPos);
-            }
+            selectGeneral();
             e.preventDefault();
             e.stopPropagation();
             return;
@@ -2768,14 +2808,11 @@ function resizeCanvas() {
         canvas.style.width = containerWidth + 'px';
         canvas.style.height = containerHeight + 'px';
         
-        // Redraw if game is active
-        if (gameState) {
-            // Center on active tile when canvas size changes
-            if (selectedTile !== null) {
-                updateCamera();
-            }
-            drawGame();
+        // Center on active tile when canvas size changes
+        if (gameStarted && selectedTile !== null) {
+            updateCamera();
         }
+        drawGame();
     }
 }
 

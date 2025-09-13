@@ -83,7 +83,6 @@ const games = new Map<string, Game>();
 const playerRooms = new Map<string, string>();
 const gameHosts = new Map<string, string>(); // gameId -> socketId of host
 const gameHistory = new Map<string, any[]>(); // gameId -> array of completed games
-const disconnectedPlayers = new Map<string, { gameId: string, playerIndex: number, disconnectTime: number }>();
 
 // Game event tracking
 const gameFirstBlood = new Map<string, boolean>(); // gameId -> has first blood occurred
@@ -224,52 +223,6 @@ function checkTerritoryMilestones(gameId: string, game: Game) {
 }
 
 // Clean up disconnected players every 5 seconds
-setInterval(() => {
-  const now = Date.now();
-  const toRemove: string[] = [];
-  
-  disconnectedPlayers.forEach((data, socketId) => {
-    if (now - data.disconnectTime > 30000) { // 30 seconds
-      const game = games.get(data.gameId);
-      if (game && game.isStarted()) {
-        console.log(`🧹 Removing disconnected player ${data.playerIndex} from game ${data.gameId}`);
-        
-        // Mark player as eliminated
-        const player = game.getState().players[data.playerIndex];
-        if (player && !player.eliminated) {
-          player.eliminated = true;
-          sendSystemMessage(data.gameId, `${player.username} was eliminated due to disconnection`);
-          
-          // Check for victory condition
-          const remainingPlayers = game.getState().players.filter(p => !p.eliminated);
-          console.log(`   Remaining players after elimination: ${remainingPlayers.length}`);
-          
-          if (remainingPlayers.length === 1) {
-            const winner = remainingPlayers[0];
-            sendSystemMessage(data.gameId, `🎉 ${winner.username} wins the game!`);
-            
-            // End the game after a short delay
-            setTimeout(() => {
-              console.log(`   Ending game ${data.gameId} - winner: ${winner.username}`);
-              game.endGame(winner.index || 0);
-            }, 2000);
-          } else if (remainingPlayers.length === 0) {
-            // No players left - end game with no winner
-            sendSystemMessage(data.gameId, `Game ended - no players remaining`);
-            setTimeout(() => {
-              console.log(`   Ending game ${data.gameId} - no players remaining`);
-              game.endGame(-1);
-            }, 2000);
-          }
-        }
-      }
-      toRemove.push(socketId);
-    }
-  });
-  
-  toRemove.forEach(socketId => disconnectedPlayers.delete(socketId));
-}, 5000);
-
 // Serve static files with no-cache headers for development
 app.use(express.static(path.join(__dirname, '../public'), {
   setHeaders: (res, path) => {
@@ -408,41 +361,40 @@ io.on('connection', (socket) => {
         const existingPlayerIndex = gameState.players.findIndex(p => p.id === userId);
         
         if (existingPlayerIndex >= 0) {
-          // This is a reconnection to an active game
-          const wasDisconnected = Array.from(disconnectedPlayers.entries()).find(([socketId, data]) => 
-            data.gameId === gameId && data.playerIndex === existingPlayerIndex
-          );
-          
-          if (wasDisconnected) {
-            // Allow reconnection by setting up socket data
-            socket.data.playerIndex = existingPlayerIndex;
-            socket.data.userId = userId;
-            socket.data.isViewer = false;
-            
-            // Remove from disconnected players
-            disconnectedPlayers.delete(wasDisconnected[0]);
-            sendSystemMessage(gameId, `${username} reconnected`);
-            console.log(`🔄 Player ${username} reconnected to active game ${gameId} as player ${existingPlayerIndex}`);
-            
-            // Send current game state to reconnected player
-            const mapData = game.getMapData();
-            socket.emit('game_start', {
-              playerIndex: existingPlayerIndex,
-              replay_id: gameId,
-              ...mapData
-            });
-            
-            // Send confirmation and continue with normal flow
-            socket.emit('joined_as_player', { playerIndex: existingPlayerIndex });
-            
-            // Notify all players
-            io.to(gameId).emit('player_joined', {
-              players: gameState.players,
-              newPlayerIndex: existingPlayerIndex
-            });
-            
+          // Player already exists in active game - check if eliminated
+          const existingPlayer = gameState.players[existingPlayerIndex];
+          if (existingPlayer.eliminated) {
+            console.log(`❌ Player ${username} was eliminated and cannot rejoin active game ${gameId}`);
+            socket.emit('game_full', { reason: 'Player was eliminated' });
             return;
           }
+          
+          // Allow reconnection by setting up socket data
+          socket.data.playerIndex = existingPlayerIndex;
+          socket.data.userId = userId;
+          socket.data.isViewer = false;
+          
+          sendSystemMessage(gameId, `${username} reconnected`);
+          console.log(`🔄 Player ${username} reconnected to active game ${gameId} as player ${existingPlayerIndex}`);
+          
+          // Send current game state to reconnected player
+          const mapData = game.getMapData();
+          socket.emit('game_start', {
+            playerIndex: existingPlayerIndex,
+            replay_id: gameId,
+            ...mapData
+          });
+          
+          // Send confirmation and continue with normal flow
+          socket.emit('joined_as_player', { playerIndex: existingPlayerIndex });
+          
+          // Notify all players
+          io.to(gameId).emit('player_joined', {
+            players: gameState.players,
+            newPlayerIndex: existingPlayerIndex
+          });
+          
+          return;
         }
         
         console.log(`❌ Cannot join game ${gameId} - game already started`);
@@ -1126,13 +1078,39 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
             }))
           });
         } else {
-          // Game is started - track disconnection for cleanup
-          console.log(`⏰ Tracking disconnected player ${socket.data.playerIndex} for cleanup`);
-          disconnectedPlayers.set(socket.id, {
-            gameId: roomId,
-            playerIndex: socket.data.playerIndex,
-            disconnectTime: Date.now()
-          });
+          // Game is started - immediately abandon the game
+          console.log(`🏃 Auto-abandoning game for disconnected player ${socket.data.playerIndex}`);
+          
+          const gameState = game.getState();
+          const player = gameState.players.find(p => p.index === socket.data.playerIndex);
+          
+          if (player && !player.eliminated) {
+            // Mark player as eliminated
+            player.eliminated = true;
+            console.log(`✅ Player ${player.id} (${player.username}) marked as eliminated due to disconnect`);
+            
+            // Send system message
+            sendSystemMessage(roomId, `${player.username} abandoned the game`);
+            
+            // Check for victory condition
+            const remainingPlayers = gameState.players.filter(p => !p.eliminated);
+            console.log(`   Remaining players after disconnect: ${remainingPlayers.length}`);
+            
+            if (remainingPlayers.length === 1) {
+              const winner = remainingPlayers[0];
+              sendSystemMessage(roomId, `🎉 ${winner.username} wins the game!`);
+              
+              // End the game after a short delay
+              setTimeout(() => {
+                console.log(`   Ending game ${roomId} - winner: ${winner.username}`);
+                game.endGame(winner.index || 0);
+              }, 2000);
+            }
+          }
+          
+          // Convert socket to viewer
+          socket.data.playerIndex = -1;
+          socket.data.isViewer = true;
           
           // Don't remove from game immediately - let cleanup timer handle it
           playerRooms.delete(socket.id);

@@ -458,6 +458,10 @@ ul.game-stats li {
     animation: pulse 2s infinite;
 }
 
+#overlayStartBtn2 {
+    margin: 20px auto 0;
+}
+
 #startBtn:hover, #overlayStartBtn:hover {
     background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
     box-shadow: 0 8px 25px rgba(231, 76, 60, 0.6);

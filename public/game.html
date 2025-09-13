@@ -330,34 +330,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
     <script src="/game.js"></script>
     <script>
-      let deferredPrompt;
-
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register("/sw.js");
       }
-
-      // Handle install prompt
-      window.addEventListener("beforeinstallprompt", (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-
-        // Only show prompt if game not started and not already prompted for any game
-        if (!gameStarted && !localStorage.getItem("pwa-install-prompted")) {
-          document.getElementById("installBtn").style.display = "inline-block";
-        }
-      });
-
-      document
-        .getElementById("installBtn")
-        .addEventListener("click", async () => {
-          if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const result = await deferredPrompt.userChoice;
-            localStorage.setItem("pwa-install-prompted", "true");
-            document.getElementById("installBtn").style.display = "none";
-            deferredPrompt = null;
-          }
-        });
     </script>
   </body>
 </html>
