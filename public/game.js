@@ -1322,29 +1322,45 @@ function drawGame() {
                 gradient.addColorStop(0.7, '#4682B4'); // Steel blue
                 gradient.addColorStop(1, '#2F4F4F'); // Dark slate gray
                 ctx.fillStyle = gradient;
-            } else if ((gameState.generals && Object.values(gameState.generals).includes(i)) || discoveredEnemyGenerals.has(i)) {
-                // Any enemy general (current or discovered) - always silver
-                const isPlayerGeneral = gameState.generals && gameState.generals[playerIndex] === i;
-                if (isPlayerGeneral) {
-                    // Player's own general gets gold gradient
+            } else if (terrain >= 0) { // Player owned
+                // Check if this is a general tile
+                const isGeneral = gameState.generals && Object.values(gameState.generals).includes(i);
+                if (isGeneral && terrain === playerIndex) {
+                    // Player's general gets gold gradient
                     const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
                     gradient.addColorStop(0, '#FFD700'); // Gold
                     gradient.addColorStop(0.3, '#FFF8DC'); // Cornsilk (lighter)
                     gradient.addColorStop(0.7, '#DAA520'); // Goldenrod
                     gradient.addColorStop(1, '#B8860B'); // Dark goldenrod
                     ctx.fillStyle = gradient;
-                } else {
-                    // Enemy general (current or discovered) gets silver gradient
+                } else if (isGeneral) {
+                    // Enemy generals get silver gradient
                     const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
                     gradient.addColorStop(0, '#C0C0C0'); // Silver
                     gradient.addColorStop(0.3, '#F5F5F5'); // White smoke (lighter)
                     gradient.addColorStop(0.7, '#A9A9A9'); // Dark gray
                     gradient.addColorStop(1, '#808080'); // Gray
                     ctx.fillStyle = gradient;
+                } else {
+                    // Regular tiles use player color
+                    ctx.fillStyle = playerColors[terrain] || emptyColor;
                 }
-            } else if (terrain >= 0) { // Player owned (non-general)
-                // Regular tiles use player color
-                ctx.fillStyle = playerColors[terrain] || emptyColor;
+            } else if (gameState.generals && Object.values(gameState.generals).includes(i)) {
+                // Enemy general on neutral/empty tile (discovered but not currently owned)
+                const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
+                gradient.addColorStop(0, '#C0C0C0'); // Silver
+                gradient.addColorStop(0.3, '#F5F5F5'); // White smoke (lighter)
+                gradient.addColorStop(0.7, '#A9A9A9'); // Dark gray
+                gradient.addColorStop(1, '#808080'); // Gray
+                ctx.fillStyle = gradient;
+            } else if (discoveredEnemyGenerals.has(i)) {
+                // Previously discovered enemy general (permanently visible)
+                const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
+                gradient.addColorStop(0, '#C0C0C0'); // Silver
+                gradient.addColorStop(0.3, '#F5F5F5'); // White smoke (lighter)
+                gradient.addColorStop(0.7, '#A9A9A9'); // Dark gray
+                gradient.addColorStop(1, '#808080'); // Gray
+                ctx.fillStyle = gradient;
             } else if (ghostTerrain >= 0) { // Ghost territory from eliminated player
                 // Use faded player color for ghost territory
                 const ghostColor = playerColors[ghostTerrain];
