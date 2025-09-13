@@ -36,12 +36,12 @@
           </button>
           <!-- Territory Control Progress Bar -->
           <div id="territoryProgressBar" class="territory-progress-bar"></div>
+          <div id="turnDisplay">
+            <span id="turnNumber"></span>
+            <span id="armyCountdown" class="army-countdown"></span>
+          </div>
         </div>
         
-        <div id="turnDisplay">
-          <span id="turnNumber"></span>
-          <span id="armyCountdown" class="army-countdown"></span>
-        </div>
         
         <!-- Gear icon in header (only visible when sidebar is closed) -->
         <button id="headerGearButton" class="header-gear-button" onclick="toggleSidebar()" title="Open Sidebar" style="display: none;">
@@ -54,26 +54,6 @@
       <div class="mainRow">
         <div id="gameCanvas">
           <canvas id="gameBoard"></canvas>
-          <div id="mobileGameStats" class="empty">
-            <div class="stats-wrapper">
-              <table id="mobileStatsTable" class="mobile-stats-table">
-                <thead>
-                  <tr>
-                    <th>Player</th>
-                    <th>Armies</th>
-                    <th>Tiles</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-              <span id="mobileStatsLabel" style="display: none">
-                Show game stats ->
-              </span>
-              <div id="mobileStatsToggle">
-                <img src="/icons/triangle-svgrepo-com-dark.svg" alt="Toggle stats" />
-              </div>
-            </div>
-          </div>
           <div id="gameOverlay">
             <div id="preGameContent">
               <h1 id="gameTitle">Fog of War</h1>
@@ -329,7 +309,6 @@
     <div id="mobileTabBar" class="mobile-tab-bar">
       <button id="gameTab" class="mobile-tab active">Game</button>
       <button id="controlsTab" class="mobile-tab">Controls</button>
-      <button id="chatTab" class="mobile-tab">Chat</button>
     </div>
 
     <!-- Game End Modal -->

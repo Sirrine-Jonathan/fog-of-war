@@ -78,6 +78,3 @@
 		- width (with min/max restrictions)
 		- height (with min/max restrictions)
 	- Sound (on/off)
-	- Stats (show/hide)
-		- on mobile this would hide the #mobileGameStats until the game is over
-		- on desktop the entire #gameControls div so the game canvas can take the full width of .mainRow until the game is over

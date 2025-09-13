@@ -940,7 +940,7 @@ function updateTurnDisplay() {
         if (countdownElement) {
             const nextBonusTurn = Math.ceil((gameState.turn + 1) / 25) * 25;
             const turnsUntilBonus = nextBonusTurn - gameState.turn;
-            countdownElement.textContent = turnsUntilBonus > 0 ? `(+${turnsUntilBonus})` : '';
+            countdownElement.textContent =  turnsUntilBonus;
         }
     }
 }
@@ -2126,7 +2126,6 @@ function updatePlayersList() {
     console.log('updatePlayersList', { players });
     const playersDiv = document.getElementById('players');
     const playersList = document.querySelector('.players-list');
-    const mobileGameStats = document.getElementById('mobileGameStats');
     playersDiv.innerHTML = '';
     const stats = calculatePlayerStats();
     
@@ -2135,12 +2134,10 @@ function updatePlayersList() {
     // Check players array directly since stats might be empty before game starts
     if (!players || players.length === 0) {
         playersList.classList.add('empty');
-        mobileGameStats.classList.add('empty');
         hideMobilePlayersAccordion();
         return;
     } else {
         playersList.classList.remove('empty');
-        mobileGameStats.classList.remove('empty');
         updateMobilePlayersAccordion();
     }
     
@@ -2266,9 +2263,6 @@ function updatePlayersList() {
     table.appendChild(tbody);
     playersDiv.appendChild(table);
     
-    // Update mobile game stats table
-    updateMobileGameStats(sortedPlayers);
-    
     // Create mobile list
     const mobileList = document.getElementById('playersMobile');
     
@@ -2341,57 +2335,6 @@ function updatePlayersList() {
     updateButtonVisibility();
 }
 
-function updateMobileGameStats(sortedPlayers) {
-    const tbody = document.querySelector('#mobileStatsTable tbody');
-    
-    if (!tbody) return;
-    
-    tbody.innerHTML = '';
-    
-    sortedPlayers.forEach(player => {
-        const row = document.createElement('tr');
-        
-        if (player.index === playerIndex) {
-            row.classList.add('current-player');
-        }
-        
-        if (player.eliminated) {
-            row.classList.add('eliminated-player');
-        }
-        
-        const nameCell = document.createElement('td');
-        nameCell.textContent = player.username + (player.isBot ? ' [BOT]' : '');
-        nameCell.style.color = playerColors[player.index] || 'white';
-        
-        const armiesCell = document.createElement('td');
-        armiesCell.textContent = gameStarted ? player.stats.armies : '-';
-        
-        const tilesCell = document.createElement('td');
-        tilesCell.textContent = gameStarted ? player.stats.tiles : '-';
-        
-        row.appendChild(nameCell);
-        row.appendChild(armiesCell);
-        row.appendChild(tilesCell);
-        tbody.appendChild(row);
-    });
-}
-
-// Toggle mobile stats visibility
-document.addEventListener('DOMContentLoaded', () => {
-    const toggle = document.getElementById('mobileStatsToggle');
-    const table = document.getElementById('mobileStatsTable');
-    const label = document.getElementById('mobileStatsLabel');
-    const wrapper = document.querySelector('#mobileGameStats .stats-wrapper');
-    let isVisible = true;
-    
-    toggle.addEventListener('click', () => {
-        isVisible = !isVisible;
-        table.style.display = isVisible ? 'table' : 'none';
-        label.style.display = isVisible ? 'none' : 'inline';
-        wrapper.classList.toggle('collapsed', !isVisible);
-        toggle.classList.toggle('collapsed', !isVisible);
-    });
-});
 
 function transferHost(targetPlayerIndex) {
     const targetSocketId = playerSocketMap.get(targetPlayerIndex.toString());
@@ -2718,14 +2661,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Also start animation when canvas is resized and no game is active
-window.addEventListener('resize', () => {
-    if (!gameStarted && !gameState) {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight - 120;
-        // Animation will continue running and adapt to new size
-    }
-});
 function updateMobilePlayersAccordion() {
     if (!isMobile) return;
     
@@ -2828,8 +2763,8 @@ function resizeCanvas() {
     // Only update if container has meaningful size
     if (containerWidth > 0 && containerHeight > 0) {
         // Canvas matches container exactly - it's a window into the game world
-        canvas.width = containerWidth;
-        canvas.height = containerHeight;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight - 120;
         canvas.style.width = containerWidth + 'px';
         canvas.style.height = containerHeight + 'px';
         
@@ -2864,8 +2799,10 @@ function toggleSidebar() {
         headerGearButton.style.display = 'flex';
     }
     
-    // Resize canvas after sidebar animation completes
-    setTimeout(resizeCanvas, 300);
+    setTimeout(() => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight - 120;
+    }, 300);
 }
 
 function switchSidebarTab(tabName) {
