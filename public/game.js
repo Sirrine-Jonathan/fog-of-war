@@ -385,6 +385,19 @@ function getContrastColor(r, g, b) {
     return luminance > 0.5 ? '#000000' : '#FFFFFF';
 }
 
+// Darken a hex color by a percentage
+function darkenColor(hex, percent = 20) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return hex;
+    
+    const factor = (100 - percent) / 100;
+    const r = Math.round(rgb.r * factor);
+    const g = Math.round(rgb.g * factor);
+    const b = Math.round(rgb.b * factor);
+    
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
 let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
@@ -1343,7 +1356,13 @@ function drawGame() {
                     ctx.fillStyle = gradient;
                 } else {
                     // Regular tiles use player color
-                    ctx.fillStyle = playerColors[terrain] || emptyColor;
+                    const baseColor = playerColors[terrain] || emptyColor;
+                    // Darken tiles that have only 1 army
+                    if (gameState.armies[i] === 1) {
+                        ctx.fillStyle = darkenColor(baseColor, 15);
+                    } else {
+                        ctx.fillStyle = baseColor;
+                    }
                 }
             } else if (gameState.generals && Object.values(gameState.generals).includes(i)) {
                 // Enemy general on neutral/empty tile (discovered but not currently owned)
