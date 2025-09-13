@@ -49,7 +49,7 @@ h3, h4 {
 
 .fullDisplay {
     width: 100svw;
-    padding: 10px;
+    padding: 0 10px;
     box-sizing: border-box;
     flex: 1;
     display: flex;
@@ -335,6 +335,8 @@ h3, h4 {
     flex-direction: column;
     min-width: 0;
     min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
 }
 
 #gameCanvas > div:first-child {
@@ -828,14 +830,6 @@ body.mobile-game-active #gameCanvas {
     margin: 0;
 }
 
-body.mobile-game-active #gameBoard {
-    width: 100% !important;
-    height: 100% !important;
-    min-width: 0;
-    min-height: 0;
-    box-sizing: border-box;
-}
-
 body.mobile-game-active #gameControls {
     display: none !important;
 }
@@ -1065,15 +1059,6 @@ body.mobile-game-active #gameCanvas > div:first-child {
     min-height: 0;
 }
 
-body.mobile-game-active #gameBoard {
-    width: 100% !important;
-    height: 100% !important;
-    min-width: 0;
-    min-height: 0;
-    box-sizing: border-box;
-}
-
-
 .mobile-tab-bar {
     display: none;
 }
@@ -1173,6 +1158,7 @@ body.mobile-game-active #gameBoard {
         height: 100% !important;
         min-width: 0;
         min-height: 0;
+        box-sizing: border-box;
     }
     
     #gameControls {

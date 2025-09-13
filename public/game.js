@@ -929,6 +929,7 @@ socket.on('game_end', (data) => {
     
     notification.style.display = 'block';
     
+    clearState();
     updateVisibleTiles();
     drawGame();
 });
@@ -2787,7 +2788,7 @@ function updateRipples() {
     });
 }
 
-// Canvas resizing functionality - Responsive viewport window
+// Canvas resizing functionality - Responsive viewport window - FIXED VERSION 123
 function resizeCanvas() {
     const canvas = document.getElementById('gameBoard');
     const container = canvas.parentElement;
@@ -2797,7 +2798,10 @@ function resizeCanvas() {
     // Let the container size itself via flexbox first
     const containerRect = container.getBoundingClientRect();
     const containerWidth = containerRect.width - 6; // Account for border
-    const containerHeight = containerRect.height - 6; // Account for border
+    
+    // Constrain height to viewport to prevent overflow scrolling
+    const maxHeight = window.innerHeight - containerRect.top - 20; // 20px bottom margin
+    const containerHeight = Math.min(containerRect.height, maxHeight) - 6; // Account for border
     
     // Only update if container has meaningful size
     if (containerWidth > 0 && containerHeight > 0) {
