@@ -411,59 +411,18 @@ let activeIntent = null; // { fromTile, targetTile, path, currentStep }
 const roomId = window.location.pathname.split('/').pop();
 document.getElementById('roomId').textContent = roomId;
 
-// Persistence keys (defined after roomId)
-const STORAGE_KEY = `fog_of_war_${roomId}`;
-
-// Discovered tiles that remain visible permanently (no localStorage)
+// Discovered tiles that remain visible permanently
 let discoveredTiles = new Set();
 
-// Load persisted state
-function loadPersistedState() {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-        try {
-            const state = JSON.parse(saved);
-            lastUsername = state.username || '';
-            document.getElementById('usernameInput').value = lastUsername;
-            
-            return state;
-        } catch (e) {
-            console.warn('Failed to load persisted state:', e);
-        }
-    }
-    return null;
-}
-
-// Save state to localStorage (only for actual players)
-function saveState() {
-    if (playerIndex >= 0) { // Only save if actually joined as player
-        const state = {
-            username: lastUsername,
-            playerIndex: playerIndex,
-            isHost: isHost,
-            gameStarted: gameStarted,
-            timestamp: Date.now()
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    }
-}
-
-// Clear saved state
+// Clear discovered state
 function clearState() {
-    localStorage.removeItem(STORAGE_KEY);
     discoveredTiles.clear();
     processedTowers.clear();
 }
 
-// Auto-rejoin if we were previously in this game (only if we were a player in an active game)
+// Auto-rejoin if we were previously in this game (disabled - no persistence)
 function attemptAutoRejoin() {
-    const saved = loadPersistedState();
-    // Only auto-rejoin if we were in a started game
-    if (saved && saved.username && saved.playerIndex >= 0 && saved.gameStarted && (Date.now() - saved.timestamp < 30 * 60 * 1000)) { // 30 min timeout
-        const userId = 'human_' + Date.now();
-        socket.emit('set_username', userId, saved.username);
-        socket.emit('join_private', roomId, userId);
-    }
+    // No auto-rejoin - users must manually rejoin after refresh
 }
 
 const emptyColor = '#f0f0f0';
@@ -528,8 +487,7 @@ function switchMobileTab(tab) {
 socket.emit('set_username', 'viewer_' + Date.now(), 'Viewer');
 socket.emit('join_private', roomId, 'viewer_' + Date.now());
 
-// Load persisted state and attempt auto-rejoin
-loadPersistedState();
+// No persistence - users must manually rejoin after refresh
 setTimeout(attemptAutoRejoin, 100); // Small delay to ensure connection
 
 // Initialize mobile tabs
@@ -612,7 +570,6 @@ socket.on('game_start', (data) => {
     stopAnimation();
     
     updateButtonVisibility(); // Update button visibility
-    saveState(); // Save state when game starts
 });
 
 socket.on('game_info', (data) => {
@@ -700,7 +657,6 @@ function updateButtonVisibility() {
 
 socket.on('joined_as_player', (data) => {
     playerIndex = data.playerIndex;
-    saveState(); // Save state only after successfully joining
     updateButtonVisibility(); // Update button visibility
 });
 
@@ -932,7 +888,6 @@ socket.on('game_update', (data) => {
         drawGame();
         updatePlayersList(); // Update stats display
         updateTerritoryProgressBar(); // Update header territory bar
-        saveState(); // Save state on each game update
     }
 });
 
@@ -1348,7 +1303,7 @@ function drawGame() {
                 ctx.fillStyle = gradient;
             } else if (terrain >= 0) { // Player owned
                 // Check if this is a general tile
-                const isGeneral = gameState.generals && gameState.generals.includes(i);
+                const isGeneral = gameState.generals && Object.values(gameState.generals).includes(i);
                 if (isGeneral && terrain === playerIndex) {
                     // Player's general gets gold gradient
                     const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
@@ -1369,6 +1324,14 @@ function drawGame() {
                     // Regular tiles use player color
                     ctx.fillStyle = playerColors[terrain] || emptyColor;
                 }
+            } else if (gameState.generals && Object.values(gameState.generals).includes(i)) {
+                // Enemy general on neutral/empty tile (discovered but not currently owned)
+                const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
+                gradient.addColorStop(0, '#C0C0C0'); // Silver
+                gradient.addColorStop(0.3, '#F5F5F5'); // White smoke (lighter)
+                gradient.addColorStop(0.7, '#A9A9A9'); // Dark gray
+                gradient.addColorStop(1, '#808080'); // Gray
+                ctx.fillStyle = gradient;
             } else if (ghostTerrain >= 0) { // Ghost territory from eliminated player
                 // Use faded player color for ghost territory
                 const ghostColor = playerColors[ghostTerrain];
@@ -1385,8 +1348,8 @@ function drawGame() {
             ctx.fillRect(x, y, tileSize, tileSize);
             
             // Add shine effect for generals only (validate terrain and general data)
-            const isServerGeneral = gameState.generals && gameState.generals[terrain] === i && terrain >= 0;
-            if (isServerGeneral && terrain !== -2) { // Never shine mountains
+            const isAnyGeneral = gameState.generals && Object.values(gameState.generals).includes(i);
+            if (isAnyGeneral && terrain !== -2) { // Never shine mountains
                 const isClientGeneral = terrain === playerIndex;
                 
                 if (isClientGeneral) {
@@ -1544,7 +1507,7 @@ function drawGame() {
     ctx.restore();
     
     // Debug overlay
-    drawDebugInfo();
+    // drawDebugInfo();
 }
 
 function drawDebugInfo() {
@@ -2501,7 +2464,7 @@ function leaveGame() {
     selectedTile = null;
     isHost = false;
     currentUserId = '';
-    clearState(); // This clears localStorage
+    clearState(); // Clear discovered state
     
     updateButtonVisibility();
 }
