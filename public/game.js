@@ -857,7 +857,7 @@ socket.on('game_update', (data) => {
             if (generalPos !== undefined) {
                 setSelectedTile(generalPos);
                 
-                // Center camera on general immediately (override smooth following)
+                // Center camera on general immediately using consistent logic
                 const row = Math.floor(generalPos / gameState.width);
                 const col = generalPos % gameState.width;
                 const tileWorldX = (col * 35 + 17.5) * camera.zoom;
@@ -867,12 +867,6 @@ socket.on('game_update', (data) => {
                 camera.y = tileWorldY - canvas.height / 2;
                 camera.targetX = camera.x;
                 camera.targetY = camera.y;
-                
-                // Clamp to bounds
-                const mapWidth = gameState.width * 35 * camera.zoom;
-                const mapHeight = gameState.height * 35 * camera.zoom;
-                camera.x = Math.max(0, Math.min(camera.x, mapWidth - canvas.width));
-                camera.y = Math.max(0, Math.min(camera.y, mapHeight - canvas.height));
                 camera.targetX = camera.x;
                 camera.targetY = camera.y;
             }
@@ -1244,28 +1238,33 @@ function updateCamera() {
     const marginX = effectiveViewportWidth * 0.25;
     const marginY = effectiveViewportHeight * 0.25;
     
-    // Calculate target camera position to center tile in effective viewport
-    const targetCameraX = tileWorldX - effectiveViewportX - effectiveViewportWidth / 2;
-    const targetCameraY = tileWorldY - effectiveViewportY - effectiveViewportHeight / 2;
+    // Calculate target camera position to center tile in viewport
+    const targetCameraX = tileWorldX - canvas.width / 2;
+    const targetCameraY = tileWorldY - canvas.height / 2;
     
-    // Only update target if tile is near edges of effective viewport
-    if (tileScreenX < marginX || tileScreenX > effectiveViewportWidth - marginX) {
+    // Only update camera if tile is near the edge (follow behavior, not always center)
+    if (tileScreenX < marginX) {
+        // Tile is too close to left edge
+        camera.targetX = targetCameraX;
+    } else if (tileScreenX > effectiveViewportWidth - marginX) {
+        // Tile is too close to right edge
         camera.targetX = targetCameraX;
     }
-    if (tileScreenY < marginY || tileScreenY > effectiveViewportHeight - marginY) {
+    
+    if (tileScreenY < marginY) {
+        // Tile is too close to top edge
+        camera.targetY = targetCameraY;
+    } else if (tileScreenY > effectiveViewportHeight - marginY) {
+        // Tile is too close to bottom edge
         camera.targetY = targetCameraY;
     }
     
-    // Apply bounds checking that respects auto-centering
-    if (canvas.width > mapWidth) {
-        camera.targetX = -(canvas.width - mapWidth) / 2;
-    } else {
+    // Apply bounds checking - but allow camera movement when canvas is larger than map
+    if (canvas.width <= mapWidth) {
         camera.targetX = Math.max(0, Math.min(camera.targetX, mapWidth - canvas.width));
     }
     
-    if (canvas.height > mapHeight) {
-        camera.targetY = -(canvas.height - mapHeight) / 2;
-    } else {
+    if (canvas.height <= mapHeight) {
         camera.targetY = Math.max(0, Math.min(camera.targetY, mapHeight - canvas.height));
     }
     
@@ -1542,6 +1541,43 @@ function drawGame() {
     }
     
     // Restore context
+    ctx.restore();
+    
+    // Debug overlay
+    drawDebugInfo();
+}
+
+function drawDebugInfo() {
+    if (!gameState) return;
+    
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(10, 10, 250, 180);
+    
+    ctx.fillStyle = 'white';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'left';
+    
+    const mapWidth = gameState.width * 35 * camera.zoom;
+    const mapHeight = gameState.height * 35 * camera.zoom;
+    
+    const lines = [
+        `Screen: ${window.innerWidth}x${window.innerHeight}`,
+        `Canvas: ${canvas.width}x${canvas.height}`,
+        `Map: ${mapWidth.toFixed(0)}x${mapHeight.toFixed(0)}`,
+        `Grid: ${gameState.width}x${gameState.height}`,
+        `Zoom: ${camera.zoom.toFixed(2)}`,
+        `Camera: ${camera.x.toFixed(0)}, ${camera.y.toFixed(0)}`,
+        `Target: ${camera.targetX.toFixed(0)}, ${camera.targetY.toFixed(0)}`,
+        `Selected: ${selectedTile || 'none'}`,
+        `Tile Size: ${(35 * camera.zoom).toFixed(1)}px`,
+        `Press 'D' to copy debug info`
+    ];
+    
+    lines.forEach((line, i) => {
+        ctx.fillText(line, 20, 30 + i * 15);
+    });
+    
     ctx.restore();
 }
 
@@ -2417,6 +2453,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('abandonBtn').addEventListener('click', abandonGame);
     document.getElementById('endBotGameBtn').addEventListener('click', endBotGame);
     document.getElementById('overlayStartBtn').addEventListener('click', startGame);
+    document.getElementById('overlayStartBtn2').addEventListener('click', startGame);
     document.getElementById('copyUrlBtn').addEventListener('click', copyGameUrl);
     
     // Bot invite buttons
@@ -2575,6 +2612,34 @@ document.addEventListener('keydown', (e) => {
             e.stopPropagation();
             return;
         }
+    }
+    
+    // Debug copy functionality
+    if (e.key === 'd' || e.key === 'D') {
+        if (gameState) {
+            const mapWidth = gameState.width * 35 * camera.zoom;
+            const mapHeight = gameState.height * 35 * camera.zoom;
+            
+            const debugInfo = [
+                `Screen: ${window.innerWidth}x${window.innerHeight}`,
+                `Canvas: ${canvas.width}x${canvas.height}`,
+                `Map: ${mapWidth.toFixed(0)}x${mapHeight.toFixed(0)}`,
+                `Grid: ${gameState.width}x${gameState.height}`,
+                `Zoom: ${camera.zoom.toFixed(2)}`,
+                `Camera: ${camera.x.toFixed(0)}, ${camera.y.toFixed(0)}`,
+                `Target: ${camera.targetX.toFixed(0)}, ${camera.targetY.toFixed(0)}`,
+                `Selected: ${selectedTile || 'none'}`,
+                `Tile Size: ${(35 * camera.zoom).toFixed(1)}px`
+            ].join('\n');
+            
+            navigator.clipboard.writeText(debugInfo).then(() => {
+                console.log('Debug info copied to clipboard');
+            }).catch(err => {
+                console.error('Failed to copy debug info:', err);
+            });
+        }
+        e.preventDefault();
+        return;
     }
     
     // Game controls (only if game is active)
@@ -2779,7 +2844,7 @@ function updateRipples() {
     });
 }
 
-// Canvas resizing functionality - Works with flexbox layout
+// Canvas resizing functionality - Responsive viewport window
 function resizeCanvas() {
     const canvas = document.getElementById('gameBoard');
     const container = canvas.parentElement;
@@ -2793,21 +2858,18 @@ function resizeCanvas() {
     
     // Only update if container has meaningful size
     if (containerWidth > 0 && containerHeight > 0) {
-        // Update canvas display size to match container
+        // Canvas matches container exactly - it's a window into the game world
+        canvas.width = containerWidth;
+        canvas.height = containerHeight;
         canvas.style.width = containerWidth + 'px';
         canvas.style.height = containerHeight + 'px';
         
-        // Update canvas internal resolution for crisp rendering
-        const dpr = window.devicePixelRatio || 1;
-        canvas.width = containerWidth * dpr;
-        canvas.height = containerHeight * dpr;
-        
-        // Scale the drawing context
-        const ctx = canvas.getContext('2d');
-        ctx.scale(dpr, dpr);
-        
         // Redraw if game is active
         if (gameState) {
+            // Center on active tile when canvas size changes
+            if (selectedTile !== null) {
+                updateCamera();
+            }
             drawGame();
         }
     }
