@@ -463,7 +463,7 @@ export class Game {
     }
   }
 
-  attack(playerIndex: number, from: number, to: number): { success: boolean, events: string[], attackInfo?: { attackForce: number, defenderLoss: number, isPlayerVsPlayer: boolean } } {
+  attack(playerIndex: number, from: number, to: number): { success: boolean, events: string[], attackInfo?: { attackForce: number, defenderLoss: number, isPlayerVsPlayer: boolean, territoryType: string } } {
     // Validate move
     if (!this.isValidMove(playerIndex, from, to)) {
       return { success: false, events: [] };
@@ -479,30 +479,66 @@ export class Game {
     this.state.armies[from] = 1;
 
     // Track attack info for player vs player attacks
-    let attackInfo: { attackForce: number, defenderLoss: number, isPlayerVsPlayer: boolean } | undefined;
+    let attackInfo: { attackForce: number, defenderLoss: number, isPlayerVsPlayer: boolean, territoryType: string } | undefined;
 
     if (defenderOwner === playerIndex) {
       // Moving to own territory - transfer armies
       this.state.armies[to] += attackForce;
+      
+      // Set attack info for own territory move
+      attackInfo = {
+        attackForce: attackForce,
+        defenderLoss: 0,
+        isPlayerVsPlayer: false,
+        territoryType: 'owned'
+      };
+      console.log('🏠 Move to owned territory detected');
     } else if (defenderOwner === TILE_EMPTY) {
       // Capture neutral territory
       if (attackForce > defenderArmies) {
         this.state.terrain[to] = playerIndex;
         this.state.armies[to] = attackForce - defenderArmies;
+        
+        // Set attack info for neutral territory capture
+        attackInfo = {
+          attackForce: attackForce,
+          defenderLoss: defenderArmies,
+          isPlayerVsPlayer: false,
+          territoryType: 'neutral'
+        };
       } else {
         // Failed to capture, armies are lost
         return { success: false, events };
       }
     } else if (defenderOwner === TILE_CITY) {
       // Attack city
+      console.log('🏰 Attacking city');
       if (attackForce > defenderArmies) {
         this.state.terrain[to] = playerIndex;
         this.state.armies[to] = attackForce - defenderArmies;
         events.push(`${this.state.players[playerIndex]?.username || `Player ${playerIndex}`} captured a city!`);
+        
+        // Set attack info for city capture
+        attackInfo = {
+          attackForce: attackForce,
+          defenderLoss: defenderArmies,
+          isPlayerVsPlayer: false,
+          territoryType: 'city'
+        };
+        console.log('🏰 City attack info set:', attackInfo);
       } else {
         // City damaged but not captured - reduce defense like towers
         this.state.armies[to] = Math.max(0, defenderArmies - attackForce);
-        return { success: false, events };
+        
+        // Still set attack info for failed city attack
+        attackInfo = {
+          attackForce: attackForce,
+          defenderLoss: Math.min(defenderArmies, attackForce),
+          isPlayerVsPlayer: false,
+          territoryType: 'city'
+        };
+        console.log('🏰 Failed city attack info set:', attackInfo);
+        return { success: false, events, attackInfo };
       }
     } else if (defenderOwner === TILE_LOOKOUT_TOWER) {
       // Attack lookout tower
@@ -514,22 +550,44 @@ export class Game {
         this.state.armies[to] = Math.abs(remaining);
         this.state.towerDefense[to] = 0;
         events.push(`${this.state.players[playerIndex]?.username || `Player ${playerIndex}`} captured a lookout tower!`);
+        
+        // Set attack info for tower capture
+        attackInfo = {
+          attackForce: attackForce,
+          defenderLoss: towerDefense,
+          isPlayerVsPlayer: false,
+          territoryType: 'tower'
+        };
+        console.log('🗼 Successful tower attack info set:', attackInfo);
       } else {
         // Tower damaged but not captured
         this.state.towerDefense[to] = remaining;
-        return { success: false, events };
+        
+        // Still set attack info for failed tower attack
+        attackInfo = {
+          attackForce: attackForce,
+          defenderLoss: Math.min(towerDefense, attackForce),
+          isPlayerVsPlayer: false,
+          territoryType: 'tower'
+        };
+        console.log('🗼 Failed tower attack info set:', attackInfo);
+        return { success: false, events, attackInfo };
       }
     } else if (defenderOwner >= 0 && defenderOwner !== playerIndex) {
       // Attack enemy territory
+      console.log('⚔️ Attacking enemy territory');
       const remaining = defenderArmies - attackForce;
       const defenderLoss = Math.min(defenderArmies, attackForce);
       
       // Set attack info for player vs player attacks
+      const isGeneralCapture = this.state.generals[defenderOwner] === to;
       attackInfo = {
         attackForce: attackForce,
         defenderLoss: defenderLoss,
-        isPlayerVsPlayer: true
+        isPlayerVsPlayer: true,
+        territoryType: isGeneralCapture ? 'general' : 'enemy'
       };
+      console.log('⚔️ Enemy attack info set:', attackInfo);
       
       if (remaining <= 0) {
         this.state.terrain[to] = playerIndex;

@@ -62,7 +62,15 @@
 - Game sounds
 	- on player tile move (plays only for the client's player tile moves)
 		- one default sound
-		- different sound for when player moves to a tile that is adjacent to a mountain
+		- when player moves to a tile that is adjacent to a mountain (bonk)
+		- when player moves to owned territory
+		- when player moves to unowned territory
+		- when player attacks 
+			- enemy territory
+			- city
+			- tower
+			- enemy general
+		- when player activates their general square
 	- on general captured (plays for all game players when anyone's general is captured)
 	- on game end
 	- on game start

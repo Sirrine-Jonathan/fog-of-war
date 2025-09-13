@@ -830,24 +830,55 @@ socket.on('attack_result', (data) => {
         drawGame();
     }
     
-    // Show attack/defense animations for player vs player attacks
+    // Show attack/defense animations for player vs player attacks only
     if (data.attackInfo) {
-        // Show attack animation on source tile
-        if (data.attackInfo.attackForce) {
-            playerAttackDisplay.set(data.from, {
-                startTime: Date.now(),
-                value: data.attackInfo.attackForce,
-                type: 'attack'
-            });
+        console.log('🎯 attackInfo:', data.attackInfo);
+        // Play sound based on territory type (regardless of success)
+        switch (data.attackInfo.territoryType) {
+            case 'neutral':
+                soundManager.play('captureUnowned');
+                break;
+            case 'owned':
+                soundManager.play('moveToOwned');
+                break;
+            case 'city':
+            case 'tower':
+                soundManager.play('captureSpecial'); // Always play attack sound
+                if (data.success) {
+                    soundManager.play('captureSuccess'); // Also play success sound
+                }
+                break;
+            case 'enemy':
+                soundManager.play('captureEnemy');
+                break;
+            case 'general':
+                if (data.success) {
+                    soundManager.play('generalSuccess');
+                } else {
+                    soundManager.play('captureGeneral');
+                }
+                break;
         }
         
-        // Show defense animation on target tile
-        if (data.attackInfo.defenderLoss) {
-            playerAttackDisplay.set(data.to, {
-                startTime: Date.now(),
-                value: data.attackInfo.defenderLoss,
-                type: 'defense'
-            });
+        // Show animations only for player vs player attacks
+        if (data.attackInfo.isPlayerVsPlayer) {
+            // Show attack animation on source tile
+            if (data.attackInfo.attackForce) {
+                playerAttackDisplay.set(data.from, {
+                    startTime: Date.now(),
+                    value: data.attackInfo.attackForce,
+                    type: 'attack'
+                });
+            }
+            
+            // Show defense animation on target tile
+            if (data.attackInfo.defenderLoss) {
+                playerAttackDisplay.set(data.to, {
+                    startTime: Date.now(),
+                    value: data.attackInfo.defenderLoss,
+                    type: 'defense'
+                });
+            }
         }
     }
     
@@ -1218,8 +1249,38 @@ function setSelectedTile(tileIndex) {
     drawGame();
 }
 
+// Check if a tile is adjacent to a mountain
+function isAdjacentToMountain(tileIndex) {
+    if (!gameState) return false;
+    
+    const width = gameState.width;
+    const row = Math.floor(tileIndex / width);
+    const col = tileIndex % width;
+    
+    // Check all 4 adjacent tiles
+    const adjacentTiles = [
+        (row - 1) * width + col, // up
+        (row + 1) * width + col, // down
+        row * width + (col - 1), // left
+        row * width + (col + 1)  // right
+    ];
+    
+    return adjacentTiles.some(adjTile => {
+        if (adjTile >= 0 && adjTile < gameState.terrain.length) {
+            return gameState.terrain[adjTile] === -2; // TILE_MOUNTAIN
+        }
+        return false;
+    });
+}
+
 function attemptMove(fromTile, toTile) {
     if (!gameState || !visibleTiles.has(toTile)) return false;
+    
+    // Check if trying to attack a mountain
+    if (gameState.terrain[toTile] === -2) { // TILE_MOUNTAIN
+        soundManager.play('mountainAdjacent');
+        return false;
+    }
     
     if (gameState.armies[fromTile] > 1) {
         // Capture defense value before attack for special tiles
@@ -1241,6 +1302,10 @@ function attemptMove(fromTile, toTile) {
         // Can't move but target is owned - change selection
         setSelectedTile(toTile);
         return true;
+    } else {
+        // Insufficient armies to attack - play error sound
+        soundManager.play('insufficientArmies');
+        return false;
     }
     return false;
 }
@@ -2938,11 +3003,27 @@ function switchSidebarTab(tabName) {
         content.classList.remove('active');
     });
     document.getElementById(tabName + 'Tab').classList.add('active');
+    
+    // Initialize options tab when first opened
+    if (tabName === 'options') {
+        initializeOptionsTab();
+    }
+}
+
+function toggleSoundOption() {
+    const checkbox = document.getElementById('soundToggle');
+    optionsManager.set('sound', checkbox.checked);
+}
+
+function initializeOptionsTab() {
+    const soundToggle = document.getElementById('soundToggle');
+    soundToggle.checked = optionsManager.get('sound');
 }
 
 // Make functions globally accessible
 window.toggleSidebar = toggleSidebar;
 window.switchSidebarTab = switchSidebarTab;
+window.toggleSoundOption = toggleSoundOption;
 
 // Add mouse and touch event listeners for ripples
 function addRippleListeners() {

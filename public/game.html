@@ -90,6 +90,7 @@
             <div class="sidebar-tabs">
               <button class="sidebar-tab active" onclick="switchSidebarTab('gameInfo')">Game Info</button>
               <button class="sidebar-tab" onclick="switchSidebarTab('chat')">Chat</button>
+              <button class="sidebar-tab" onclick="switchSidebarTab('options')">Options</button>
             </div>
             
             <div id="gameInfoTab" class="sidebar-tab-content active">
@@ -298,6 +299,18 @@
                 <button id="sendChatBtn" class="btn">Send</button>
               </div>
             </div>
+            
+            <div id="optionsTab" class="sidebar-tab-content">
+              <div class="options-section">
+                <h3>Sound Options</h3>
+                <div class="option-item">
+                  <label class="option-label">
+                    <input type="checkbox" id="soundToggle" onchange="toggleSoundOption()">
+                    <span>Enable Sounds</span>
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -328,11 +341,27 @@
     <script src="/modal.js"></script>
     <!-- P5.js for intricate tiling animation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <script src="/optionsManager.js"></script>
+    <script src="/soundManager.js"></script>
     <script src="/game.js"></script>
     <script>
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register("/sw.js");
       }
     </script>
+    
+    <!-- Sound Attribution -->
+    <div id="soundAttribution" style="position: fixed; bottom: 5px; right: 5px; font-size: 9px; color: #666; background: rgba(255,255,255,0.9); padding: 3px 6px; border-radius: 3px; display: none; max-width: 400px; line-height: 1.2;">
+      Sounds: <a href="https://freesound.org/people/willy_ineedthatapp_com/sounds/167338/">pup_fat.mp3</a> by <a href="https://freesound.org/people/willy_ineedthatapp_com/">willy_ineedthatapp_com</a> | 
+      <a href="https://freesound.org/people/waveplaySFX/sounds/201767/">short burst of noise</a> by <a href="https://freesound.org/people/waveplaySFX/">waveplaySFX</a> | 
+      <a href="https://freesound.org/people/Krokulator/sounds/652499/">error2.wav</a> by <a href="https://freesound.org/people/Krokulator/">Krokulator</a> | 
+      <a href="https://freesound.org/people/datasoundsample/sounds/41633/">littleclick.wav</a> by <a href="https://freesound.org/people/datasoundsample/">datasoundsample</a> | 
+      <a href="https://freesound.org/people/KorgMS2000B/sounds/54408/">Phone Beep 1.wav</a> by <a href="https://freesound.org/people/KorgMS2000B/">KorgMS2000B</a> | 
+      <a href="https://freesound.org/people/wouter.hisschemoller/sounds/101271/">noisy_sound_1.wav</a> by <a href="https://freesound.org/people/wouter.hisschemoller/">wouter.hisschemoller</a> | 
+      <a href="https://freesound.org/people/BrickDeveloper171/sounds/610280/">Retro Hit Sound</a> by <a href="https://freesound.org/people/BrickDeveloper171/">BrickDeveloper171</a> | 
+      <a href="https://freesound.org/people/djm62/sounds/318968/">successarpeggio.flac</a> by <a href="https://freesound.org/people/djm62/">djm62</a> | 
+      <a href="https://freesound.org/people/suntemple/sounds/253177/">Retro "Accomplished" SFX</a> by <a href="https://freesound.org/people/suntemple/">suntemple</a> | 
+      Licenses: <a href="http://creativecommons.org/publicdomain/zero/1.0/">CC0</a> & <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>
+    </div>
   </body>
 </html>
