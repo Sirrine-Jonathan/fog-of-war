@@ -293,6 +293,48 @@ function calculateMinZoom() {
 // Special tile defense display tracking
 const specialTileDefenseDisplay = new Map(); // tileIndex -> { startTime: timestamp, defense: number }
 
+// Player attack/defense display tracking
+const playerAttackDisplay = new Map(); // tileIndex -> { startTime: timestamp, value: number, type: 'attack'|'defense' }
+
+// Render animated number display (reusable for both special tiles and player attacks)
+function renderAnimatedNumber(ctx, x, y, tileSize, camera, display, isPlayerAttack = false) {
+    const elapsed = Date.now() - display.startTime;
+    const duration = 1500;
+    
+    if (elapsed < duration) {
+        const progress = elapsed / duration;
+        const yOffset = -20 * progress * camera.zoom;
+        const scale = 1 + (0.5 * (1 - progress));
+        const opacity = 1 - progress;
+        
+        let color, text;
+        if (isPlayerAttack) {
+            if (display.type === 'attack') {
+                color = '0, 255, 0'; // Green for attack
+                text = `+${display.value}`;
+            } else {
+                color = '255, 0, 0'; // Red for defense loss
+                text = `-${display.value}`;
+            }
+        } else {
+            // Original special tile logic
+            color = display.defense < 10 ? '255, 0, 0' : '0, 0, 0';
+            text = display.defense.toString();
+        }
+        
+        ctx.save();
+        ctx.translate(x + tileSize/2, y + tileSize/2 + yOffset);
+        ctx.scale(scale, scale);
+        ctx.fillStyle = `rgba(${color}, ${opacity})`;
+        ctx.font = `bold ${Math.max(10, 12 * camera.zoom)}px 'Courier New', monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillText(text, 0, 3*camera.zoom);
+        ctx.restore();
+        return true;
+    }
+    return false;
+}
+
 // Track which towers have already been processed for discovery
 const processedTowers = new Set();
 
@@ -786,6 +828,27 @@ socket.on('attack_result', (data) => {
         // Keep the original tile selected on failed moves
         // selectedTile remains unchanged
         drawGame();
+    }
+    
+    // Show attack/defense animations for player vs player attacks
+    if (data.attackInfo) {
+        // Show attack animation on source tile
+        if (data.attackInfo.attackForce) {
+            playerAttackDisplay.set(data.from, {
+                startTime: Date.now(),
+                value: data.attackInfo.attackForce,
+                type: 'attack'
+            });
+        }
+        
+        // Show defense animation on target tile
+        if (data.attackInfo.defenderLoss) {
+            playerAttackDisplay.set(data.to, {
+                startTime: Date.now(),
+                value: data.attackInfo.defenderLoss,
+                type: 'defense'
+            });
+        }
     }
     
     // Force a redraw to show any defense numbers that were set in attemptMove
@@ -1472,29 +1535,17 @@ function drawGame() {
                 const defenseDisplay = specialTileDefenseDisplay.get(i);
                 
                 if (defenseDisplay) {
-                    const elapsed = Date.now() - defenseDisplay.startTime;
-                    const duration = 1500;
-                    
-                    if (elapsed < duration) {
-                        const progress = elapsed / duration;
-                        const yOffset = -20 * progress * camera.zoom;
-                        const scale = 1 + (0.5 * (1 - progress));
-                        const opacity = 1 - progress;
-                        
-                        // Color based on remaining defense: black normally, red when < 10
-                        const color = defenseDisplay.defense < 10 ? '255, 0, 0' : '0, 0, 0';
-                        
-                        ctx.save();
-                        ctx.translate(x + tileSize/2, y + tileSize/2 + yOffset);
-                        ctx.scale(scale, scale);
-                        ctx.fillStyle = `rgba(${color}, ${opacity})`;
-                        ctx.font = `bold ${Math.max(10, 12 * camera.zoom)}px 'Courier New', monospace`;
-                        ctx.textAlign = 'center';
-                        ctx.fillText(defenseDisplay.defense.toString(), 0, 3*camera.zoom);
-                        ctx.restore();
-                    } else {
+                    if (!renderAnimatedNumber(ctx, x, y, tileSize, camera, defenseDisplay, false)) {
                         specialTileDefenseDisplay.delete(i);
                     }
+                }
+            }
+            
+            // Handle player attack/defense animations
+            const playerDisplay = playerAttackDisplay.get(i);
+            if (playerDisplay) {
+                if (!renderAnimatedNumber(ctx, x, y, tileSize, camera, playerDisplay, true)) {
+                    playerAttackDisplay.delete(i);
                 }
             }
         }

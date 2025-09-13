@@ -875,7 +875,7 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
       }
       
       // Send attack result back to client
-      socket.emit('attack_result', { from, to, success: result.success });
+      socket.emit('attack_result', { from, to, success: result.success, attackInfo: result.attackInfo });
     } else {
       console.log(`   Attack failed: game=${!!game}, playerIndex=${socket.data.playerIndex}, roomId=${roomId}`);
     }

@@ -463,7 +463,7 @@ export class Game {
     }
   }
 
-  attack(playerIndex: number, from: number, to: number): { success: boolean, events: string[] } {
+  attack(playerIndex: number, from: number, to: number): { success: boolean, events: string[], attackInfo?: { attackForce: number, defenderLoss: number, isPlayerVsPlayer: boolean } } {
     // Validate move
     if (!this.isValidMove(playerIndex, from, to)) {
       return { success: false, events: [] };
@@ -477,6 +477,9 @@ export class Game {
     // Execute attack/move
     const attackForce = attackerArmies - 1;
     this.state.armies[from] = 1;
+
+    // Track attack info for player vs player attacks
+    let attackInfo: { attackForce: number, defenderLoss: number, isPlayerVsPlayer: boolean } | undefined;
 
     if (defenderOwner === playerIndex) {
       // Moving to own territory - transfer armies
@@ -519,6 +522,15 @@ export class Game {
     } else if (defenderOwner >= 0 && defenderOwner !== playerIndex) {
       // Attack enemy territory
       const remaining = defenderArmies - attackForce;
+      const defenderLoss = Math.min(defenderArmies, attackForce);
+      
+      // Set attack info for player vs player attacks
+      attackInfo = {
+        attackForce: attackForce,
+        defenderLoss: defenderLoss,
+        isPlayerVsPlayer: true
+      };
+      
       if (remaining <= 0) {
         this.state.terrain[to] = playerIndex;
         this.state.armies[to] = Math.abs(remaining);
@@ -536,11 +548,11 @@ export class Game {
         }
       } else {
         this.state.armies[to] = remaining;
-        return { success: false, events };
+        return { success: false, events, attackInfo };
       }
     }
 
-    return { success: true, events };
+    return { success: true, events, attackInfo };
   }
 
   private isValidMove(playerIndex: number, from: number, to: number): boolean {
