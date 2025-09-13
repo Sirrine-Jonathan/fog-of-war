@@ -476,8 +476,7 @@ function switchMobileTab(tab) {
     // Resize canvas if switching to game tab
     if (tab === 'game') {
         setTimeout(() => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight - 120;
+            resizeCanvas();
             drawGame();
         }, 100);
     }
@@ -2802,9 +2801,9 @@ function resizeCanvas() {
     
     // Only update if container has meaningful size
     if (containerWidth > 0 && containerHeight > 0) {
-        // Canvas matches container exactly - it's a window into the game world
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight - 120;
+        // Canvas internal dimensions match display dimensions exactly (1:1 pixel mapping)
+        canvas.width = containerWidth;
+        canvas.height = containerHeight;
         canvas.style.width = containerWidth + 'px';
         canvas.style.height = containerHeight + 'px';
         
@@ -2836,9 +2835,9 @@ function toggleSidebar() {
         headerGearButton.style.display = 'flex';
     }
     
+    // Resize canvas after sidebar animation completes
     setTimeout(() => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight - 120;
+        resizeCanvas();
     }, 300);
 }
 
