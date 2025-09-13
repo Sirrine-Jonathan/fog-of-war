@@ -414,9 +414,13 @@ document.getElementById('roomId').textContent = roomId;
 // Discovered tiles that remain visible permanently
 let discoveredTiles = new Set();
 
+// Discovered enemy generals that remain permanently visible
+let discoveredEnemyGenerals = new Set();
+
 // Clear discovered state
 function clearState() {
     discoveredTiles.clear();
+    discoveredEnemyGenerals.clear();
     processedTowers.clear();
 }
 
@@ -545,6 +549,9 @@ socket.on('game_start', (data) => {
     
     // Reset tower processing tracking for new game
     processedTowers.clear();
+    
+    // Clear discovered state for new game
+    clearState();
     
     if (data.mapData) {
         gameState = parseMapData(data.mapData);
@@ -830,19 +837,6 @@ socket.on('game_update', (data) => {
             const generalPos = data.generals[playerIndex];
             if (generalPos !== undefined) {
                 setSelectedTile(generalPos);
-                
-                // Center camera on general immediately using consistent logic
-                const row = Math.floor(generalPos / gameState.width);
-                const col = generalPos % gameState.width;
-                const tileWorldX = (col * 35 + 17.5) * camera.zoom;
-                const tileWorldY = (row * 35 + 17.5) * camera.zoom;
-                
-                camera.x = tileWorldX - canvas.width / 2;
-                camera.y = tileWorldY - canvas.height / 2;
-                camera.targetX = camera.x;
-                camera.targetY = camera.y;
-                camera.targetX = camera.x;
-                camera.targetY = camera.y;
             }
         }
         
@@ -1044,6 +1038,14 @@ function updateVisibleTiles() {
                 if (!processedTowers.has(i)) {
                     towerVision.forEach(tile => {
                         discoveredTiles.add(tile); // Permanently discover these tiles
+                        
+                        // Check if this discovered tile contains an enemy general
+                        if (gameState.generals && gameState.generals.includes(tile)) {
+                            const generalOwner = gameState.generals.indexOf(tile);
+                            if (generalOwner !== playerIndex && generalOwner >= 0) {
+                                discoveredEnemyGenerals.add(tile);
+                            }
+                        }
                     });
                     processedTowers.add(i);
                 }
@@ -1320,37 +1322,29 @@ function drawGame() {
                 gradient.addColorStop(0.7, '#4682B4'); // Steel blue
                 gradient.addColorStop(1, '#2F4F4F'); // Dark slate gray
                 ctx.fillStyle = gradient;
-            } else if (terrain >= 0) { // Player owned
-                // Check if this is a general tile
-                const isGeneral = gameState.generals && Object.values(gameState.generals).includes(i);
-                if (isGeneral && terrain === playerIndex) {
-                    // Player's general gets gold gradient
+            } else if ((gameState.generals && Object.values(gameState.generals).includes(i)) || discoveredEnemyGenerals.has(i)) {
+                // Any enemy general (current or discovered) - always silver
+                const isPlayerGeneral = gameState.generals && gameState.generals[playerIndex] === i;
+                if (isPlayerGeneral) {
+                    // Player's own general gets gold gradient
                     const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
                     gradient.addColorStop(0, '#FFD700'); // Gold
                     gradient.addColorStop(0.3, '#FFF8DC'); // Cornsilk (lighter)
                     gradient.addColorStop(0.7, '#DAA520'); // Goldenrod
                     gradient.addColorStop(1, '#B8860B'); // Dark goldenrod
                     ctx.fillStyle = gradient;
-                } else if (isGeneral) {
-                    // Enemy generals get silver gradient
+                } else {
+                    // Enemy general (current or discovered) gets silver gradient
                     const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
                     gradient.addColorStop(0, '#C0C0C0'); // Silver
                     gradient.addColorStop(0.3, '#F5F5F5'); // White smoke (lighter)
                     gradient.addColorStop(0.7, '#A9A9A9'); // Dark gray
                     gradient.addColorStop(1, '#808080'); // Gray
                     ctx.fillStyle = gradient;
-                } else {
-                    // Regular tiles use player color
-                    ctx.fillStyle = playerColors[terrain] || emptyColor;
                 }
-            } else if (gameState.generals && Object.values(gameState.generals).includes(i)) {
-                // Enemy general on neutral/empty tile (discovered but not currently owned)
-                const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
-                gradient.addColorStop(0, '#C0C0C0'); // Silver
-                gradient.addColorStop(0.3, '#F5F5F5'); // White smoke (lighter)
-                gradient.addColorStop(0.7, '#A9A9A9'); // Dark gray
-                gradient.addColorStop(1, '#808080'); // Gray
-                ctx.fillStyle = gradient;
+            } else if (terrain >= 0) { // Player owned (non-general)
+                // Regular tiles use player color
+                ctx.fillStyle = playerColors[terrain] || emptyColor;
             } else if (ghostTerrain >= 0) { // Ghost territory from eliminated player
                 // Use faded player color for ghost territory
                 const ghostColor = playerColors[ghostTerrain];
@@ -1368,7 +1362,8 @@ function drawGame() {
             
             // Add shine effect for generals only (validate terrain and general data)
             const isAnyGeneral = gameState.generals && Object.values(gameState.generals).includes(i);
-            if (isAnyGeneral && terrain !== -2) { // Never shine mountains
+            const isDiscoveredEnemyGeneral = discoveredEnemyGenerals.has(i);
+            if ((isAnyGeneral || isDiscoveredEnemyGeneral) && terrain !== -2) { // Never shine mountains
                 const isClientGeneral = terrain === playerIndex;
                 
                 if (isClientGeneral) {
@@ -1379,7 +1374,7 @@ function drawGame() {
                     ctx.fillStyle = shineGradient;
                     ctx.fillRect(x, y, tileSize, tileSize);
                 } else {
-                    // Enemy general: very strong shine with pulsing effect
+                    // Enemy general or discovered enemy general: very strong shine with pulsing effect
                     const time = Date.now() * 0.003; // Slow pulse
                     const pulseIntensity = 0.8 + Math.sin(time) * 0.2; // Pulse between 0.6 and 1.0
                     
