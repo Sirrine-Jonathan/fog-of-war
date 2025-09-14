@@ -602,6 +602,9 @@ function initAccordion() {
 
 socket.on('game_start', (data) => {
     
+    // Play game start sound
+    soundManager.play('gameStart');
+    
     // Reset tower processing tracking for new game
     processedTowers.clear();
     

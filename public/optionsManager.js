@@ -19,7 +19,8 @@ class OptionsManager {
                 captureGeneral: true,
                 generalLost: true,
                 territoryLost: true,
-                armyBonus: true
+                armyBonus: true,
+                gameStart: true
             }
         };
         

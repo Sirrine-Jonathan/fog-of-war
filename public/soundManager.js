@@ -54,7 +54,9 @@ class SoundManager {
         // Load player's territory captured sound
         this.loadSound('territoryLost', '/sounds/686365__faircashew__au.mp3');
         // Load army bonus sound (turn 25 multiples)
-        this.loadSound('armyBonus', '/sounds/791034__janalvent__1-i-5-808.mp3');
+        this.loadSound('armyBonus', '/sounds/89380__zimbot__lettuce_frozen2_multibreak.wav');
+        // Load game start sound
+        this.loadSound('gameStart', '/sounds/791034__janalvent__1-i-5-808.mp3');
     }
 
     loadSound(name, path) {
