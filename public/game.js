@@ -886,6 +886,9 @@ socket.on('attack_result', (data) => {
     drawGame();
 });
 
+// Track last turn we played army bonus sound for
+let lastArmyBonusTurn = -1;
+
 socket.on('game_update', (data) => {
     // Stop animation when game state is received
     stopAnimation();
@@ -911,6 +914,13 @@ socket.on('game_update', (data) => {
         if (data.turn !== undefined) {
             gameState.turn = data.turn;
             updateTurnDisplay();
+            
+            // Play army bonus sound on turn 25 and multiples (only once per turn)
+            if (gameState.turn > 0 && gameState.turn % 25 === 0 && gameState.turn !== lastArmyBonusTurn) {
+                console.log(`🔊 Playing armyBonus sound for turn ${gameState.turn}`);
+                soundManager.play('armyBonus');
+                lastArmyBonusTurn = gameState.turn;
+            }
         }
         
         // Update cities and lookout towers if provided

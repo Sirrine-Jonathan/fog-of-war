@@ -18,7 +18,8 @@ class OptionsManager {
                 attackGeneral: true,
                 captureGeneral: true,
                 generalLost: true,
-                territoryLost: true
+                territoryLost: true,
+                armyBonus: true
             }
         };
         

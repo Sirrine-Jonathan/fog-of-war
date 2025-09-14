@@ -109,3 +109,11 @@
 	- on game end
 	- on game start
 	- on turn 25 and multiples of turn 25 when armies are awarded to all owned territories.
+		791034__janalvent__1-i-5-808.mp3
+		Attribution:
+		Plain text:
+		1 i 5 808 by janalvent -- https://freesound.org/s/791034/ -- License: Creative Commons 0
+		HTML:
+		<a href="https://freesound.org/people/janalvent/sounds/791034/">1 i 5 808</a> by <a href="https://freesound.org/people/janalvent/">janalvent</a> | License: <a href="http://creativecommons.org/publicdomain/zero/1.0/">Creative Commons 0</a>
+		JSON:
+		{"sound_url": "https://freesound.org/people/janalvent/sounds/791034/", "sound_name": "1 i 5 808", "author_url": "https://freesound.org/people/janalvent/", "author_name": "janalvent", "license_url": "http://creativecommons.org/publicdomain/zero/1.0/", "license_name": "Creative Commons 0"}
