@@ -108,7 +108,6 @@
 		{"sound_url": "https://freesound.org/people/FairCashew/sounds/686365/", "sound_name": "au.mp3", "author_url": "https://freesound.org/people/FairCashew/", "author_name": "FairCashew", "license_url": "http://creativecommons.org/publicdomain/zero/1.0/", "license_name": "Creative Commons 0"}
 	- on game end
 	- on game start
-	- on turn 25 and multiples of turn 25 when armies are awarded to all owned territories.
 		791034__janalvent__1-i-5-808.mp3
 		Attribution:
 		Plain text:
@@ -117,3 +116,13 @@
 		<a href="https://freesound.org/people/janalvent/sounds/791034/">1 i 5 808</a> by <a href="https://freesound.org/people/janalvent/">janalvent</a> | License: <a href="http://creativecommons.org/publicdomain/zero/1.0/">Creative Commons 0</a>
 		JSON:
 		{"sound_url": "https://freesound.org/people/janalvent/sounds/791034/", "sound_name": "1 i 5 808", "author_url": "https://freesound.org/people/janalvent/", "author_name": "janalvent", "license_url": "http://creativecommons.org/publicdomain/zero/1.0/", "license_name": "Creative Commons 0"}
+
+- on turn 25 and multiples of turn 25 when armies are awarded to all owned territories.
+		89380__zimbot__lettuce_frozen2_multibreak.wav
+		Attribution:
+		Plain text:
+		Lettuce_Frozen2_Multibreak.wav by zimbot -- https://freesound.org/s/89380/ -- License: Attribution 4.0
+		HTML:
+		<a href="https://freesound.org/people/zimbot/sounds/89380/">Lettuce_Frozen2_Multibreak.wav</a> by <a href="https://freesound.org/people/zimbot/">zimbot</a> | License: <a href="https://creativecommons.org/licenses/by/4.0/">Attribution 4.0</a>
+		JSON:
+		{"sound_url": "https://freesound.org/people/zimbot/sounds/89380/", "sound_name": "Lettuce_Frozen2_Multibreak.wav", "author_url": "https://freesound.org/people/zimbot/", "author_name": "zimbot", "license_url": "https://creativecommons.org/licenses/by/4.0/", "license_name": "Attribution 4.0"}
