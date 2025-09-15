@@ -905,6 +905,8 @@ body.mobile-controls-active #chatSection {
     border-radius: 8px;
     padding: 20px;
     color: white;
+    width: 90%;
+    max-width: 600px;
 }
 
 #gameOverContent .player-name {
