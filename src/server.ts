@@ -909,7 +909,7 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
     }
   });
 
-  socket.on('invite_bot', (gameId: string, botType: 'blob' | 'arrow') => {
+  socket.on('invite_bot', (gameId: string, botType: 'blob' | 'arrow' | 'spiral') => {
     console.log(`🤖 Bot invite request: gameId=${gameId}, botType=${botType}`);
     
     if (!games.has(gameId)) {

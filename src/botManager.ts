@@ -1,4 +1,4 @@
-import { BlobBot, ArrowBot } from './bots';
+import { BlobBot, ArrowBot, SpiralBot } from './bots';
 
 export class BotManager {
   private bots: Map<string, any> = new Map();
@@ -8,7 +8,7 @@ export class BotManager {
     this.serverUrl = serverUrl;
   }
 
-  inviteBot(botType: 'blob' | 'arrow', gameRoom: string): string {
+  inviteBot(botType: 'blob' | 'arrow' | 'spiral', gameRoom: string): string {
     const botKey = `${botType}_${gameRoom}`;
     
     // Don't create duplicate bots for the same room
@@ -19,22 +19,24 @@ export class BotManager {
     let bot;
     if (botType === 'blob') {
       bot = new BlobBot('Blob', gameRoom, this.serverUrl);
-    } else {
+    } else if (botType === 'arrow') {
       bot = new ArrowBot('Arrow', gameRoom, this.serverUrl);
+    } else if (botType === 'spiral') {
+      bot = new SpiralBot('Spiral', gameRoom, this.serverUrl);
     }
 
     this.bots.set(botKey, bot);
     return `${botType} bot invited to ${gameRoom}`;
   }
 
-  hasBot(botType: 'blob' | 'arrow', gameRoom: string): boolean {
+  hasBot(botType: 'blob' | 'arrow' | 'spiral', gameRoom: string): boolean {
     const botKey = `${botType}_${gameRoom}`;
     const exists = this.bots.has(botKey);
     console.log(`🎯 BOTMANAGER.hasBot(${botType}, ${gameRoom}): key=${botKey}, exists=${exists}`);
     return exists;
   }
 
-  removeBot(botType: 'blob' | 'arrow', gameRoom: string) {
+  removeBot(botType: 'blob' | 'arrow' | 'spiral', gameRoom: string) {
     const botKey = `${botType}_${gameRoom}`;
     const bot = this.bots.get(botKey);
     
@@ -58,6 +60,7 @@ export class BotManager {
   removeAllBotsFromRoom(gameRoom: string) {
     this.removeBot('blob', gameRoom);
     this.removeBot('arrow', gameRoom);
+    this.removeBot('spiral', gameRoom);
   }
 
   cleanup() {

@@ -2560,6 +2560,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bot invite buttons
     const blobBtn = document.getElementById('inviteBlobBtn');
     const arrowBtn = document.getElementById('inviteArrowBtn');
+    const spiralBtn = document.getElementById('inviteSpiralBtn');
     
     
     if (blobBtn) {
@@ -2572,6 +2573,12 @@ document.addEventListener('DOMContentLoaded', () => {
         arrowBtn.addEventListener('click', () => inviteBot('arrow'));
     } else {
         console.error('Arrow button not found');
+    }
+    
+    if (spiralBtn) {
+        spiralBtn.addEventListener('click', () => inviteBot('spiral'));
+    } else {
+        console.error('Spiral button not found');
     }
     
     // Chat functionality
