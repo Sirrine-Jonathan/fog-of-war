@@ -10,7 +10,7 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "/icon-pwa.svg",
       "sizes": "any",
       "type": "image/svg+xml"
     },
