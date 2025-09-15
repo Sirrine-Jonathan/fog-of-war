@@ -4,6 +4,10 @@ export interface Player {
   index: number;
   isBot: boolean;
   eliminated?: boolean;
+  eliminationStats?: {
+    territories: number;
+    armies: number;
+  };
 }
 
 export interface GameState {

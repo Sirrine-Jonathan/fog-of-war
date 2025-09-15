@@ -2288,12 +2288,21 @@ function calculatePlayerStats() {
     
     const stats = {};
     players.forEach((player, index) => {
-        stats[index] = { tiles: 0, armies: 0 };
+        // Use elimination stats for eliminated players, otherwise calculate current stats
+        if (player.eliminated && player.eliminationStats) {
+            stats[index] = {
+                tiles: player.eliminationStats.territories,
+                armies: player.eliminationStats.armies
+            };
+        } else {
+            stats[index] = { tiles: 0, armies: 0 };
+        }
     });
     
+    // Only calculate current stats for non-eliminated players
     for (let i = 0; i < gameState.terrain.length; i++) {
         const owner = gameState.terrain[i];
-        if (owner >= 0 && stats[owner]) {
+        if (owner >= 0 && stats[owner] && !players[owner]?.eliminated) {
             stats[owner].tiles++;
             stats[owner].armies += gameState.armies[i];
         }

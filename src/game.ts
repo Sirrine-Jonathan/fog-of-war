@@ -661,8 +661,19 @@ export class Game {
   }
 
   private eliminatePlayer(playerIndex: number): void {
-    // Mark player as eliminated
+    // Calculate stats before elimination
+    let territories = 0;
+    let armies = 0;
+    for (let i = 0; i < this.state.terrain.length; i++) {
+      if (this.state.terrain[i] === playerIndex) {
+        territories++;
+        armies += this.state.armies[i];
+      }
+    }
+    
+    // Mark player as eliminated and store their stats
     this.state.players[playerIndex].eliminated = true;
+    this.state.players[playerIndex].eliminationStats = { territories, armies };
     
     // Remove their general
     this.state.generals[playerIndex] = -1;
