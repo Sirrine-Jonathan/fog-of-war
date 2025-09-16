@@ -1837,12 +1837,31 @@ canvas.addEventListener('click', (e) => {
     if (!gameState || playerIndex < 0 || isDragging) return;
     
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left + camera.x;
-    const y = e.clientY - rect.top + camera.y;
-    const tileSize = 35 * camera.zoom;
+    // Account for potential device pixel ratio scaling
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
     
-    const col = Math.floor(x / tileSize);
-    const row = Math.floor(y / tileSize);
+    const screenX = (e.clientX - rect.left) * scaleX;
+    const screenY = (e.clientY - rect.top) * scaleY;
+    
+    // Convert screen coordinates to world coordinates (accounting for zoom and camera)
+    const worldX = (screenX + camera.x) / camera.zoom;
+    const worldY = (screenY + camera.y) / camera.zoom;
+    
+    // Calculate tile coordinates using base tile size
+    const col = Math.floor(worldX / 35);
+    const row = Math.floor(worldY / 35);
+    
+    // Debug logging for coordinate conversion (remove in production)
+    if (window.debugClicks) {
+        console.log(`Click Debug: screen(${screenX.toFixed(1)}, ${screenY.toFixed(1)}) -> world(${worldX.toFixed(1)}, ${worldY.toFixed(1)}) -> tile(${col}, ${row}) zoom=${camera.zoom.toFixed(2)}`);
+    }
+    
+    // Bounds checking to prevent out-of-bounds tile access
+    if (col < 0 || col >= gameState.width || row < 0 || row >= gameState.height) {
+        return;
+    }
+    
     const tileIndex = row * gameState.width + col;
     
     // Only allow interaction with visible tiles (except mobile users can click through fog)
@@ -2045,9 +2064,13 @@ canvas.addEventListener('touchstart', (e) => {
         // Single touch - prepare for potential tap, long press, or pan
         const rect = canvas.getBoundingClientRect();
         const touch = touches[0];
+        // Account for potential device pixel ratio scaling
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        
         touchStartPos = {
-            x: touch.clientX - rect.left,
-            y: touch.clientY - rect.top
+            x: (touch.clientX - rect.left) * scaleX,
+            y: (touch.clientY - rect.top) * scaleY
         };
         lastPanX = touchStartPos.x;
         lastPanY = touchStartPos.y;
@@ -2079,8 +2102,12 @@ canvas.addEventListener('touchmove', (e) => {
     
     if (touches.length === 1 && newTouches.length === 1) {
         const rect = canvas.getBoundingClientRect();
-        const currentX = newTouches[0].clientX - rect.left;
-        const currentY = newTouches[0].clientY - rect.top;
+        // Account for potential device pixel ratio scaling
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        
+        const currentX = (newTouches[0].clientX - rect.left) * scaleX;
+        const currentY = (newTouches[0].clientY - rect.top) * scaleY;
         
         // Check if we've moved enough to start panning
         const moveDistance = Math.hypot(
@@ -2178,13 +2205,19 @@ canvas.addEventListener('touchend', (e) => {
 function handleTouchTap(x, y, isActivationOnly) {
     if (!gameState || playerIndex < 0) return;
     
-    // Convert touch coordinates to game coordinates
-    const gameX = x + camera.x;
-    const gameY = y + camera.y;
-    const tileSize = 35 * camera.zoom;
+    // Convert touch coordinates to world coordinates (accounting for zoom and camera)
+    const worldX = (x + camera.x) / camera.zoom;
+    const worldY = (y + camera.y) / camera.zoom;
     
-    const col = Math.floor(gameX / tileSize);
-    const row = Math.floor(gameY / tileSize);
+    // Calculate tile coordinates using base tile size
+    const col = Math.floor(worldX / 35);
+    const row = Math.floor(worldY / 35);
+    
+    // Bounds checking to prevent out-of-bounds tile access
+    if (col < 0 || col >= gameState.width || row < 0 || row >= gameState.height) {
+        return;
+    }
+    
     const tileIndex = row * gameState.width + col;
     
     // Only allow interaction with visible tiles (except mobile users can click through fog)
