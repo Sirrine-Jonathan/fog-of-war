@@ -726,7 +726,7 @@ function updateButtonVisibility() {
     const canStart = isHost && !gameStarted && playerCount >= 2;
     console.log(`Button visibility: isHost=${isHost}, gameStarted=${gameStarted}, playerCount=${playerCount}, canStart=${canStart}`);
     if (overlayStartBtn) {
-        overlayStartBtn.style.display = canStart ? 'block' : 'none';
+        overlayStartBtn.style.opacity = canStart ? 1 : 0;
     }
     
     // Show "Start New Game" button with same conditions

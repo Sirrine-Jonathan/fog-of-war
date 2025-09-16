@@ -458,7 +458,8 @@ ul.game-stats li {
     letter-spacing: 1px;
     box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
     animation: pulse 2s infinite;
-    display: none;
+    opacity: 0;
+    transition: opacity 0.2s;
 }
 
 #overlayStartBtn2 {
