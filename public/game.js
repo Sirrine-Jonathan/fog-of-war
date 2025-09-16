@@ -641,6 +641,9 @@ socket.on('game_start', (data) => {
     resizeCanvas();
     selectGeneral();
     drawGame();
+    
+    // Focus canvas for keyboard controls
+    canvas.focus();
 
 });
 
@@ -2723,25 +2726,22 @@ function selectGeneral() {
     }
 }
 
+// Make canvas focusable
+canvas.tabIndex = 0;
+
 // Keyboard controls
 document.addEventListener('keydown', (e) => {
+    // Only handle keyboard events if the canvas is focused
+    if (document.activeElement !== canvas) return;
+    
     // Shift key cursor feedback
     if (e.key === 'Shift' && !isDragging) {
         canvas.style.cursor = 'grab';
     }
     
-    // Spacebar: Make general the active tile (but only if not typing in input fields)
+    // Spacebar: Make general the active tile
     if (e.key === ' ' || e.key === 'Spacebar') {
-        // Check if user is typing in an input field
-        const activeElement = document.activeElement;
-        const isTypingInInput = activeElement && (
-            activeElement.tagName === 'INPUT' || 
-            activeElement.tagName === 'TEXTAREA' ||
-            activeElement.contentEditable === 'true'
-        );
-        
-        // Only handle spacebar for game controls if not typing in an input
-        if (!isTypingInInput && gameState && playerIndex >= 0) {
+        if (gameState && playerIndex >= 0) {
             selectGeneral();
             e.preventDefault();
             e.stopPropagation();
@@ -2749,71 +2749,40 @@ document.addEventListener('keydown', (e) => {
         }
     }
     
-    // Debug copy functionality
-    if (e.key === 'd' || e.key === 'D') {
-        if (gameState) {
-            const mapWidth = gameState.width * 35 * camera.zoom;
-            const mapHeight = gameState.height * 35 * camera.zoom;
-            
-            const debugInfo = [
-                `Screen: ${window.innerWidth}x${window.innerHeight}`,
-                `Canvas: ${canvas.width}x${canvas.height}`,
-                `Map: ${mapWidth.toFixed(0)}x${mapHeight.toFixed(0)}`,
-                `Grid: ${gameState.width}x${gameState.height}`,
-                `Zoom: ${camera.zoom.toFixed(2)}`,
-                `Camera: ${camera.x.toFixed(0)}, ${camera.y.toFixed(0)}`,
-                `Target: ${camera.targetX.toFixed(0)}, ${camera.targetY.toFixed(0)}`,
-                `Selected: ${selectedTile || 'none'}`,
-                `Tile Size: ${(35 * camera.zoom).toFixed(1)}px`
-            ].join('\n');
-            
-            navigator.clipboard.writeText(debugInfo).then(() => {
-                console.log('Debug info copied to clipboard');
-            }).catch(err => {
-                console.error('Failed to copy debug info:', err);
-            });
-        }
-        e.preventDefault();
-        return;
-    }
-    
     // Game controls (only if game is active)
-    if (!gameState || playerIndex < 0) return;
-    
-    // Arrow keys: require active tile
-    if (selectedTile === null) return;
-    
-    let targetTile = null;
-    const row = Math.floor(selectedTile / gameState.width);
-    const col = selectedTile % gameState.width;
-    
-    switch(e.key) {
-        case 'ArrowUp':
-        case 'w':
-        case 'W':
-            if (row > 0) targetTile = selectedTile - gameState.width;
-            break;
-        case 'ArrowDown':
-        case 's':
-        case 'S':
-            if (row < gameState.height - 1) targetTile = selectedTile + gameState.width;
-            break;
-        case 'ArrowLeft':
-        case 'a':
-        case 'A':
-            if (col > 0) targetTile = selectedTile - 1;
-            break;
-        case 'ArrowRight':
-        case 'd':
-        case 'D':
-            if (col < gameState.width - 1) targetTile = selectedTile + 1;
-            break;
-    }
-    
-    if (targetTile !== null && visibleTiles.has(targetTile)) {
-        const moveSuccessful = attemptMove(selectedTile, targetTile);
-        // Keep active tile on failed attacks (don't change selectedTile)
-        e.preventDefault();
+    if (gameState && playerIndex >= 0 && selectedTile !== null) {
+        let targetTile = null;
+        const row = Math.floor(selectedTile / gameState.width);
+        const col = selectedTile % gameState.width;
+        
+        switch(e.key) {
+            case 'ArrowUp':
+            case 'w':
+            case 'W':
+                if (row > 0) targetTile = selectedTile - gameState.width;
+                break;
+            case 'ArrowDown':
+            case 's':
+            case 'S':
+                if (row < gameState.height - 1) targetTile = selectedTile + gameState.width;
+                break;
+            case 'ArrowLeft':
+            case 'a':
+            case 'A':
+                if (col > 0) targetTile = selectedTile - 1;
+                break;
+            case 'ArrowRight':
+            case 'd':
+            case 'D':
+                if (col < gameState.width - 1) targetTile = selectedTile + 1;
+                break;
+        }
+        
+        if (targetTile !== null && visibleTiles.has(targetTile)) {
+            attemptMove(selectedTile, targetTile);
+            e.preventDefault();
+            return;
+        }
     }
 });
 

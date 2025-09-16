@@ -750,8 +750,8 @@ io.on('connection', (socket) => {
           if (playerSocket) {
             const personalizedGenerals = getPersonalizedGenerals(gameState.generals, playerIndex, gameState);
             
-            // Debug logging for general data integrity
-            if (gameState.turn % 50 === 0) { // Log every 50 turns
+            // Debug logging for general data integrity - Spiral only
+            if (gameState.turn % 50 === 0 && player.username === 'Spiral') {
               console.log(`🔍 General data for ${player.username}:`, {
                 allGenerals: gameState.generals,
                 personalizedGenerals,
@@ -837,9 +837,12 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
         moveType = 'ATTACK';
       }
       
-      console.log(`⚔️ ${moveType}: ${playerName}(P${playerIndex}) ${from}(${fromArmies}) -> ${to}(${toArmies})`);
+      // Only log Spiral moves
+      if (playerName === 'Spiral') {
+        console.log(`⚔️ ${moveType}: ${playerName}(P${playerIndex}) ${from}(${fromArmies}) -> ${to}(${toArmies})`);
+      }
     } else {
-      console.log(`⚔️ Attack request: from=${from}, to=${to}, player=${playerIndex}`);
+      // Remove this log
     }
     
     // Prevent viewers from attacking

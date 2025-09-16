@@ -2,6 +2,9 @@ import { BaseBot } from './BaseBot';
 
 export class SpiralBot extends BaseBot {
   private phase: 'expand' | 'collect' | 'attack' = 'expand';
+  private conqueredDirections: Set<string> = new Set();
+  private spiralPath = ['north', 'east', 'south', 'south', 'west', 'west', 'north', 'north'];
+  private spiralStep = 0;
 
   makeMove() {
     const { armies, terrain } = this.gameState;
@@ -14,8 +17,8 @@ export class SpiralBot extends BaseBot {
       const expansion = this.spiralExpansion();
       if (expansion) {
         this.attack(expansion.from, expansion.to);
-        return;
       }
+      return;
     }
     
     if (this.currentTurn > 25 && this.currentTurn <= 50) {
@@ -23,8 +26,8 @@ export class SpiralBot extends BaseBot {
       const collection = this.collectArmies();
       if (collection) {
         this.attack(collection.from, collection.to);
-        return;
       }
+      return;
     }
     
     if (this.currentTurn > 50) {
@@ -32,44 +35,145 @@ export class SpiralBot extends BaseBot {
       const attack = this.seekAndDestroy();
       if (attack) {
         this.attack(attack.from, attack.to);
-        return;
       }
     }
   }
 
   private spiralExpansion(): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
+    const ourGeneral = this.gameState.generals[this.gameState.playerIndex];
     
-    for (let i = 0; i < terrain.length; i++) {
-      if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
-        const target = this.getNextSpiralTarget(i);
-        if (target !== -1 && !this.wouldCreateLoop(i, target)) {
-          return { from: i, to: target };
+    // Step 1: Conquer adjacent tiles in strict N->E->S->W order
+    if (this.conqueredDirections.size < 4) {
+      const adjacentMove = this.conquerAdjacentSequential(ourGeneral);
+      if (adjacentMove) return adjacentMove;
+    }
+    
+    // Step 2: Follow the exact spiral path
+    if (this.spiralStep < this.spiralPath.length) {
+      const spiralMove = this.followSpiralPath();
+      if (spiralMove) return spiralMove;
+    }
+    
+    // Step 3: Stop expanding (all territory around general conquered)
+    return null;
+  }
+
+  private conquerAdjacentSequential(general: number): { from: number; to: number } | null {
+    const { armies, terrain } = this.gameState;
+    if (armies[general] <= 1) return null;
+    
+    const directions = this.getDirectionalTargets(general);
+    
+    // Try directions in strict order: north, east, south, west
+    for (const direction of ['north', 'east', 'south', 'west']) {
+      if (!this.conqueredDirections.has(direction)) {
+        const target = directions[direction];
+        if (target !== -1 && this.isEmptyTile(target) && !this.wouldCreateLoop(general, target)) {
+          this.conqueredDirections.add(direction);
+          return { from: general, to: target };
+        } else if (target !== -1) {
+          // Mark as conquered even if we can't move there (mountain/obstacle)
+          this.conqueredDirections.add(direction);
         }
       }
     }
     return null;
   }
 
-  private getNextSpiralTarget(from: number): number {
-    const { terrain } = this.gameState;
+  private followSpiralPath(): { from: number; to: number } | null {
+    const { armies, terrain } = this.gameState;
+    
+    // Find any tile with >1 army to continue the spiral
+    for (let i = 0; i < terrain.length; i++) {
+      if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
+        const direction = this.spiralPath[this.spiralStep];
+        const target = this.getTargetInDirection(i, direction);
+        
+        if (target !== -1 && this.isEmptyTile(target) && !this.wouldCreateLoop(i, target)) {
+          this.spiralStep++;
+          return { from: i, to: target };
+        }
+      }
+    }
+    
+    // If can't follow exact path, mark step as complete
+    this.spiralStep++;
+    return null;
+  }
+
+  private getTargetInDirection(from: number, direction: string): number {
     const directions = this.getDirectionalTargets(from);
+    return directions[direction] || -1;
+  }
+
+  private findNearestDiagonal(from: number, general: number): number {
+    const { terrain } = this.gameState;
+    const row = Math.floor(from / this.gameState.width);
+    const col = from % this.gameState.width;
     
-    for (const direction of ['north', 'east', 'south', 'west']) {
-      const target = directions[direction];
-      if (target !== -1 && (terrain[target] === -1 || terrain[target] === -3)) {
-        return target;
+    // Check all 4 diagonals
+    const diagonals = [
+      { row: row - 1, col: col - 1 }, // NW
+      { row: row - 1, col: col + 1 }, // NE  
+      { row: row + 1, col: col - 1 }, // SW
+      { row: row + 1, col: col + 1 }  // SE
+    ];
+    
+    for (const diag of diagonals) {
+      if (diag.row >= 0 && diag.row < this.gameState.height && 
+          diag.col >= 0 && diag.col < this.gameState.width) {
+        const target = diag.row * this.gameState.width + diag.col;
+        if (this.isEmptyTile(target)) {
+          return target;
+        }
       }
     }
-    
-    const adjacent = this.getAdjacentTiles(from);
-    for (const adj of adjacent) {
-      if (terrain[adj] === -1 || terrain[adj] === -3) {
-        return adj;
-      }
-    }
-    
     return -1;
+  }
+
+  private findNorthernmostEmpty(): number {
+    const { terrain } = this.gameState;
+    
+    // Scan from top row down
+    for (let row = 0; row < this.gameState.height; row++) {
+      for (let col = 0; col < this.gameState.width; col++) {
+        const tile = row * this.gameState.width + col;
+        if (this.isEmptyTile(tile)) {
+          return tile;
+        }
+      }
+    }
+    return -1;
+  }
+
+  private findPathToTarget(target: number): { from: number; to: number } | null {
+    const { armies, terrain } = this.gameState;
+    
+    // Find closest owned tile with >1 army
+    let bestMove = null;
+    let bestDistance = Infinity;
+    
+    for (let i = 0; i < terrain.length; i++) {
+      if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
+        const adjacent = this.getAdjacentTiles(i);
+        for (const adj of adjacent) {
+          if (this.isEmptyTile(adj) && !this.wouldCreateLoop(i, adj)) {
+            const distance = this.getDistance(adj, target);
+            if (distance < bestDistance) {
+              bestDistance = distance;
+              bestMove = { from: i, to: adj };
+            }
+          }
+        }
+      }
+    }
+    return bestMove;
+  }
+
+  private isEmptyTile(tile: number): boolean {
+    const { terrain } = this.gameState;
+    return terrain[tile] === -1 || terrain[tile] === -3;
   }
 
   private getDirectionalTargets(from: number): Record<string, number> {
@@ -86,16 +190,13 @@ export class SpiralBot extends BaseBot {
 
   private collectArmies(): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
-    
     const frontlineTile = this.findFrontlineTile();
     if (frontlineTile === -1) return null;
     
     for (let i = 0; i < terrain.length; i++) {
       if (terrain[i] === this.gameState.playerIndex && armies[i] > 1 && i !== frontlineTile) {
-        const pathMove = this.findPathToTarget(i, frontlineTile);
-        if (pathMove) {
-          return pathMove;
-        }
+        const pathMove = this.findPathToTarget(frontlineTile);
+        if (pathMove) return pathMove;
       }
     }
     return null;
@@ -127,7 +228,6 @@ export class SpiralBot extends BaseBot {
         }
       }
     }
-    
     return bestTile;
   }
 
@@ -199,32 +299,11 @@ export class SpiralBot extends BaseBot {
     }
     
     if (strongestTile !== -1 && armies[strongestTile] > 1) {
-      const pathMove = this.findPathToTarget(strongestTile, centerTile);
+      const pathMove = this.findPathToTarget(centerTile);
       if (pathMove) return pathMove;
     }
     
     return null;
-  }
-
-  private findPathToTarget(from: number, target: number): { from: number; to: number } | null {
-    const { armies, terrain } = this.gameState;
-    const adjacent = this.getAdjacentTiles(from);
-    
-    let bestMove = null;
-    let bestDistance = Infinity;
-    
-    for (const adj of adjacent) {
-      if ((terrain[adj] === this.gameState.playerIndex || terrain[adj] === -1 || terrain[adj] === -3) &&
-          !this.wouldCreateLoop(from, adj)) {
-        const distance = this.getDistance(adj, target);
-        if (distance < bestDistance) {
-          bestDistance = distance;
-          bestMove = { from, to: adj };
-        }
-      }
-    }
-    
-    return bestMove;
   }
 
   private getDistance(from: number, to: number): number {
