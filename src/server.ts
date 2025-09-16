@@ -126,16 +126,6 @@ function isBot(socket: any, userId: string, username: string): boolean {
   // Only flag as bot if we have strong evidence
   const result = hasNodeUserAgent || hasSocketIOClient || explicitBotName;
 
-  console.log(`🤖 Bot detection for ${username}:`, {
-    userAgent:
-      userAgent.substring(0, 50) + (userAgent.length > 50 ? "..." : ""),
-    referer: referer.substring(0, 30) + (referer.length > 30 ? "..." : ""),
-    hasNodeUserAgent,
-    hasSocketIOClient,
-    explicitBotName,
-    isBot: result,
-  });
-
   return result;
 }
 
@@ -390,7 +380,6 @@ io.on("connection", (socket) => {
           const existingPlayer = gameState.players[existingPlayerIndex];
           if (existingPlayer.eliminated) {
             // Eliminated players can only rejoin as viewers during the same game
-            console.log(`👁️ Eliminated player ${username} rejoining as viewer`);
             socket.data.isViewer = true;
             socket.data.playerIndex = -1; // No active player index
             
@@ -562,7 +551,6 @@ io.on("connection", (socket) => {
       (p) => p.id === botUserId && p.isBot
     );
 
-    console.log({ players: gameState.players, botUserId });
     if (!botPlayer || typeof botUserId !== "string" || !botUserId) {
       return;
     }
@@ -688,7 +676,6 @@ io.on("connection", (socket) => {
           (s) => s.data.userId === player.id
         );
         if (playerSocket) {
-          console.log(`🔍 Sending personalized update to player ${player.username} (isViewer: ${playerSocket.data.isViewer}, playerIndex: ${playerSocket.data.playerIndex})`);
           const personalizedGenerals = getPersonalizedGenerals(
             gameState.generals,
             playerIndex,
@@ -712,9 +699,9 @@ io.on("connection", (socket) => {
           s.data.isViewer &&
           gameState.players.some((p) => p.id === s.data.userId)
       );
-      console.log(`👁️ Found ${playerViewerSockets.length} player viewers for full map data`);
+      
       playerViewerSockets.forEach((socket) => {
-        console.log(`👁️ Sending full map to player viewer ${socket.data.username} (eliminated/abandoned)`);
+        
         socket.emit("game_update", {
           cities_diff: [0, gameState.cities.length, ...gameState.cities],
           map_diff: [0, mapData.length, ...mapData],
@@ -730,9 +717,9 @@ io.on("connection", (socket) => {
           s.rooms.has(gameId) &&
           !gameState.players.some((p) => p.id === s.data.userId)
       );
-      console.log(`👁️ Found ${viewerSockets.length} viewer sockets for full map data`);
+      
       viewerSockets.forEach((socket) => {
-        console.log(`👁️ Sending full map to viewer ${socket.data.username} (isViewer: ${socket.data.isViewer}, playerIndex: ${socket.data.playerIndex})`);
+        
         socket.emit("game_update", {
           cities_diff: [0, gameState.cities.length, ...gameState.cities],
           map_diff: [0, mapData.length, ...mapData],
@@ -763,20 +750,20 @@ io.on("connection", (socket) => {
 
         if (gameState.gameEnded) {
           // Notify players of game end
-          console.log(`🏁 Game ${gameId} ended, winner: ${gameState.winner}`);
+          
 
           io.to(gameId).emit("game_won", { winner: gameState.winner });
 
           // Reset all players to non-viewer status for next game
-          console.log(`🔄 Starting viewer status reset for game ${gameId}`);
+          
           const gameEndSockets = await io.in(gameId).fetchSockets();
           gameEndSockets.forEach(socket => {
             if (gameState.players.some(p => p.id === socket.data.userId)) {
-              console.log(`🔄 Resetting viewer status for player ${socket.data.username} (was viewer: ${socket.data.isViewer})`);
+              
               socket.data.isViewer = false;
             }
           });
-          console.log(`🔄 Completed viewer status reset for game ${gameId}`);
+          
 
           // Store game data for replay/analysis before resetting
           const completedGame = {
@@ -822,7 +809,7 @@ io.on("connection", (socket) => {
           game.reset();
 
           // Re-add human players to the reset game
-          console.log(`🔄 Re-adding ${humanPlayers.length} human players to reset game`);
+          
           humanPlayers.forEach((player, index) => {
             const newIndex = game.addPlayer(player.id, player.username, false);
             // Update socket data for human players
@@ -830,7 +817,7 @@ io.on("connection", (socket) => {
               (s) => s.data.userId === player.id
             );
             if (playerSocket) {
-              console.log(`🔄 Re-adding player ${player.username} with isViewer: ${playerSocket.data.isViewer} -> false`);
+              
               playerSocket.data.playerIndex = newIndex;
               playerSocket.data.isViewer = false;
 
@@ -868,7 +855,7 @@ io.on("connection", (socket) => {
           if (playerSocket) {
             // Log viewer status every 10 turns for debugging
             if (gameState.turn % 10 === 0) {
-              console.log(`🔍 Turn ${gameState.turn}: Player ${player.username} (isViewer: ${playerSocket.data.isViewer}, playerIndex: ${playerSocket.data.playerIndex})`);
+              
             }
             
             const personalizedGenerals = getPersonalizedGenerals(
@@ -911,9 +898,9 @@ io.on("connection", (socket) => {
         );
         
         if (gameState.turn % 10 === 0 && playerViewerSockets.length > 0) {
-          console.log(`👁️ Turn ${gameState.turn}: Found ${playerViewerSockets.length} player viewers receiving full map data`);
+          
           playerViewerSockets.forEach(socket => {
-            console.log(`👁️ Player viewer: ${socket.data.username} (eliminated/abandoned)`);
+            
           });
         }
         
@@ -941,9 +928,9 @@ io.on("connection", (socket) => {
         
         // Log viewer status every 10 turns
         if (gameState.turn % 10 === 0 && viewerSockets.length > 0) {
-          console.log(`👁️ Turn ${gameState.turn}: Found ${viewerSockets.length} viewers receiving full map data`);
+          
           viewerSockets.forEach(socket => {
-            console.log(`👁️ Viewer: ${socket.data.username} (isViewer: ${socket.data.isViewer}, playerIndex: ${socket.data.playerIndex})`);
+            
           });
         }
         
@@ -1173,7 +1160,7 @@ io.on("connection", (socket) => {
     sendSystemMessage(gameId, `${player.username} abandoned the game`);
 
     // Convert player to viewer
-    console.log(`🚪 Player ${player.username} abandoned game - converting to viewer (was playerIndex: ${socket.data.playerIndex})`);
+    
     socket.data.playerIndex = -1;
     socket.data.isViewer = true;
 
@@ -1219,7 +1206,7 @@ io.on("connection", (socket) => {
       sendSystemMessage(gameId, `${player.username} left the game`);
 
       // Reset player data
-      console.log(`🔌 Player ${socket.data.username} disconnected - converting to viewer (was playerIndex: ${socket.data.playerIndex})`);
+      
       socket.data.playerIndex = -1;
       socket.data.isViewer = true;
 
@@ -1352,7 +1339,7 @@ io.on("connection", (socket) => {
           }
 
           // Convert socket to viewer
-          console.log(`💀 Player ${socket.data.username} eliminated - converting to viewer (was playerIndex: ${socket.data.playerIndex})`);
+          
           socket.data.playerIndex = -1;
           socket.data.isViewer = true;
 

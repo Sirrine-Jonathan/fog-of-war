@@ -224,11 +224,7 @@
                       </li>
                       <li>
                         <strong>Turn Duration:</strong>
-                        <span id="gameDetailsTurnDuration">1000ms</span>
-                      </li>
-                      <li>
-                        <strong>Moves Per Turn:</strong>
-                        <span id="gameDetailsMovesPerTurn">1</span>
+                        <span id="gameDetailsTurnDuration">200ms</span>
                       </li>
                     </ul>
                   </div>
@@ -501,37 +497,17 @@
                   <label class="option-label">
                     <span
                       >Turn Duration:
-                      <span id="turnDurationValue">1000ms</span></span
+                      <span id="turnDurationValue">200ms</span></span
                     >
                   </label>
                   <input
                     type="range"
                     id="turnDurationSlider"
-                    min="250"
+                    min="100"
                     max="1000"
-                    step="250"
-                    value="1000"
+                    step="50"
+                    value="200"
                   />
-                </div>
-
-                <div class="option-item">
-                  <label class="option-label">
-                    <span
-                      >Moves Per Turn:
-                      <span id="movesPerTurnValue">1</span></span
-                    >
-                  </label>
-                  <input
-                    type="range"
-                    id="movesPerTurnSlider"
-                    min="1"
-                    max="5"
-                    step="1"
-                    value="1"
-                  />
-                  <div class="option-note">
-                    Note: Bots only make 1 move per turn regardless
-                  </div>
                 </div>
               </div>
 

@@ -36,4 +36,4 @@ export const TILE_LOOKOUT_TOWER = -5;
 export const TILE_CITY = -6;
 
 export const MOVES_PER_TURN = 1;
-export const TURN_INTERVAL_MS = 1000; // Default 1 second per turn
+export const TURN_INTERVAL_MS = 500; // Default 0.5 second per turn

@@ -463,6 +463,7 @@ let remainingMoves = 0; // Current remaining moves
 
 // Intent-based movement system
 let activeIntent = null; // { fromTile, targetTile, path, currentStep }
+let moveQueue = []; // Queue of relative directions: 'up', 'down', 'left', 'right'
 
 // Get room ID from URL
 const roomId = window.location.pathname.split('/').pop();
@@ -476,9 +477,14 @@ let discoveredEnemyGenerals = new Set();
 
 // Clear discovered state
 function clearState() {
+    console.log(`🧹 clearState: clearing ${moveQueue.length} queued moves`);
     discoveredTiles.clear();
     discoveredEnemyGenerals.clear();
     processedTowers.clear();
+    moveQueue = []; // Clear queued moves
+    if (activeIntent && activeIntent.isQueuedPath) {
+        activeIntent = null; // Clear queued path display
+    }
 }
 
 // Auto-rejoin if we were previously in this game (disabled - no persistence)
@@ -614,8 +620,12 @@ socket.on('game_start', (data) => {
     // Clear discovered state for new game
     clearState();
     
+    // Clear move queue for new game
+    moveQueue = [];
+    
     // Store move limit info
     if (data.movesPerTurn !== undefined) {
+        console.log(`🎮 Game start: movesPerTurn=${data.movesPerTurn}, setting remainingMoves=${data.movesPerTurn}`);
         movesPerTurn = data.movesPerTurn;
         remainingMoves = movesPerTurn;
         updateMoveDisplay();
@@ -636,6 +646,7 @@ socket.on('game_start', (data) => {
     document.getElementById('gameBoard').style.display = 'block'; // Show canvas
     playerIndex = data.playerIndex !== undefined ? data.playerIndex : -1;
     gameStarted = true;
+    gameEnded = false; // Reset game ended flag for new game
     
     console.log('🎮 After game_start - playerIndex:', playerIndex, 'isViewer:', playerIndex < 0);
     
@@ -681,18 +692,14 @@ socket.on('game_info', (data) => {
     
     // Update game settings if provided
     if (data.gameSettings) {
-        updateGameDetailsSettings(data.gameSettings.turnIntervalMs, data.gameSettings.movesPerTurn);
+        updateGameDetailsSettings(data.gameSettings.turnIntervalMs);
         
         // Update options tab values if they exist
         const turnDurationValue = document.getElementById('turnDurationValue');
         const turnDurationSlider = document.getElementById('turnDurationSlider');
-        const movesPerTurnValue = document.getElementById('movesPerTurnValue');
-        const movesPerTurnSlider = document.getElementById('movesPerTurnSlider');
         
         if (turnDurationValue) turnDurationValue.textContent = data.gameSettings.turnIntervalMs + 'ms';
         if (turnDurationSlider) turnDurationSlider.value = data.gameSettings.turnIntervalMs;
-        if (movesPerTurnValue) movesPerTurnValue.textContent = data.gameSettings.movesPerTurn;
-        if (movesPerTurnSlider) movesPerTurnSlider.value = data.gameSettings.movesPerTurn;
     }
     
     // Show/hide buttons based on status
@@ -714,7 +721,7 @@ function updateButtonVisibility() {
     const abandonBtn = document.getElementById('abandonBtn');
     const endBotGameBtn = document.getElementById('endBotGameBtn');
     
-    if (gameStarted) {
+    if (gameStarted && !gameEnded) {
         // Game is active - hide join/leave controls and overlay, show abandon for players
         joinControls.style.display = 'none';
         if (gameOverlay) gameOverlay.style.display = 'none';
@@ -735,7 +742,7 @@ function updateButtonVisibility() {
             endBotGameBtn.style.display = 'none';
         }
     } else if (playerIndex >= 0) {
-        // Joined but game not started - show leave button, hide join controls, show overlay
+        // Joined but game not started OR game has ended - show leave button, hide join controls, show overlay
         joinBtn.style.display = 'none';
         leaveBtn.style.display = 'inline-block';
         if (abandonBtn) abandonBtn.style.display = 'none';
@@ -858,7 +865,12 @@ socket.on('game_won', (data) => {
 
 socket.on('attack_result', (data) => {
     if (data.success) {
-        setSelectedTile(data.to);
+        // Only update selected tile if we don't have queued moves (to preserve virtual position)
+        if (moveQueue.length === 0) {
+            setSelectedTile(data.to);
+        } else {
+            console.log(`🎯 attack_result: preserving virtual selected tile (${selectedTile}) due to queued moves`);
+        }
         updateVisibleTiles();
         
         // Advance intent step only on successful moves
@@ -958,6 +970,7 @@ socket.on('game_update', (data) => {
         
         // Update remaining moves for current player (sent as top-level property)
         if (playerIndex >= 0 && data.remainingMoves !== undefined) {
+            console.log(`[QUEUE] Remaining moves updated: ${remainingMoves} -> ${data.remainingMoves} (from server)`);
             remainingMoves = data.remainingMoves;
             updateMoveDisplay();
         }
@@ -1028,31 +1041,83 @@ socket.on('game_update', (data) => {
         
         updateVisibleTiles();
         
-        // Execute intent-based movement (only if player has remaining moves)
-        if (activeIntent && activeIntent.currentStep <= activeIntent.path.length && remainingMoves > 0) {
+        console.log(`[QUEUE] TURN PROCESSING START: remainingMoves=${remainingMoves}, queueLength=${moveQueue.length}, hasActiveIntent=${!!activeIntent}`);
+        console.log(`[QUEUE] Current queue: [${moveQueue.map(m => typeof m === 'string' ? m : `${m.fromTile}->${m.toTile}`).join(', ')}]`);
+        console.log(`[QUEUE] selectedTile: ${selectedTile}`);
+        
+        // Process queued moves first (if player has remaining moves)
+        if (moveQueue.length > 0 && remainingMoves > 0) {
+            console.log(`[QUEUE] PROCESSING QUEUE: ${moveQueue.length} moves in queue, ${remainingMoves} moves available`);
+            const queuedMove = moveQueue.shift();
+            console.log(`[QUEUE] Dequeued move: ${queuedMove.fromTile} -> ${queuedMove.toTile}`);
+            console.log(`[QUEUE] Queue after dequeue: [${moveQueue.map(m => `${m.fromTile}->${m.toTile}`).join(', ')}] (length: ${moveQueue.length})`);
+            
+            // Validate the move is still valid
+            const hasArmies = gameState.armies[queuedMove.fromTile] > 1;
+            const isVisible = visibleTiles.has(queuedMove.toTile);
+            console.log(`[QUEUE] Validation: armies=${gameState.armies[queuedMove.fromTile]} (>1: ${hasArmies}), visible=${isVisible}`);
+            
+            if (hasArmies && isVisible) {
+                console.log(`[QUEUE] EXECUTING QUEUED MOVE: ${queuedMove.fromTile} -> ${queuedMove.toTile}`);
+                executeMove(queuedMove.fromTile, queuedMove.toTile);
+                updateQueuedPath();
+                console.log(`[QUEUE] Queued move execution complete`);
+            } else {
+                console.log(`[QUEUE] QUEUED MOVE INVALID: armies=${gameState.armies[queuedMove.fromTile]}, visible=${isVisible}`);
+                updateQueuedPath();
+            }
+        }
+        // Execute intent-based movement (only if player has remaining moves and no queued moves, and not a queued path)
+        else if (activeIntent && !activeIntent.isQueuedPath && activeIntent.currentStep <= activeIntent.path.length && remainingMoves > 0) {
+            console.log(`[QUEUE] Processing intent: step ${activeIntent.currentStep}/${activeIntent.path.length}`);
             const currentTile = activeIntent.currentStep === 0 ? activeIntent.fromTile : activeIntent.path[activeIntent.currentStep - 1];
             const nextTile = activeIntent.currentStep < activeIntent.path.length ? activeIntent.path[activeIntent.currentStep] : activeIntent.targetTile;
             
             if (gameState.armies[currentTile] > 1 && isAdjacent(currentTile, nextTile)) {
-                
-                // Capture defense value before attack for special tiles
-                if (gameState.lookoutTowers?.includes(nextTile) || gameState.cities?.includes(nextTile)) {
-                    const isTower = gameState.lookoutTowers?.includes(nextTile);
-                    const preAttackDefense = isTower ? gameState.towerDefense?.[nextTile] : gameState.armies[nextTile];
-                    if (preAttackDefense !== undefined) {
-                        specialTileDefenseDisplay.set(nextTile, {
-                            startTime: Date.now(),
-                            defense: Math.max(0, preAttackDefense - (gameState.armies[currentTile] - 1))
-                        });
-                    }
-                }
-                
-                socket.emit('attack', currentTile, nextTile);
+                console.log(`[QUEUE] Intent move valid: ${currentTile} -> ${nextTile}`);
+                executeMove(currentTile, nextTile);
                 // Don't increment currentStep here - wait for attack_result to confirm success
             } else {
-                activeIntent = null; // Clear invalid intent
+                console.log(`[QUEUE] Intent move invalid, attempting re-pathfinding`);
+                // Try to re-pathfind from current position to target
+                const newPath = findPath(currentTile, activeIntent.targetTile);
+                if (newPath && newPath.length > 0) {
+                    console.log(`[QUEUE] Re-pathfinding successful: new path [${newPath.join(',')}]`);
+                    activeIntent.path = newPath;
+                    activeIntent.fromTile = currentTile;
+                    activeIntent.currentStep = 0;
+                } else {
+                    console.log(`[QUEUE] Re-pathfinding failed, clearing intent`);
+                    activeIntent = null; // Clear invalid intent
+                }
             }
+        } else if (remainingMoves > 0) {
+            console.log(`[QUEUE] NO MOVES TO PROCESS: no queue (${moveQueue.length}), no valid intent`);
+        } else {
+            console.log(`[QUEUE] NO REMAINING MOVES: remainingMoves=${remainingMoves}`);
         }
+        
+        console.log(`[QUEUE] TURN PROCESSING END: queueLength=${moveQueue.length}, selectedTile=${selectedTile}`);
+
+function getTargetTileFromDirection(fromTile, direction) {
+    if (!gameState || fromTile === null) return null;
+    
+    const row = Math.floor(fromTile / gameState.width);
+    const col = fromTile % gameState.width;
+    
+    switch(direction) {
+        case 'up':
+            return row > 0 ? fromTile - gameState.width : null;
+        case 'down':
+            return row < gameState.height - 1 ? fromTile + gameState.width : null;
+        case 'left':
+            return col > 0 ? fromTile - 1 : null;
+        case 'right':
+            return col < gameState.width - 1 ? fromTile + 1 : null;
+        default:
+            return null;
+    }
+}
         
         drawGame();
         updatePlayersList(); // Update stats display
@@ -1071,23 +1136,13 @@ socket.on('territoryCaptured', () => {
 socket.on('game_settings_updated', (settings) => {
     // Update game details for all players
     if (settings.turnIntervalMs !== undefined) {
-        updateGameDetailsSettings(settings.turnIntervalMs, null);
+        updateGameDetailsSettings(settings.turnIntervalMs);
         
         // Update options tab values if they exist
         const turnDurationValue = document.getElementById('turnDurationValue');
         const turnDurationSlider = document.getElementById('turnDurationSlider');
         if (turnDurationValue) turnDurationValue.textContent = settings.turnIntervalMs + 'ms';
         if (turnDurationSlider) turnDurationSlider.value = settings.turnIntervalMs;
-    }
-    
-    if (settings.movesPerTurn !== undefined) {
-        updateGameDetailsSettings(null, settings.movesPerTurn);
-        
-        // Update options tab values if they exist
-        const movesPerTurnValue = document.getElementById('movesPerTurnValue');
-        const movesPerTurnSlider = document.getElementById('movesPerTurnSlider');
-        if (movesPerTurnValue) movesPerTurnValue.textContent = settings.movesPerTurn;
-        if (movesPerTurnSlider) movesPerTurnSlider.value = settings.movesPerTurn;
     }
 });
 
@@ -1122,6 +1177,7 @@ socket.on('game_end', (data) => {
     
     clearState();
     updateVisibleTiles();
+    updateButtonVisibility(); // Update button visibility after game ends
     drawGame();
 });
 
@@ -1205,7 +1261,11 @@ function updateTerritoryProgressBar() {
 // Update move display in UI
 function updateMoveDisplay() {
     if (playerIndex >= 0 && gameStarted) {
-        // Update any UI elements that show remaining moves
+        // Log queued moves for debugging (could be replaced with UI element later)
+        if (moveQueue.length > 0) {
+            console.log(`📋 Moves queued: ${moveQueue.length}`);
+        }
+        console.log(`🎮 Move status: remaining=${remainingMoves}, queued=${moveQueue.length}`);
     }
 }
 
@@ -1376,46 +1436,162 @@ function isAdjacentToMountain(tileIndex) {
 }
 
 function attemptMove(fromTile, toTile) {
-    if (!gameState || !visibleTiles.has(toTile)) return false;
+    console.log(`[QUEUE] attemptMove START: ${fromTile} -> ${toTile}`);
+    console.log(`[QUEUE] attemptMove state: remainingMoves=${remainingMoves}, queueLength=${moveQueue.length}, selectedTile=${selectedTile}`);
     
-    // Check if trying to attack a mountain
+    if (!gameState || !visibleTiles.has(toTile)) {
+        console.log(`[QUEUE] attemptMove BLOCKED: gameState=${!!gameState}, visible=${visibleTiles.has(toTile)}`);
+        return false;
+    }
+    
+    // Check if trying to attack a mountain - block for both immediate and queued moves
     if (gameState.terrain[toTile] === -2) { // TILE_MOUNTAIN
+        console.log(`[QUEUE] attemptMove BLOCKED: mountain attack`);
         soundManager.play('mountainAdjacent');
         return false;
     }
     
-    // Check if player has remaining moves
-    if (remainingMoves <= 0) {
-        soundManager.play('insufficientArmies'); // Same sound as insufficient armies
-        return false;
-    }
+    // Temporarily disable army validation to allow queuing
+    console.log(`[QUEUE] attemptMove: allowing move (army validation disabled)`);
+    console.log(`[QUEUE] Current armies at fromTile ${fromTile}: ${gameState.armies[fromTile]}`);
     
-    if (gameState.armies[fromTile] > 1) {
-        // Capture defense value before attack for special tiles
-        if (gameState.lookoutTowers?.includes(toTile) || gameState.cities?.includes(toTile)) {
-            const isTower = gameState.lookoutTowers?.includes(toTile);
-            const preAttackDefense = isTower ? gameState.towerDefense?.[toTile] : gameState.armies[toTile];
-            if (preAttackDefense !== undefined) {
-                specialTileDefenseDisplay.set(toTile, {
-                    startTime: Date.now(),
-                    defense: Math.max(0, preAttackDefense - (gameState.armies[fromTile] - 1))
-                });
+    // Always update selected tile immediately to show where we're "virtually" moving
+    console.log(`[QUEUE] Setting selectedTile from ${selectedTile} to ${toTile}`);
+    setSelectedTile(toTile);
+    console.log(`[QUEUE] selectedTile now: ${selectedTile}`);
+    
+    // Check if player has remaining moves for immediate execution
+    if (remainingMoves > 0 && moveQueue.length === 0) {
+        // Only execute immediately if queue is empty (no rapid input)
+        console.log(`[QUEUE] IMMEDIATE EXECUTION: ${fromTile} -> ${toTile} (remainingMoves: ${remainingMoves}, empty queue)`);
+        executeMove(fromTile, toTile);
+    } else {
+        // Always queue if there are already queued moves, or if we want to allow rapid input
+        console.log(`[QUEUE] QUEUEING MOVE: ${fromTile} -> ${toTile}`);
+        console.log(`[QUEUE] Queue before push: [${moveQueue.map(m => `${m.fromTile}->${m.toTile}`).join(', ')}]`);
+        moveQueue.push({ fromTile, toTile });
+        console.log(`[QUEUE] Queue after push: [${moveQueue.map(m => `${m.fromTile}->${m.toTile}`).join(', ')}] (length: ${moveQueue.length})`);
+        updateMoveDisplay();
+        updateQueuedPath(); // Show visual path
+        console.log(`[QUEUE] Queue operations complete`);
+    }
+    console.log(`[QUEUE] attemptMove END: returning true`);
+    return true;
+}
+
+function updateQueuedPath() {
+    console.log(`[QUEUE] updateQueuedPath START: moveQueue.length=${moveQueue.length}, selectedTile=${selectedTile}`);
+    
+    // Create a visual path from queued moves for display
+    if (moveQueue.length > 0) {
+        const queuedPath = [];
+        let currentTile = selectedTile;
+        
+        console.log(`[QUEUE] Building path from queued moves`);
+        
+        // Build path from queued moves
+        for (let i = 0; i < moveQueue.length; i++) {
+            const move = moveQueue[i];
+            console.log(`[QUEUE] Processing move ${i}: ${move.fromTile} -> ${move.toTile}`);
+            if (move.fromTile !== undefined && move.toTile !== undefined) {
+                // Check if this is an adjacent move or needs pathfinding
+                if (isAdjacent(move.fromTile, move.toTile)) {
+                    queuedPath.push(move.toTile);
+                    console.log(`[QUEUE] Added adjacent ${move.toTile} to path`);
+                } else {
+                    // Non-adjacent move - use pathfinding
+                    const pathSegment = findPath(move.fromTile, move.toTile);
+                    if (pathSegment && pathSegment.length > 0) {
+                        queuedPath.push(...pathSegment);
+                        console.log(`[QUEUE] Added pathfinding segment [${pathSegment.join(',')}] to path`);
+                    } else {
+                        queuedPath.push(move.toTile);
+                        console.log(`[QUEUE] No path found, added direct ${move.toTile} to path`);
+                    }
+                }
+                currentTile = move.toTile;
             }
         }
         
-        // Have armies to move - attempt attack/move
-        socket.emit('attack', fromTile, toTile);
-        return true;
-    } else if (gameState.terrain[toTile] === playerIndex) {
-        // Can't move but target is owned - change selection
-        setSelectedTile(toTile);
-        return true;
+        // Use existing intent system to show the path
+        if (queuedPath.length > 0) {
+            const newIntent = {
+                fromTile: selectedTile,
+                targetTile: queuedPath[queuedPath.length - 1],
+                path: queuedPath,
+                currentStep: 0,
+                isQueuedPath: true // Flag to distinguish from regular intent
+            };
+            console.log(`[QUEUE] Creating queued path intent: from=${newIntent.fromTile}, to=${newIntent.targetTile}, path=[${queuedPath.join(',')}]`);
+            activeIntent = newIntent;
+        }
     } else {
-        // Insufficient armies to attack - play error sound
-        soundManager.play('insufficientArmies');
-        return false;
+        // Clear path if no queued moves
+        if (activeIntent && activeIntent.isQueuedPath) {
+            console.log(`[QUEUE] Clearing queued path (no moves in queue)`);
+            activeIntent = null;
+        } else {
+            console.log(`[QUEUE] No queued path to clear (activeIntent.isQueuedPath=${activeIntent?.isQueuedPath})`);
+        }
     }
-    return false;
+    
+    console.log(`[QUEUE] updateQueuedPath END: activeIntent=${activeIntent ? 'set' : 'null'}`);
+}
+
+function getPlayerColor(playerIndex) {
+    const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3', '#54a0ff', '#5f27cd'];
+    return colors[playerIndex] || '#ff6b6b';
+}
+
+function brightenColor(color, factor) {
+    // Convert hex to RGB
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    // Brighten by factor (0-1, where 1 is 100% brighter)
+    const newR = Math.min(255, Math.round(r + (255 - r) * factor));
+    const newG = Math.min(255, Math.round(g + (255 - g) * factor));
+    const newB = Math.min(255, Math.round(b + (255 - b) * factor));
+    
+    // Convert back to hex
+    return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+}
+
+function getDirection(fromTile, toTile) {
+    const fromRow = Math.floor(fromTile / gameState.width);
+    const fromCol = fromTile % gameState.width;
+    const toRow = Math.floor(toTile / gameState.width);
+    const toCol = toTile % gameState.width;
+    
+    if (toRow < fromRow) return 'up';
+    if (toRow > fromRow) return 'down';
+    if (toCol < fromCol) return 'left';
+    if (toCol > fromCol) return 'right';
+    return null;
+}
+
+function executeMove(fromTile, toTile) {
+    console.log(`[QUEUE] executeMove: ${fromTile} -> ${toTile}, remainingMoves BEFORE: ${remainingMoves}`);
+    
+    // Capture defense value before attack for special tiles
+    if (gameState.lookoutTowers?.includes(toTile) || gameState.cities?.includes(toTile)) {
+        const isTower = gameState.lookoutTowers?.includes(toTile);
+        const preAttackDefense = isTower ? gameState.towerDefense?.[toTile] : gameState.armies[toTile];
+        if (preAttackDefense !== undefined) {
+            console.log(`[QUEUE] executeMove: special tile defense ${preAttackDefense}`);
+            specialTileDefenseDisplay.set(toTile, {
+                startTime: Date.now(),
+                defense: Math.max(0, preAttackDefense - (gameState.armies[fromTile] - 1))
+            });
+        }
+    }
+    
+    // Send attack to server
+    console.log(`[QUEUE] executeMove: sending attack to server`);
+    socket.emit('attack', fromTile, toTile);
+    console.log(`[QUEUE] executeMove: remainingMoves AFTER emit: ${remainingMoves}`);
 }
 
 function updateCamera() {
@@ -1732,10 +1908,30 @@ function drawGame() {
         
         // Draw intent path
         if (activeIntent && activeIntent.path.includes(i)) {
-            ctx.strokeStyle = '#ff6b6b';
-            ctx.lineWidth = 3 * camera.zoom;
-            ctx.setLineDash([5 * camera.zoom, 5 * camera.zoom]);
-            ctx.strokeRect(x, y, tileSize, tileSize);
+            if (activeIntent.isQueuedPath) {
+                // Queued moves - brighter player color with thin dotted lines
+                ctx.save();
+                const playerColor = getPlayerColor(playerIndex);
+                const brightColor = brightenColor(playerColor, 0.6); // 60% brighter
+                
+                ctx.shadowColor = brightColor;
+                ctx.shadowBlur = 10 * camera.zoom;
+                ctx.fillStyle = brightColor + '33'; // Add transparency (20%)
+                ctx.fillRect(x, y, tileSize, tileSize);
+                
+                ctx.strokeStyle = brightColor;
+                ctx.lineWidth = 2 * camera.zoom; // Thinner
+                ctx.setLineDash([3 * camera.zoom, 3 * camera.zoom]); // Smaller dots
+                const inset = 3 * camera.zoom;
+                ctx.strokeRect(x + inset, y + inset, tileSize - inset * 2, tileSize - inset * 2);
+                ctx.restore();
+            } else {
+                // Regular intent path
+                ctx.strokeStyle = '#ff6b6b';
+                ctx.lineWidth = 3 * camera.zoom;
+                ctx.setLineDash([5 * camera.zoom, 5 * camera.zoom]);
+                ctx.strokeRect(x, y, tileSize, tileSize);
+            }
             ctx.setLineDash([]);
         }
         
@@ -1979,19 +2175,31 @@ canvas.addEventListener('click', (e) => {
             activeIntent = null; // Clear any existing intent
             attemptMove(selectedTile, tileIndex);
         } else {
-            // Non-adjacent click: launch intent if visible, otherwise no action
-            if (gameState.armies[selectedTile] > 1) {
-                // Regular click: Start intent-based movement
+            // Non-adjacent click: use intent system if moves available, queue if not
+            // But first check if we can actually launch an intent from the selected tile
+            if (selectedTile !== null && gameState.armies[selectedTile] > 1) {
                 activeIntent = null; // Clear any existing intent first
                 
-                const path = findPath(selectedTile, tileIndex);
-                if (path && path.length > 0) {
-                    activeIntent = {
-                        fromTile: selectedTile,
-                        targetTile: tileIndex,
-                        path: path,
-                        currentStep: 0
-                    };
+                if (remainingMoves > 0) {
+                    // Start intent-based movement immediately
+                    const path = findPath(selectedTile, tileIndex);
+                    if (path && path.length > 0) {
+                        activeIntent = {
+                            fromTile: selectedTile,
+                            targetTile: tileIndex,
+                            path: path,
+                            currentStep: 0
+                        };
+                    }
+                } else {
+                    // Queue the move
+                    attemptMove(selectedTile, tileIndex);
+                }
+            } else {
+                // Cannot launch intent (no selected tile or insufficient armies)
+                // Instead, activate the clicked tile if it's owned
+                if (gameState.terrain[tileIndex] === playerIndex) {
+                    setSelectedTile(tileIndex);
                 }
             }
         }
@@ -2335,19 +2543,31 @@ function handleTouchTap(x, y, isActivationOnly) {
             activeIntent = null; // Clear any existing intent
             attemptMove(selectedTile, tileIndex);
         } else {
-            // Non-adjacent tap: launch intent if visible, otherwise no action
-            if (gameState.armies[selectedTile] > 1) {
-                // Regular tap: Start intent-based movement
+            // Non-adjacent tap: use intent system if moves available, queue if not
+            // But first check if we can actually launch an intent from the selected tile
+            if (selectedTile !== null && gameState.armies[selectedTile] > 1) {
                 activeIntent = null; // Clear any existing intent first
                 
-                const path = findPath(selectedTile, tileIndex);
-                if (path && path.length > 0) {
-                    activeIntent = {
-                        fromTile: selectedTile,
-                        targetTile: tileIndex,
-                        path: path,
-                        currentStep: 0
-                    };
+                if (remainingMoves > 0) {
+                    // Start intent-based movement immediately
+                    const path = findPath(selectedTile, tileIndex);
+                    if (path && path.length > 0) {
+                        activeIntent = {
+                            fromTile: selectedTile,
+                            targetTile: tileIndex,
+                            path: path,
+                            currentStep: 0
+                        };
+                    }
+                } else {
+                    // Queue the move
+                    attemptMove(selectedTile, tileIndex);
+                }
+            } else {
+                // Cannot launch intent (no selected tile or insufficient armies)
+                // Instead, activate the clicked tile if it's owned
+                if (gameState.terrain[tileIndex] === playerIndex) {
+                    setSelectedTile(tileIndex);
                 }
             }
         }
@@ -2368,15 +2588,17 @@ function isAdjacent(from, to) {
     return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
 }
 
-// Simple pathfinding for intent-based movement
+// Weighted pathfinding for intent-based movement with preferences
 function findPath(from, to) {
     if (!gameState) return null;
     
-    const queue = [{ tile: from, path: [from] }];
-    const visited = new Set([from]);
+    const queue = [{ tile: from, path: [from], cost: 0 }];
+    const visited = new Map([[from, 0]]); // tile -> best cost
     
     while (queue.length > 0) {
-        const { tile, path } = queue.shift();
+        // Sort queue by cost (simple priority queue)
+        queue.sort((a, b) => a.cost - b.cost);
+        const { tile, path, cost } = queue.shift();
         
         if (tile === to) {
             return path.slice(1); // Remove starting tile
@@ -2397,13 +2619,43 @@ function findPath(from, to) {
             if (r < 0 || r >= gameState.height || c < 0 || c >= gameState.width) continue;
             
             const neighborTile = r * gameState.width + c;
-            if (visited.has(neighborTile)) continue;
             
-            // Skip mountains (terrain -2) - but allow pathfinding through fog and other terrain
+            // Skip mountains (terrain -2)
             if (visibleTiles.has(neighborTile) && gameState.terrain[neighborTile] === -2) continue;
             
-            visited.add(neighborTile);
-            queue.push({ tile: neighborTile, path: [...path, neighborTile] });
+            // Calculate movement cost with preferences
+            let moveCost = 1; // Base cost
+            
+            if (visibleTiles.has(neighborTile)) {
+                // Check for avoidance first (before owned territory bonus)
+                if (neighborTile !== to && (
+                    (gameState.lookoutTowers?.includes(neighborTile) && gameState.terrain[neighborTile] !== playerIndex) ||
+                    (gameState.cities?.includes(neighborTile) && gameState.terrain[neighborTile] !== playerIndex) ||
+                    gameState.generals?.includes(neighborTile)
+                )) {
+                    moveCost = 3; // Higher cost to avoid
+                }
+                // Prefer owned territory (lower cost) - but only if not avoiding
+                else if (gameState.terrain[neighborTile] === playerIndex) {
+                    moveCost = 0.5;
+                }
+                // Neutral/enemy territory has normal cost
+                else {
+                    moveCost = 1;
+                }
+            }
+            // Unknown territory (fog) has slightly higher cost
+            else {
+                moveCost = 1.2;
+            }
+            
+            const newCost = cost + moveCost;
+            
+            // Only proceed if we haven't visited or found a better path
+            if (!visited.has(neighborTile) || visited.get(neighborTile) > newCost) {
+                visited.set(neighborTile, newCost);
+                queue.push({ tile: neighborTile, path: [...path, neighborTile], cost: newCost });
+            }
         }
     }
     
@@ -2745,8 +2997,16 @@ function joinAsPlayer() {
     
     const username = document.getElementById('usernameInput').value.trim();
     if (!username) {
-        alert('Please enter a username');
-        document.getElementById('usernameInput').focus();
+        showModal({
+            title: 'Username Required',
+            message: 'Please enter a username to join the game.',
+            confirmText: 'OK',
+            onConfirm: () => {
+                document.getElementById('usernameInput').focus();
+            }
+        });
+        // Hide cancel button for this modal
+        document.querySelector('.modal-cancel').style.display = 'none';
         return;
     }
     
@@ -2892,8 +3152,13 @@ canvas.tabIndex = 0;
 
 // Keyboard controls
 document.addEventListener('keydown', (e) => {
+    console.log(`[QUEUE] RAW KEYDOWN: ${e.key}, activeElement: ${document.activeElement?.tagName}, canvas: ${document.activeElement === canvas}`);
+    
     // Only handle keyboard events if the canvas is focused
-    if (document.activeElement !== canvas) return;
+    if (document.activeElement !== canvas) {
+        console.log(`[QUEUE] Canvas not focused, ignoring keydown`);
+        return;
+    }
     
     // Shift key cursor feedback
     if (e.key === 'Shift' && !isDragging) {
@@ -2912,6 +3177,7 @@ document.addEventListener('keydown', (e) => {
     
     // Game controls (only if game is active)
     if (gameState && playerIndex >= 0 && selectedTile !== null) {
+        console.log(`[QUEUE] Keyboard input detected: ${e.key}, selectedTile: ${selectedTile}`);
         let targetTile = null;
         const row = Math.floor(selectedTile / gameState.width);
         const col = selectedTile % gameState.width;
@@ -2939,11 +3205,20 @@ document.addEventListener('keydown', (e) => {
                 break;
         }
         
+        console.log(`[QUEUE] Calculated targetTile: ${targetTile} for key: ${e.key}`);
+        
         if (targetTile !== null && visibleTiles.has(targetTile)) {
-            attemptMove(selectedTile, targetTile);
+            console.log(`[QUEUE] Keyboard move: ${e.key} from ${selectedTile} to ${targetTile}`);
+            console.log(`[QUEUE] Before attemptMove - selectedTile: ${selectedTile}, remainingMoves: ${remainingMoves}, queueLength: ${moveQueue.length}`);
+            const result = attemptMove(selectedTile, targetTile);
+            console.log(`[QUEUE] After attemptMove - result: ${result}, selectedTile: ${selectedTile}, queueLength: ${moveQueue.length}`);
             e.preventDefault();
             return;
+        } else {
+            console.log(`[QUEUE] Keyboard move blocked: targetTile=${targetTile}, visible=${targetTile ? visibleTiles.has(targetTile) : 'N/A'}`);
         }
+    } else {
+        console.log(`[QUEUE] Keyboard input ignored: gameState=${!!gameState}, playerIndex=${playerIndex}, selectedTile=${selectedTile}`);
     }
 });
 
@@ -3192,25 +3467,14 @@ function initializeOptionsTab() {
     
     // Initialize game settings sliders
     const turnDurationSlider = document.getElementById('turnDurationSlider');
-    const movesPerTurnSlider = document.getElementById('movesPerTurnSlider');
     const turnDurationValue = document.getElementById('turnDurationValue');
-    const movesPerTurnValue = document.getElementById('movesPerTurnValue');
     
     if (turnDurationSlider) {
         turnDurationSlider.addEventListener('input', (e) => {
             const value = parseInt(e.target.value);
             turnDurationValue.textContent = value + 'ms';
-            updateGameDetailsSettings(value, null);
+            updateGameDetailsSettings(value);
             socket.emit('update_game_settings', roomId, { turnIntervalMs: value });
-        });
-    }
-    
-    if (movesPerTurnSlider) {
-        movesPerTurnSlider.addEventListener('input', (e) => {
-            const value = parseInt(e.target.value);
-            movesPerTurnValue.textContent = value;
-            updateGameDetailsSettings(null, value);
-            socket.emit('update_game_settings', roomId, { movesPerTurn: value });
         });
     }
     
@@ -3234,18 +3498,11 @@ function initializeOptionsTab() {
     updateGranularSoundControls();
 }
 
-function updateGameDetailsSettings(turnDuration, movesPerTurn) {
+function updateGameDetailsSettings(turnDuration) {
     if (turnDuration !== null) {
         const gameDetailsTurnDuration = document.getElementById('gameDetailsTurnDuration');
         if (gameDetailsTurnDuration) {
             gameDetailsTurnDuration.textContent = turnDuration + 'ms';
-        }
-    }
-    
-    if (movesPerTurn !== null) {
-        const gameDetailsMovesPerTurn = document.getElementById('gameDetailsMovesPerTurn');
-        if (gameDetailsMovesPerTurn) {
-            gameDetailsMovesPerTurn.textContent = movesPerTurn;
         }
     }
 }
@@ -3253,7 +3510,6 @@ function updateGameDetailsSettings(turnDuration, movesPerTurn) {
 function updateGameSettingsVisibility() {
     const gameSettingsSection = document.getElementById('gameSettingsSection');
     const turnDurationSlider = document.getElementById('turnDurationSlider');
-    const movesPerTurnSlider = document.getElementById('movesPerTurnSlider');
     
     if (gameSettingsSection) {
         // Show only for host
@@ -3262,7 +3518,6 @@ function updateGameSettingsVisibility() {
         // Disable during active games
         const isGameActive = gameStarted && !gameEnded;
         if (turnDurationSlider) turnDurationSlider.disabled = isGameActive;
-        if (movesPerTurnSlider) movesPerTurnSlider.disabled = isGameActive;
     }
 }
 

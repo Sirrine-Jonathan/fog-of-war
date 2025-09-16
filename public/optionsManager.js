@@ -1,10 +1,12 @@
+const STORAGE_KEY = 'fog_of_war_options';
+
 class OptionsManager {
     constructor() {
         this.options = this.loadOptions();
     }
 
     loadOptions() {
-        const saved = localStorage.getItem('gameOptions');
+        const saved = localStorage.getItem(STORAGE_KEY);
         const defaults = {
             sound: false,
             sounds: {
@@ -41,7 +43,7 @@ class OptionsManager {
     }
 
     saveOptions() {
-        localStorage.setItem('gameOptions', JSON.stringify(this.options));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.options));
     }
 
     get(key) {
