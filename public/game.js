@@ -829,8 +829,16 @@ socket.on('connect', () => {
 });
 
 socket.on('username_taken', (data) => {
-    alert(`Username "${data.username}" is already taken. Please choose a different username.`);
-    document.getElementById('usernameInput').focus();
+    showModal({
+        title: 'Username Taken',
+        message: `Username "${data.username}" is already taken. Please choose a different username.`,
+        confirmText: 'OK',
+        onConfirm: () => {
+            document.getElementById('usernameInput').focus();
+        }
+    });
+    // Hide cancel button for this modal
+    document.querySelector('.modal-cancel').style.display = 'none';
 });
 
 socket.on('game_already_started', () => {
@@ -1264,7 +1272,10 @@ function updateTerritoryProgressBar() {
     });
 }
 
-// Update move display in UI
+/**
+ * Update move display in UI.
+ * Logs the number of moves queued and remaining moves for debugging.
+ */
 function updateMoveDisplay() {
     if (playerIndex >= 0 && gameStarted) {
         // Log queued moves for debugging (could be replaced with UI element later)
