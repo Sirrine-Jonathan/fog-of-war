@@ -606,8 +606,8 @@ export class Game {
           
           // Check for victory
           const remainingPlayers = this.state.players.filter(p => !p.eliminated);
-          if (remainingPlayers.length === 1) {
-            this.endGame(playerIndex);
+          if (remainingPlayers.length <= 1) {
+            this.endGame(remainingPlayers.length === 1 ? remainingPlayers[0].index : -1);
           }
         }
       } else {

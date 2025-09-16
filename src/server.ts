@@ -709,18 +709,35 @@ io.on('connection', (socket) => {
           gameHistory.get(gameId)!.push(completedGame);
           console.log(`   📊 Game data stored for replay/analysis`);
           
-          // Clear ALL players' socket data so they need to rejoin (including bots)
+          // Clear bot players' socket data and remove them from game
           const sockets = await io.in(gameId).fetchSockets();
           for (const playerSocket of sockets) {
             if (playerSocket.data.playerIndex !== undefined && !playerSocket.data.isViewer) {
-              console.log(`   🧹 Clearing player data for ${playerSocket.data.username}`);
-              delete playerSocket.data.playerIndex;
-              playerSocket.data.isViewer = true;
+              const player = gameState.players[playerSocket.data.playerIndex];
+              if (player?.isBot) {
+                console.log(`   🧹 Clearing bot data for ${playerSocket.data.username}`);
+                delete playerSocket.data.playerIndex;
+                playerSocket.data.isViewer = true;
+              }
             }
           }
           
-          // Reset the game state to clear player list
+          // Remove bots from game but keep human players
+          const humanPlayers = gameState.players.filter(p => !p.isBot);
+          
+          // Reset game state but preserve human players
           game.reset();
+          
+          // Re-add human players to the reset game
+          humanPlayers.forEach((player, index) => {
+            const newIndex = game.addPlayer(player.id, player.username, false);
+            // Update socket data for human players
+            const playerSocket = sockets.find(s => s.data.userId === player.id);
+            if (playerSocket) {
+              playerSocket.data.playerIndex = newIndex;
+              playerSocket.data.isViewer = false;
+            }
+          });
           console.log(`   🔄 Game state reset - players list cleared`);
           
           // Remove all bots from this room
@@ -731,8 +748,8 @@ io.on('connection', (socket) => {
           gameHosts.delete(gameId);
           console.log(`   👑 Host cleared for game ${gameId}`);
           
-          // Send updated player list (should be empty now)
-          io.to(gameId).emit('player_joined', { players: [] });
+          // Send updated player list (human players remain joined)
+          io.to(gameId).emit('player_joined', { players: game.getState().players });
           await sendGameInfo(gameId);
           
           // Assign new host after game cleanup
@@ -892,6 +909,11 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
         if (capturedSocket) {
           capturedSocket.emit('generalCaptured');
         }
+        
+        // Broadcast updated player list immediately when someone is eliminated
+        io.to(roomId || '').emit('player_joined', {
+          players: gameState.players
+        });
       }
       
       // Handle territory capture notification

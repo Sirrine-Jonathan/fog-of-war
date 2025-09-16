@@ -914,6 +914,7 @@ socket.on('game_update', (data) => {
         if (data.players) {
             console.log('game_update updating players', data);
             gameState.players = data.players;
+            players = data.players; // Also update the global players array used by UI
         }
         
         // Update turn if provided
@@ -1426,6 +1427,11 @@ function updateCamera() {
 function drawGame() {
     if (!gameState) return;
     
+    // Debug: Check viewer generals data
+    if (playerIndex < 0) {
+        console.log('Viewer generals data:', gameState.generals);
+    }
+    
     const tileSize = 35 * camera.zoom;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
@@ -1445,8 +1451,8 @@ function drawGame() {
             continue;
         }
         
-        // Check if tile is visible to current player (or show all if game ended)
-        const isVisible = playerIndex < 0 || visibleTiles.has(i) || gameEnded;
+        // Check if tile is visible to current player (or show all if game ended or viewer/eliminated)
+        const isVisible = playerIndex < 0 || isEliminated || visibleTiles.has(i) || gameEnded;
         
         if (!isVisible) {
             // Draw fog of war
@@ -1489,9 +1495,10 @@ function drawGame() {
                 ctx.fillStyle = gradient;
             } else if (terrain >= 0) { // Player owned
                 // Check if this is a general tile
-                const isGeneral = gameState.generals && Object.values(gameState.generals).includes(i);
+                const isGeneral = (gameState.generals && Object.values(gameState.generals).includes(i)) ||
+                    discoveredEnemyGenerals.has(i);
                 if (isGeneral && terrain === playerIndex) {
-                    // Player's general gets gold gradient
+                    // Player's own general gets gold gradient
                     const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
                     gradient.addColorStop(0, '#FFD700'); // Gold
                     gradient.addColorStop(0.3, '#FFF8DC'); // Cornsilk (lighter)
@@ -1499,7 +1506,7 @@ function drawGame() {
                     gradient.addColorStop(1, '#B8860B'); // Dark goldenrod
                     ctx.fillStyle = gradient;
                 } else if (isGeneral) {
-                    // Enemy generals get silver gradient
+                    // ALL other generals get silver gradient (including enemy-owned ones)
                     const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
                     gradient.addColorStop(0, '#C0C0C0'); // Silver
                     gradient.addColorStop(0.3, '#F5F5F5'); // White smoke (lighter)
@@ -1507,7 +1514,7 @@ function drawGame() {
                     gradient.addColorStop(1, '#808080'); // Gray
                     ctx.fillStyle = gradient;
                 } else {
-                    // Regular tiles use player color
+                    // Regular non-general tiles use player color
                     const baseColor = playerColors[terrain] || emptyColor;
                     // Darken tiles that have only 1 army
                     if (gameState.armies[i] === 1) {
@@ -1550,7 +1557,9 @@ function drawGame() {
             // Add shine effect for generals only (validate terrain and general data)
             const isAnyGeneral = gameState.generals && Object.values(gameState.generals).includes(i);
             const isDiscoveredEnemyGeneral = discoveredEnemyGenerals.has(i);
-            if ((isAnyGeneral || isDiscoveredEnemyGeneral) && terrain !== -2) { // Never shine mountains
+            const isEnemyGeneralTile = (gameState.generals && Object.values(gameState.generals).includes(i)) || discoveredEnemyGenerals.has(i);
+            
+            if (isEnemyGeneralTile && terrain !== -2) { // Never shine mountains
                 const isClientGeneral = terrain === playerIndex;
                 
                 if (isClientGeneral) {
@@ -1561,7 +1570,7 @@ function drawGame() {
                     ctx.fillStyle = shineGradient;
                     ctx.fillRect(x, y, tileSize, tileSize);
                 } else {
-                    // Enemy general or discovered enemy general: very strong shine with pulsing effect
+                    // Enemy generals ALWAYS get very strong shine with pulsing effect
                     const time = Date.now() * 0.003; // Slow pulse
                     const pulseIntensity = 0.8 + Math.sin(time) * 0.2; // Pulse between 0.6 and 1.0
                     
@@ -1834,7 +1843,10 @@ function showGameEndModal(winnerName, winnerIndex) {
 }
 
 canvas.addEventListener('click', (e) => {
-    if (!gameState || playerIndex < 0 || isDragging) return;
+    if (!gameState || isDragging) return;
+    
+    // Viewers can't make moves, but they can still interact with camera
+    if (playerIndex < 0) return;
     
     const rect = canvas.getBoundingClientRect();
     // Account for potential device pixel ratio scaling
