@@ -1,9 +1,11 @@
-import { GameState, Player, TILE_EMPTY, TILE_MOUNTAIN, TILE_LOOKOUT_TOWER, TILE_CITY } from './types';
+import { GameState, Player, TILE_EMPTY, TILE_MOUNTAIN, TILE_LOOKOUT_TOWER, TILE_CITY, MOVES_PER_TURN, TURN_INTERVAL_MS } from './types';
 
 export class Game {
   private state: GameState;
   private gameInterval?: NodeJS.Timeout;
   private roomId: string;
+  private turnIntervalMs: number = TURN_INTERVAL_MS;
+  private movesPerTurn: number = MOVES_PER_TURN;
 
   constructor(roomId: string) {
     this.roomId = roomId;
@@ -51,36 +53,37 @@ export class Game {
       turn: 0,
       players: [],
       gameStarted: false,
-      gameEnded: false
+      gameEnded: false,
+      playerMoves: new Map()
     };
   }
 
   addPlayer(id: string, username: string, isBot: boolean = false): number {
-    console.log(`🎮 addPlayer called: id=${id}, username=${username}, isBot=${isBot}`);
-    console.log(`   Current game state: started=${this.state.gameStarted}, players=${this.state.players.length}`);
+    
+    
     
     if (this.state.gameStarted) {
-      console.log(`❌ Cannot add player - game already started`);
+      
       return -1;
     }
     
     const playerIndex = this.state.players.length;
-    console.log(`   Assigning player index: ${playerIndex}`);
+    
     
     this.state.players.push({ id, username, index: playerIndex, isBot });
-    console.log(`   Player added to array, new length: ${this.state.players.length}`);
+    
     
     // Place general - this should always succeed with proper map size
-    console.log(`   Finding position for general...`);
+    
     const generalPos = this.findOptimalGeneralPosition();
-    console.log(`   General position found: ${generalPos}`);
+    
     
     this.state.generals[playerIndex] = generalPos;
     this.state.terrain[generalPos] = playerIndex;
     this.state.armies[generalPos] = 1;
     
-    console.log(`   General placed: generals[${playerIndex}]=${generalPos}, terrain[${generalPos}]=${playerIndex}, armies[${generalPos}]=1`);
-    console.log(`   Final state: ${this.state.players.length} players, ${this.state.generals.length} generals`);
+    
+    
     
     return playerIndex;
   }
@@ -235,19 +238,19 @@ export class Game {
       attempts++;
       if (attempts > 1000) {
         console.error('Could not find empty position after 1000 attempts');
-        console.log(`   Map stats: ${this.state.armies.length} total tiles`);
+        
         
         // Count terrain types
         const terrainCounts: { [key: number]: number } = {};
         this.state.terrain.forEach(t => {
           terrainCounts[t] = (terrainCounts[t] || 0) + 1;
         });
-        console.log(`   Terrain distribution:`, terrainCounts);
+        
         
         // Return first empty position found
         for (let i = 0; i < this.state.terrain.length; i++) {
           if (this.state.terrain[i] === TILE_EMPTY) {
-            console.log(`   Found empty position at ${i} after exhaustive search`);
+            
             return i;
           }
         }
@@ -258,13 +261,13 @@ export class Game {
   }
 
   startGame(): void {
-    console.log(`🚀 startGame called`);
-    console.log(`   Players before start: ${this.state.players.length}`);
-    console.log(`   Generals before start: ${this.state.generals.length}`);
+    
+    
+    
     
     // Log all current generals
     this.state.generals.forEach((pos, index) => {
-      console.log(`   General ${index}: position=${pos}, terrain[${pos}]=${this.state.terrain[pos]}, armies[${pos}]=${this.state.armies[pos]}`);
+      
     });
     
     if (this.roomId === 'testing') {
@@ -276,15 +279,15 @@ export class Game {
     
     this.state.gameStarted = true;
     
-    console.log(`   Game started with ${this.state.players.length} players`);
+    
     
     this.gameInterval = setInterval(() => {
       this.processTurn();
-    }, 500); // 2 moves per second
+    }, this.turnIntervalMs);
   }
 
   private createTestingLayout(): void {
-    console.log(`🧪 Creating testing layout for room: ${this.roomId}`);
+    
     
     // Clear existing terrain (keep generals)
     for (let i = 0; i < this.state.terrain.length; i++) {
@@ -347,18 +350,18 @@ export class Game {
             this.state.towerDefense[element.pos] = 40;
           }
           
-          console.log(`   ${element.name} placed at position ${element.pos}`);
+          
         }
       });
     }
     
-    console.log(`🧪 Testing layout complete: ${this.state.cities.length} cities, ${this.state.lookoutTowers.length} towers`);
+    
   }
 
   private spawnCities(): void {
     const cityCount = Math.max(1, Math.floor(this.state.players.length * 3.0));
     const MIN_CITY_DISTANCE = 8; // Cities must be at least 8 tiles apart
-    console.log(`🏙️  Spawning ${cityCount} cities with ${MIN_CITY_DISTANCE} tile separation...`);
+    
     
     const placedCities: number[] = [];
     const maxAttempts = this.state.width * this.state.height;
@@ -378,21 +381,21 @@ export class Game {
           this.state.cities.push(pos);
           this.state.terrain[pos] = TILE_CITY;
           this.state.armies[pos] = 40;
-          console.log(`   City ${placedCities.length} placed at position ${pos}`);
+          
         }
       } catch (error) {
         console.warn(`   Could not find more valid city positions after ${attempt} attempts`);
         break;
       }
     }
-    console.log(`   Cities spawned: ${this.state.cities.length}`);
+    
   }
 
   private spawnLookoutTowers(): void {
     const TOWER_SIGHT_RADIUS = 5;
     const MIN_TOWER_DISTANCE = TOWER_SIGHT_RADIUS * 2 + 1; // 11 tiles apart
     
-    console.log(`🗼 Spawning maximum lookout towers with ${MIN_TOWER_DISTANCE} tile separation...`);
+    
     
     const placedTowers: number[] = [];
     const maxAttempts = this.state.width * this.state.height;
@@ -413,7 +416,7 @@ export class Game {
           this.state.terrain[pos] = TILE_LOOKOUT_TOWER;
           this.state.towerDefense[pos] = 25;
           this.state.armies[pos] = 0;
-          console.log(`   Tower ${placedTowers.length} placed at position ${pos}`);
+          
         }
       } catch (error) {
         console.warn(`   Could not find more valid tower positions after ${attempt} attempts`);
@@ -421,13 +424,13 @@ export class Game {
       }
     }
     
-    console.log(`   Towers spawned: ${this.state.lookoutTowers.length}`);
+    
     
     // Final verification - check all generals are still intact
-    console.log(`🔍 Post-spawn verification:`);
+    
     this.state.generals.forEach((pos, index) => {
       if (pos >= 0) {
-        console.log(`   General ${index}: position=${pos}, terrain[${pos}]=${this.state.terrain[pos]}, armies[${pos}]=${this.state.armies[pos]}`);
+        
         if (this.state.terrain[pos] !== index) {
           console.error(`❌ GENERAL ${index} OVERWRITTEN! Expected terrain=${index}, got=${this.state.terrain[pos]}`);
         }
@@ -447,6 +450,9 @@ export class Game {
   private processTurn(): void {
     this.state.turn++;
     
+    // Reset move counts for all players
+    this.state.playerMoves.clear();
+    
     // Generate armies
     for (let i = 0; i < this.state.terrain.length; i++) {
       const owner = this.state.terrain[i];
@@ -464,10 +470,19 @@ export class Game {
   }
 
   attack(playerIndex: number, from: number, to: number): { success: boolean, events: string[], attackInfo?: { attackForce: number, defenderLoss: number, isPlayerVsPlayer: boolean, territoryType: string, generalCaptured?: number, territoryCaptured?: number } } {
+    // Check move limit
+    const movesUsed = this.state.playerMoves.get(playerIndex) || 0;
+    if (movesUsed >= this.movesPerTurn) {
+      return { success: false, events: [] };
+    }
+
     // Validate move
     if (!this.isValidMove(playerIndex, from, to)) {
       return { success: false, events: [] };
     }
+
+    // Increment move count
+    this.state.playerMoves.set(playerIndex, movesUsed + 1);
 
     const attackerArmies = this.state.armies[from];
     const defenderArmies = this.state.armies[to];
@@ -492,7 +507,7 @@ export class Game {
         isPlayerVsPlayer: false,
         territoryType: 'owned'
       };
-      console.log('🏠 Move to owned territory detected');
+      
     } else if (defenderOwner === TILE_EMPTY) {
       // Capture neutral territory
       if (attackForce > defenderArmies) {
@@ -512,7 +527,7 @@ export class Game {
       }
     } else if (defenderOwner === TILE_CITY) {
       // Attack city
-      console.log('🏰 Attacking city');
+      
       if (attackForce > defenderArmies) {
         this.state.terrain[to] = playerIndex;
         this.state.armies[to] = attackForce - defenderArmies;
@@ -525,7 +540,7 @@ export class Game {
           isPlayerVsPlayer: false,
           territoryType: 'city'
         };
-        console.log('🏰 City attack info set:', attackInfo);
+        
       } else {
         // City damaged but not captured - reduce defense like towers
         this.state.armies[to] = Math.max(0, defenderArmies - attackForce);
@@ -537,7 +552,7 @@ export class Game {
           isPlayerVsPlayer: false,
           territoryType: 'city'
         };
-        console.log('🏰 Failed city attack info set:', attackInfo);
+        
         return { success: false, events, attackInfo };
       }
     } else if (defenderOwner === TILE_LOOKOUT_TOWER) {
@@ -558,7 +573,7 @@ export class Game {
           isPlayerVsPlayer: false,
           territoryType: 'tower'
         };
-        console.log('🗼 Successful tower attack info set:', attackInfo);
+        
       } else {
         // Tower damaged but not captured
         this.state.towerDefense[to] = remaining;
@@ -570,12 +585,12 @@ export class Game {
           isPlayerVsPlayer: false,
           territoryType: 'tower'
         };
-        console.log('🗼 Failed tower attack info set:', attackInfo);
+        
         return { success: false, events, attackInfo };
       }
     } else if (defenderOwner >= 0 && defenderOwner !== playerIndex) {
       // Attack enemy territory
-      console.log('⚔️ Attacking enemy territory');
+      
       const remaining = defenderArmies - attackForce;
       const defenderLoss = Math.min(defenderArmies, attackForce);
       
@@ -587,7 +602,7 @@ export class Game {
         isPlayerVsPlayer: true,
         territoryType: isGeneralCapture ? 'general' : 'enemy'
       };
-      console.log('⚔️ Enemy attack info set:', attackInfo);
+      
       
       if (remaining <= 0) {
         this.state.terrain[to] = playerIndex;
@@ -622,29 +637,29 @@ export class Game {
   private isValidMove(playerIndex: number, from: number, to: number): boolean {
     // Check ownership
     if (this.state.terrain[from] !== playerIndex) {
-      console.log(`   Invalid: not owned by player ${playerIndex}, terrain[${from}] = ${this.state.terrain[from]}`);
+      
       return false;
     }
     
     // Check army count
     if (this.state.armies[from] <= 1) {
-      console.log(`   Invalid: insufficient armies, armies[${from}] = ${this.state.armies[from]}`);
+      
       return false;
     }
     
     // Check adjacency
     if (!this.isAdjacent(from, to)) {
-      console.log(`   Invalid: not adjacent, ${from} -> ${to}`);
+      
       return false;
     }
     
     // Can't attack mountains or neutral villages
     if (this.state.terrain[to] === TILE_MOUNTAIN) {
-      console.log(`   Invalid: target is mountain, terrain[${to}] = ${this.state.terrain[to]}`);
+      
       return false;
     }
     
-    console.log(`   Valid move: ${from}(${this.state.armies[from]}) -> ${to}(${this.state.armies[to]})`);
+    
     return true;
   }
 
@@ -707,6 +722,23 @@ export class Game {
       ...this.state.towerDefense,
       ...this.state.ghostTerrain
     ];
+  }
+
+  getRemainingMoves(playerIndex: number): number {
+    const movesUsed = this.state.playerMoves.get(playerIndex) || 0;
+    return Math.max(0, this.movesPerTurn - movesUsed);
+  }
+
+  setGameSettings(turnIntervalMs: number, movesPerTurn: number): void {
+    this.turnIntervalMs = Math.max(250, Math.min(1000, turnIntervalMs));
+    this.movesPerTurn = Math.max(1, Math.min(5, movesPerTurn));
+  }
+
+  getGameSettings(): { turnIntervalMs: number, movesPerTurn: number } {
+    return {
+      turnIntervalMs: this.turnIntervalMs,
+      movesPerTurn: this.movesPerTurn
+    };
   }
 
   getState(): GameState {

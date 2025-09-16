@@ -235,7 +235,7 @@ let camera = {
     x: 0,
     y: 0,
     zoom: 1,
-    minZoom: 0.5, // Will be calculated dynamically
+    minZoom: 0.2, // Increased zoom-out capability for better map overview
     maxZoom: 2,
     targetX: 0,
     targetY: 0,
@@ -458,6 +458,8 @@ let isHost = false;
 let hostSocketId = null;
 let isEliminated = false;
 let playerSocketMap = new Map(); // playerIndex -> socketId
+let movesPerTurn = 1; // Default value
+let remainingMoves = 0; // Current remaining moves
 
 // Intent-based movement system
 let activeIntent = null; // { fromTile, targetTile, path, currentStep }
@@ -601,6 +603,7 @@ function initAccordion() {
 }
 
 socket.on('game_start', (data) => {
+    console.log('🎮 game_start received:', { playerIndex: data.playerIndex, currentPlayerIndex: playerIndex });
     
     // Play game start sound
     soundManager.play('gameStart');
@@ -610,6 +613,13 @@ socket.on('game_start', (data) => {
     
     // Clear discovered state for new game
     clearState();
+    
+    // Store move limit info
+    if (data.movesPerTurn !== undefined) {
+        movesPerTurn = data.movesPerTurn;
+        remainingMoves = movesPerTurn;
+        updateMoveDisplay();
+    }
     
     if (data.mapData) {
         gameState = parseMapData(data.mapData);
@@ -627,6 +637,8 @@ socket.on('game_start', (data) => {
     playerIndex = data.playerIndex !== undefined ? data.playerIndex : -1;
     gameStarted = true;
     
+    console.log('🎮 After game_start - playerIndex:', playerIndex, 'isViewer:', playerIndex < 0);
+    
     // Hide PWA install button when game starts
     document.getElementById('installBtn').style.display = 'none';
     
@@ -637,6 +649,7 @@ socket.on('game_start', (data) => {
     stopAnimation();
     
     updateButtonVisibility(); // Update button visibility
+    updateGameSettingsVisibility(); // Update game settings visibility
 
     resizeCanvas();
     selectGeneral();
@@ -666,8 +679,27 @@ socket.on('game_info', (data) => {
         playerSocketMap = new Map(Object.entries(data.playerSocketMap));
     }
     
+    // Update game settings if provided
+    if (data.gameSettings) {
+        updateGameDetailsSettings(data.gameSettings.turnIntervalMs, data.gameSettings.movesPerTurn);
+        
+        // Update options tab values if they exist
+        const turnDurationValue = document.getElementById('turnDurationValue');
+        const turnDurationSlider = document.getElementById('turnDurationSlider');
+        const movesPerTurnValue = document.getElementById('movesPerTurnValue');
+        const movesPerTurnSlider = document.getElementById('movesPerTurnSlider');
+        
+        if (turnDurationValue) turnDurationValue.textContent = data.gameSettings.turnIntervalMs + 'ms';
+        if (turnDurationSlider) turnDurationSlider.value = data.gameSettings.turnIntervalMs;
+        if (movesPerTurnValue) movesPerTurnValue.textContent = data.gameSettings.movesPerTurn;
+        if (movesPerTurnSlider) movesPerTurnSlider.value = data.gameSettings.movesPerTurn;
+    }
+    
     // Show/hide buttons based on status
     updateButtonVisibility();
+    
+    // Update game settings visibility - ensure this happens after isHost is updated
+    setTimeout(() => updateGameSettingsVisibility(), 0);
     
     // Update player list to show/hide "Make Host" buttons
     updatePlayersList();
@@ -724,7 +756,6 @@ function updateButtonVisibility() {
     // Show start button only when there are 2+ players and user is host
     const playerCount = players ? players.length : 0;
     const canStart = isHost && !gameStarted && playerCount >= 2;
-    console.log(`Button visibility: isHost=${isHost}, gameStarted=${gameStarted}, playerCount=${playerCount}, canStart=${canStart}`);
     if (overlayStartBtn) {
         overlayStartBtn.style.opacity = canStart ? 1 : 0;
     }
@@ -742,7 +773,6 @@ socket.on('joined_as_player', (data) => {
 });
 
 socket.on('player_joined', (data) => {
-    console.log('player_joined', data);
     players = data.players;
     
     // Check if current player is eliminated
@@ -830,6 +860,17 @@ socket.on('attack_result', (data) => {
     if (data.success) {
         setSelectedTile(data.to);
         updateVisibleTiles();
+        
+        // Advance intent step only on successful moves
+        if (activeIntent && activeIntent.currentStep <= activeIntent.path.length) {
+            activeIntent.currentStep++;
+            
+            // Check if we've reached the target
+            if (activeIntent.currentStep > activeIntent.path.length) {
+                setSelectedTile(activeIntent.targetTile);
+                activeIntent = null; // Clear completed intent
+            }
+        }
     } else {
         // Keep the original tile selected on failed moves
         // selectedTile remains unchanged
@@ -838,7 +879,6 @@ socket.on('attack_result', (data) => {
     
     // Show attack/defense animations for player vs player attacks only
     if (data.attackInfo) {
-        console.log('🎯 attackInfo:', data.attackInfo);
         // Play sound based on territory type (regardless of success)
         switch (data.attackInfo.territoryType) {
             case 'neutral':
@@ -912,9 +952,14 @@ socket.on('game_update', (data) => {
         
         // Update players data if provided
         if (data.players) {
-            console.log('game_update updating players', data);
             gameState.players = data.players;
             players = data.players; // Also update the global players array used by UI
+        }
+        
+        // Update remaining moves for current player (sent as top-level property)
+        if (playerIndex >= 0 && data.remainingMoves !== undefined) {
+            remainingMoves = data.remainingMoves;
+            updateMoveDisplay();
         }
         
         // Update turn if provided
@@ -924,7 +969,6 @@ socket.on('game_update', (data) => {
             
             // Play army bonus sound on turn 25 and multiples (only once per turn)
             if (gameState.turn > 0 && gameState.turn % 25 === 0 && gameState.turn !== lastArmyBonusTurn) {
-                console.log(`🔊 Playing armyBonus sound for turn ${gameState.turn}`);
                 soundManager.play('armyBonus');
                 lastArmyBonusTurn = gameState.turn;
             }
@@ -984,15 +1028,12 @@ socket.on('game_update', (data) => {
         
         updateVisibleTiles();
         
-        // Execute intent-based movement
-        if (activeIntent && activeIntent.currentStep <= activeIntent.path.length) {
+        // Execute intent-based movement (only if player has remaining moves)
+        if (activeIntent && activeIntent.currentStep <= activeIntent.path.length && remainingMoves > 0) {
             const currentTile = activeIntent.currentStep === 0 ? activeIntent.fromTile : activeIntent.path[activeIntent.currentStep - 1];
             const nextTile = activeIntent.currentStep < activeIntent.path.length ? activeIntent.path[activeIntent.currentStep] : activeIntent.targetTile;
             
-            console.log(`[Intent] step ${activeIntent.currentStep}/${activeIntent.path.length}: from ${currentTile} to ${nextTile}, armies: ${gameState.armies[currentTile]}, adjacent: ${isAdjacent(currentTile, nextTile)}`);
-            
             if (gameState.armies[currentTile] > 1 && isAdjacent(currentTile, nextTile)) {
-                console.log(`[Intent] Executing move from ${currentTile} to ${nextTile}`);
                 
                 // Capture defense value before attack for special tiles
                 if (gameState.lookoutTowers?.includes(nextTile) || gameState.cities?.includes(nextTile)) {
@@ -1007,16 +1048,8 @@ socket.on('game_update', (data) => {
                 }
                 
                 socket.emit('attack', currentTile, nextTile);
-                activeIntent.currentStep++;
-                
-                // Check if we've reached the target
-                if (activeIntent.currentStep > activeIntent.path.length) {
-                    console.log(`Intent completed, setting target ${activeIntent.targetTile} as selected`);
-                    setSelectedTile(activeIntent.targetTile);
-                    activeIntent = null; // Clear completed intent
-                }
+                // Don't increment currentStep here - wait for attack_result to confirm success
             } else {
-                console.log(`[Intent] Failed: armies=${gameState.armies[currentTile]}, adjacent=${isAdjacent(currentTile, nextTile)}`);
                 activeIntent = null; // Clear invalid intent
             }
         }
@@ -1033,6 +1066,38 @@ socket.on('generalCaptured', () => {
 
 socket.on('territoryCaptured', () => {
     soundManager.play('territoryLost');
+});
+
+socket.on('game_settings_updated', (settings) => {
+    // Update game details for all players
+    if (settings.turnIntervalMs !== undefined) {
+        updateGameDetailsSettings(settings.turnIntervalMs, null);
+        
+        // Update options tab values if they exist
+        const turnDurationValue = document.getElementById('turnDurationValue');
+        const turnDurationSlider = document.getElementById('turnDurationSlider');
+        if (turnDurationValue) turnDurationValue.textContent = settings.turnIntervalMs + 'ms';
+        if (turnDurationSlider) turnDurationSlider.value = settings.turnIntervalMs;
+    }
+    
+    if (settings.movesPerTurn !== undefined) {
+        updateGameDetailsSettings(null, settings.movesPerTurn);
+        
+        // Update options tab values if they exist
+        const movesPerTurnValue = document.getElementById('movesPerTurnValue');
+        const movesPerTurnSlider = document.getElementById('movesPerTurnSlider');
+        if (movesPerTurnValue) movesPerTurnValue.textContent = settings.movesPerTurn;
+        if (movesPerTurnSlider) movesPerTurnSlider.value = settings.movesPerTurn;
+    }
+});
+
+socket.on('reset_vision', () => {
+    console.log('🔄 reset_vision received - clearing viewer state');
+    // Reset client-side vision state when transitioning from viewer back to player
+    isEliminated = false; // Reset elimination status
+    clearState();
+    updateVisibleTiles();
+    drawGame();
 });
 
 socket.on('game_end', (data) => {
@@ -1137,18 +1202,30 @@ function updateTerritoryProgressBar() {
     });
 }
 
+// Update move display in UI
+function updateMoveDisplay() {
+    if (playerIndex >= 0 && gameStarted) {
+        // Update any UI elements that show remaining moves
+    }
+}
+
 function updateVisibleTiles() {
     if (!gameState) return;
+    
+    console.log('👁️ updateVisibleTiles - playerIndex:', playerIndex, 'isEliminated:', isEliminated, 'isViewer:', playerIndex < 0);
     
     visibleTiles.clear();
     
     // Viewers and eliminated players see everything
     if (playerIndex < 0 || isEliminated) {
+        console.log('👁️ Showing full map (viewer or eliminated)');
         for (let i = 0; i < gameState.terrain.length; i++) {
             visibleTiles.add(i);
         }
         return;
     }
+    
+    console.log('👁️ Applying fog of war for active player');
     
     // Add discovered tiles (permanently visible)
     discoveredTiles.forEach(tile => visibleTiles.add(tile));
@@ -1307,6 +1384,12 @@ function attemptMove(fromTile, toTile) {
         return false;
     }
     
+    // Check if player has remaining moves
+    if (remainingMoves <= 0) {
+        soundManager.play('insufficientArmies'); // Same sound as insufficient armies
+        return false;
+    }
+    
     if (gameState.armies[fromTile] > 1) {
         // Capture defense value before attack for special tiles
         if (gameState.lookoutTowers?.includes(toTile) || gameState.cities?.includes(toTile)) {
@@ -1429,7 +1512,6 @@ function drawGame() {
     
     // Debug: Check viewer generals data
     if (playerIndex < 0) {
-        console.log('Viewer generals data:', gameState.generals);
     }
     
     const tileSize = 35 * camera.zoom;
@@ -1866,7 +1948,6 @@ canvas.addEventListener('click', (e) => {
     
     // Debug logging for coordinate conversion (remove in production)
     if (window.debugClicks) {
-        console.log(`Click Debug: screen(${screenX.toFixed(1)}, ${screenY.toFixed(1)}) -> world(${worldX.toFixed(1)}, ${worldY.toFixed(1)}) -> tile(${col}, ${row}) zoom=${camera.zoom.toFixed(2)}`);
     }
     
     // Bounds checking to prevent out-of-bounds tile access
@@ -1911,7 +1992,6 @@ canvas.addEventListener('click', (e) => {
                         path: path,
                         currentStep: 0
                     };
-                    console.log(`Created intent from ${selectedTile} to ${tileIndex}, path: [${path.join(', ')}]`);
                 }
             }
         }
@@ -2268,7 +2348,6 @@ function handleTouchTap(x, y, isActivationOnly) {
                         path: path,
                         currentStep: 0
                     };
-                    console.log(`Created intent from ${selectedTile} to ${tileIndex}, path: [${path.join(', ')}]`);
                 }
             }
         }
@@ -2360,7 +2439,6 @@ function calculatePlayerStats() {
 }
 
 function updatePlayersList() {
-    console.log('updatePlayersList', { players });
     const playersDiv = document.getElementById('players');
     const playersList = document.querySelector('.players-list');
     playersDiv.innerHTML = '';
@@ -2476,7 +2554,6 @@ function updatePlayersList() {
         if (isHost && !gameStarted) {
             const actionsCell = document.createElement('td');
             if (player.isBot) {
-                console.log('bot player', player);
                 const kickBtn = document.createElement('button');
                 kickBtn.textContent = 'Kick';
                 kickBtn.className = 'transfer-btn kick-bot-btn';
@@ -2742,13 +2819,11 @@ function copyGameUrl() {
 }
 
 function inviteBot(botType) {
-    console.log(`Inviting bot of type: ${botType}`);
     socket.emit('invite_bot', roomId, botType);
 }
 
 // Bot invite result handlers
 socket.on('bot_invite_result', (message) => {
-    console.log('Bot invite result:', message);
     if (!message.includes('already in room')) {
         showToast(message, 'success');
     }
@@ -2764,11 +2839,52 @@ socket.on('end_game_error', (error) => {
     showToast(`Cannot end game: ${error}`, 'error');
 });
 
+// Track cycling state for space bar
+let cycleIndex = 0;
+
 function selectGeneral() {
     const generalPos = gameState.generals[playerIndex];
     if (generalPos >= 0) {
         setSelectedTile(generalPos);
     }
+}
+
+function cycleOwnedTiles() {
+    if (!gameState || playerIndex < 0) return;
+    
+    // Get all owned tiles (general, cities, captured enemy generals)
+    const ownedTiles = [];
+    
+    // Add player's own general
+    const playerGeneral = gameState.generals[playerIndex];
+    if (playerGeneral >= 0) {
+        ownedTiles.push(playerGeneral);
+    }
+    
+    // Add owned cities
+    if (gameState.cities) {
+        gameState.cities.forEach(cityPos => {
+            if (gameState.terrain[cityPos] === playerIndex) {
+                ownedTiles.push(cityPos);
+            }
+        });
+    }
+    
+    // Add captured enemy generals
+    if (gameState.generals) {
+        gameState.generals.forEach((generalPos, index) => {
+            if (index !== playerIndex && generalPos >= 0 && gameState.terrain[generalPos] === playerIndex) {
+                ownedTiles.push(generalPos);
+            }
+        });
+    }
+    
+    if (ownedTiles.length === 0) return;
+    
+    // Cycle through owned tiles
+    cycleIndex = cycleIndex % ownedTiles.length;
+    setSelectedTile(ownedTiles[cycleIndex]);
+    cycleIndex = (cycleIndex + 1) % ownedTiles.length;
 }
 
 // Make canvas focusable
@@ -2784,10 +2900,10 @@ document.addEventListener('keydown', (e) => {
         canvas.style.cursor = 'grab';
     }
     
-    // Spacebar: Make general the active tile
+    // Spacebar: Cycle through owned tiles (general, cities, captured generals)
     if (e.key === ' ' || e.key === 'Spacebar') {
         if (gameState && playerIndex >= 0) {
-            selectGeneral();
+            cycleOwnedTiles();
             e.preventDefault();
             e.stopPropagation();
             return;
@@ -3071,6 +3187,33 @@ function initializeOptionsTab() {
     const soundToggle = document.getElementById('soundToggle');
     soundToggle.checked = optionsManager.get('sound');
     
+    // Update game settings visibility and state
+    updateGameSettingsVisibility();
+    
+    // Initialize game settings sliders
+    const turnDurationSlider = document.getElementById('turnDurationSlider');
+    const movesPerTurnSlider = document.getElementById('movesPerTurnSlider');
+    const turnDurationValue = document.getElementById('turnDurationValue');
+    const movesPerTurnValue = document.getElementById('movesPerTurnValue');
+    
+    if (turnDurationSlider) {
+        turnDurationSlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            turnDurationValue.textContent = value + 'ms';
+            updateGameDetailsSettings(value, null);
+            socket.emit('update_game_settings', roomId, { turnIntervalMs: value });
+        });
+    }
+    
+    if (movesPerTurnSlider) {
+        movesPerTurnSlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            movesPerTurnValue.textContent = value;
+            updateGameDetailsSettings(null, value);
+            socket.emit('update_game_settings', roomId, { movesPerTurn: value });
+        });
+    }
+    
     // Initialize granular sound checkboxes
     const soundOptions = optionsManager.get('sounds');
     document.querySelectorAll('[data-sound]').forEach(checkbox => {
@@ -3089,6 +3232,38 @@ function initializeOptionsTab() {
     });
     
     updateGranularSoundControls();
+}
+
+function updateGameDetailsSettings(turnDuration, movesPerTurn) {
+    if (turnDuration !== null) {
+        const gameDetailsTurnDuration = document.getElementById('gameDetailsTurnDuration');
+        if (gameDetailsTurnDuration) {
+            gameDetailsTurnDuration.textContent = turnDuration + 'ms';
+        }
+    }
+    
+    if (movesPerTurn !== null) {
+        const gameDetailsMovesPerTurn = document.getElementById('gameDetailsMovesPerTurn');
+        if (gameDetailsMovesPerTurn) {
+            gameDetailsMovesPerTurn.textContent = movesPerTurn;
+        }
+    }
+}
+
+function updateGameSettingsVisibility() {
+    const gameSettingsSection = document.getElementById('gameSettingsSection');
+    const turnDurationSlider = document.getElementById('turnDurationSlider');
+    const movesPerTurnSlider = document.getElementById('movesPerTurnSlider');
+    
+    if (gameSettingsSection) {
+        // Show only for host
+        gameSettingsSection.style.display = isHost ? 'block' : 'none';
+        
+        // Disable during active games
+        const isGameActive = gameStarted && !gameEnded;
+        if (turnDurationSlider) turnDurationSlider.disabled = isGameActive;
+        if (movesPerTurnSlider) movesPerTurnSlider.disabled = isGameActive;
+    }
 }
 
 function updateGranularSoundControls() {

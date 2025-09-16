@@ -16,15 +16,15 @@ npm install
 npm run dev
 ```
 
-Server runs on http://localhost:3001
+Server runs on http://localhost:5173
 
 ## Usage
 
 ### For Bots
-Update your bot to connect to `http://localhost:3001`.
+Update your bot to connect to `http://localhost:5173`.
 
 ### For Human Players
-1. Visit `http://localhost:3001/game/your-room-name`
+1. Visit `http://localhost:5173/game/your-room-name`
 
 ### Game Controls
 
