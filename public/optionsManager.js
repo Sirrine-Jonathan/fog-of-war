@@ -22,7 +22,8 @@ class OptionsManager {
                 generalLost: true,
                 territoryLost: true,
                 armyBonus: true,
-                gameStart: true
+                gameStart: true,
+                cycleTiles: true
             }
         };
         

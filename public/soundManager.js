@@ -57,6 +57,8 @@ class SoundManager {
         this.loadSound('armyBonus', '/sounds/89380__zimbot__lettuce_frozen2_multibreak.wav');
         // Load game start sound
         this.loadSound('gameStart', '/sounds/791034__janalvent__1-i-5-808.mp3');
+        // Load spacebar cycle sound
+        this.loadSound('cycleTiles', '/sounds/692836__mechwarreir2__laser-fx.wav');
     }
 
     loadSound(name, path) {

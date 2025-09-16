@@ -464,6 +464,8 @@ let remainingMoves = 0; // Current remaining moves
 // Intent-based movement system
 let activeIntent = null; // { fromTile, targetTile, path, currentStep }
 let moveQueue = []; // Queue of relative directions: 'up', 'down', 'left', 'right'
+let lastInputTime = 0;
+let inputDebounceMs = 50; // Minimum time between inputs
 
 // Get room ID from URL
 const roomId = window.location.pathname.split('/').pop();
@@ -1052,18 +1054,22 @@ socket.on('game_update', (data) => {
             console.log(`[QUEUE] Dequeued move: ${queuedMove.fromTile} -> ${queuedMove.toTile}`);
             console.log(`[QUEUE] Queue after dequeue: [${moveQueue.map(m => `${m.fromTile}->${m.toTile}`).join(', ')}] (length: ${moveQueue.length})`);
             
-            // Validate the move is still valid
+            // More conservative validation - check both armies and visibility
             const hasArmies = gameState.armies[queuedMove.fromTile] > 1;
             const isVisible = visibleTiles.has(queuedMove.toTile);
-            console.log(`[QUEUE] Validation: armies=${gameState.armies[queuedMove.fromTile]} (>1: ${hasArmies}), visible=${isVisible}`);
+            const isAdjacent = Math.abs(queuedMove.fromTile - queuedMove.toTile) === 1 || 
+                              Math.abs(queuedMove.fromTile - queuedMove.toTile) === gameState.width;
             
-            if (hasArmies && isVisible) {
+            console.log(`[QUEUE] Validation: armies=${gameState.armies[queuedMove.fromTile]} (>1: ${hasArmies}), visible=${isVisible}, adjacent=${isAdjacent}`);
+            
+            if (hasArmies && isVisible && isAdjacent) {
                 console.log(`[QUEUE] EXECUTING QUEUED MOVE: ${queuedMove.fromTile} -> ${queuedMove.toTile}`);
                 executeMove(queuedMove.fromTile, queuedMove.toTile);
                 updateQueuedPath();
                 console.log(`[QUEUE] Queued move execution complete`);
             } else {
-                console.log(`[QUEUE] QUEUED MOVE INVALID: armies=${gameState.armies[queuedMove.fromTile]}, visible=${isVisible}`);
+                console.log(`[QUEUE] QUEUED MOVE INVALID: armies=${gameState.armies[queuedMove.fromTile]}, visible=${isVisible}, adjacent=${isAdjacent}`);
+                // Don't retry invalid moves - just drop them
                 updateQueuedPath();
             }
         }
@@ -1436,6 +1442,14 @@ function isAdjacentToMountain(tileIndex) {
 }
 
 function attemptMove(fromTile, toTile) {
+    // Debounce rapid input to prevent overwhelming the system
+    const now = Date.now();
+    if (now - lastInputTime < inputDebounceMs) {
+        console.log(`[QUEUE] Input debounced (${now - lastInputTime}ms < ${inputDebounceMs}ms)`);
+        return false;
+    }
+    lastInputTime = now;
+    
     console.log(`[QUEUE] attemptMove START: ${fromTile} -> ${toTile}`);
     console.log(`[QUEUE] attemptMove state: remainingMoves=${remainingMoves}, queueLength=${moveQueue.length}, selectedTile=${selectedTile}`);
     
@@ -3144,6 +3158,7 @@ function cycleOwnedTiles() {
     // Cycle through owned tiles
     cycleIndex = cycleIndex % ownedTiles.length;
     setSelectedTile(ownedTiles[cycleIndex]);
+    soundManager.play('cycleTiles');
     cycleIndex = (cycleIndex + 1) % ownedTiles.length;
 }
 
@@ -3468,11 +3483,23 @@ function initializeOptionsTab() {
     // Initialize game settings sliders
     const turnDurationSlider = document.getElementById('turnDurationSlider');
     const turnDurationValue = document.getElementById('turnDurationValue');
+    const turnDurationWarning = document.getElementById('turnDurationWarning');
     
     if (turnDurationSlider) {
+        // Function to update warning visibility
+        const updateWarning = (value) => {
+            if (turnDurationWarning) {
+                turnDurationWarning.style.display = value < 500 ? 'block' : 'none';
+            }
+        };
+        
+        // Check initial value
+        updateWarning(parseInt(turnDurationSlider.value));
+        
         turnDurationSlider.addEventListener('input', (e) => {
             const value = parseInt(e.target.value);
             turnDurationValue.textContent = value + 'ms';
+            updateWarning(value);
             updateGameDetailsSettings(value);
             socket.emit('update_game_settings', roomId, { turnIntervalMs: value });
         });

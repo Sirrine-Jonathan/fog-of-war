@@ -126,3 +126,12 @@
 		<a href="https://freesound.org/people/zimbot/sounds/89380/">Lettuce_Frozen2_Multibreak.wav</a> by <a href="https://freesound.org/people/zimbot/">zimbot</a> | License: <a href="https://creativecommons.org/licenses/by/4.0/">Attribution 4.0</a>
 		JSON:
 		{"sound_url": "https://freesound.org/people/zimbot/sounds/89380/", "sound_name": "Lettuce_Frozen2_Multibreak.wav", "author_url": "https://freesound.org/people/zimbot/", "author_name": "zimbot", "license_url": "https://creativecommons.org/licenses/by/4.0/", "license_name": "Attribution 4.0"}
+- space bar press when the user is toggling through their general and cities
+		692836__mechwarreir2__laser-fx.wav
+		Attribution:
+		Plain text:
+		Laser fx by mechwarreir2 -- https://freesound.org/s/692836/ -- License: Creative Commons 0
+		HTML:
+		<a href="https://freesound.org/people/mechwarreir2/sounds/692836/">Laser fx</a> by <a href="https://freesound.org/people/mechwarreir2/">mechwarreir2</a> | License: <a href="http://creativecommons.org/publicdomain/zero/1.0/">Creative Commons 0</a>
+		JSON:
+		{"sound_url": "https://freesound.org/people/mechwarreir2/sounds/692836/", "sound_name": "Laser fx", "author_url": "https://freesound.org/people/mechwarreir2/", "author_name": "mechwarreir2", "license_url": "http://creativecommons.org/publicdomain/zero/1.0/", "license_name": "Creative Commons 0"}

@@ -274,8 +274,10 @@
                           move
                         </li>
                         <li>
-                          <strong>Home:</strong> Press the space bar to activate
-                          your base tile
+                          <strong>Move Queue:</strong> Multiple moves are queued and executed automatically each turn
+                        </li>
+                        <li>
+                          <strong>Cycle Tiles:</strong> Press the space bar to cycle through your general, cities, and captured enemy generals
                         </li>
                         <li>
                           <strong>Map:</strong> Shift+drag to pan, scroll to
@@ -508,6 +510,9 @@
                     step="50"
                     value="200"
                   />
+                  <div id="turnDurationWarning" class="warning-note" style="display: none;">
+                    Move queueing system is less reliable at turn durations below 500ms
+                  </div>
                 </div>
               </div>
 

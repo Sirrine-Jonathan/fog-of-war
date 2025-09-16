@@ -27,13 +27,14 @@ TILE_CITY = -6          // High-value capture target
 
 ### Map Data Format
 ```javascript
-[width, height, ...armies, ...terrain, ...towerDefense]
+[width, height, ...armies, ...terrain, ...towerDefense, ...ghostTerrain]
 ```
 
 - **width/height**: Map dimensions
 - **armies**: Army count per tile (900 values)
 - **terrain**: Tile ownership/type (900 values)
 - **towerDefense**: Tower defense values (900 values, 0 for non-towers)
+- **ghostTerrain**: Tracks eliminated player territories (900 values, player index for ghost tiles, TILE_EMPTY otherwise)
 
 ## Game Initialization
 
@@ -52,14 +53,15 @@ TILE_CITY = -6          // High-value capture target
 
 ### Structure Spawning (Game Start)
 - **Cities**: `players.length * 3` cities, ≥8 tiles apart, 40 armies each
-- **Towers**: Maximum possible, ≥11 tiles apart, 25 defense each
+- **Towers**: Maximum possible, ≥11 tiles apart, 25 defense each (40 in testing layout)
 
 ## Game Mechanics
 
 ### Turn System
 - 500ms per turn (2 turns/second)
+- **Each player may make at most 1 move per turn** (configurable, default is 1)
 - Turn counter increments each cycle
-- All player moves processed simultaneously
+- All player moves processed in order, up to their move limit per turn
 
 ### Army Generation
 - **Generals**: +1 army every turn
@@ -124,6 +126,14 @@ if (attackingArmies > towerDefense) {
 }
 ```
 
+### Elimination and Ghost Territory
+- When a player's general is captured, they are eliminated:
+  - All player territory becomes neutral (TILE_EMPTY)
+  - Army counts on their former territory are halved
+  - ghostTerrain records the eliminated player's index for those tiles
+  - General position set to -1
+  - Player marked as eliminated
+
 ### Victory Conditions
 - Game ends when only 1 player remains (others eliminated)
 - Player eliminated when their general is captured
@@ -131,6 +141,13 @@ if (attackingArmies > towerDefense) {
   - All player territory becomes neutral
   - Army counts halved
   - General position set to -1
+- Game end is broadcast as `game_won` event
+
+## Game Settings
+
+- Host may configure:
+  - `turnIntervalMs`: Turn duration (default 500ms, min 250ms, max 1000ms)
+  - `movesPerTurn`: Moves allowed per player per turn (default 1, min 1, max 5)
 
 ## Network Protocol
 
@@ -148,25 +165,46 @@ socket.emit('join_private', roomId, userId);
 // Game starts
 socket.on('game_start', (data) => {
     // data.playerIndex: your player number
+    // data.movesPerTurn: moves allowed per turn
+    // data.mapData: initial map data
 });
 
 // Game state updates
 socket.on('game_update', (data) => {
     // data.map_diff: differential map update
     // data.cities_diff: differential cities update  
+    // data.lookoutTowers_diff: differential towers update
     // data.turn: current turn number
-    // data.generals: visible general positions
+    // data.generals: visible general positions (personalized by fog of war)
+    // data.players: player list
+    // data.remainingMoves: moves left this turn
 });
 
 // Game ends
-socket.on('game_end', (data) => {
-    // data.winner: winning player info
+socket.on('game_won', (data) => {
+    // data.winner: winning player index
 });
 
 // Player list changes
-socket.on('players_update', (players) => {
-    // Array of player objects
+socket.on('player_joined', (data) => {
+    // data.players: Array of player objects
 });
+
+// Attack result
+socket.on('attack_result', (data) => {
+    // data.from, data.to, data.success, data.attackInfo
+});
+
+// General/territory capture notifications
+socket.on('generalCaptured', () => { /* ... */ });
+socket.on('territoryCaptured', () => { /* ... */ });
+
+// System messages
+socket.on('chat_message', (data) => { /* ... */ });
+
+// Game info/settings
+socket.on('game_info', (data) => { /* ... */ });
+socket.on('game_settings_updated', (data) => { /* ... */ });
 ```
 
 #### Outgoing Events
@@ -176,6 +214,16 @@ socket.emit('attack', fromTileIndex, toTileIndex);
 
 // Set force start (host only)
 socket.emit('set_force_start', roomId, true);
+
+// Invite bot (host only)
+socket.emit('invite_bot', roomId, botType);
+
+// Abandon/leave game
+socket.emit('abandon_game', roomId, userId);
+socket.emit('leave_game', roomId, userId);
+
+// Update game settings (host only)
+socket.emit('update_game_settings', roomId, { turnIntervalMs, movesPerTurn });
 ```
 
 ### Differential Updates
@@ -199,7 +247,7 @@ function patch(oldArray, diffArray) {
 ### Fog of War Rules
 - Players see only their own territory + adjacent tiles
 - Cities provide 2-tile vision radius when owned
-- Towers provide 3-tile vision radius when owned
+- **Lookout towers provide 5-tile vision radius when owned**
 - Discovered tiles remain visible permanently
 - Enemy generals visible only when in vision range
 
@@ -407,7 +455,9 @@ function chebyshevDistance(pos1, pos2, width) {
 3. **Invalid army counts** (must leave 1 army behind)
 4. **Mountain pathfinding** (mountains block movement)
 5. **Vision assumptions** (fog of war limits visibility)
+6. **Move limit per turn** (bots must not exceed allowed moves)
+7. **Ghost territory handling** (eliminated player tiles become neutral, armies halved, ghostTerrain updated)
 
 ---
 
-*This specification is authoritative for tournament play and bot development. Version 1.0 - Generated from game server analysis.*
+*This specification is authoritative for tournament play and bot development. Version 1.1 - Updated to reflect current game server implementation (1 move per turn, ghost territory, updated socket events, and other changes).*
