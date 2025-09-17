@@ -26,16 +26,22 @@ const SOUNDS = [
     attribution: `Dull Hurray by JelloApocalypse -- https://freesound.org/s/802629/ -- License: Attribution NonCommercial 4.0`,
     html: `<a href="https://freesound.org/people/JelloApocalypse/sounds/802629/">Dull Hurray</a> by <a href="https://freesound.org/people/JelloApocalypse/">JelloApocalypse</a> | License: <a href="https://creativecommons.org/licenses/by-nc/4.0/">Attribution NonCommercial 4.0</a>`
   },
-  {
-    src: "public/sounds/323697__reitanna__clear-throat7.wav",
-    attribution: `clear throat7.wav by Reitanna -- https://freesound.org/s/323697/ -- License: Creative Commons 0`,
-    html: `<a href="https://freesound.org/people/Reitanna/sounds/323697/">clear throat7.wav</a> by <a href="https://freesound.org/people/Reitanna/">Reitanna</a> | License: <a href="http://creativecommons.org/publicdomain/zero/1.0/">Creative Commons 0</a>`
-  },
+  // {
+  //   src: "public/sounds/323697__reitanna__clear-throat7.wav",
+  //   attribution: `clear throat7.wav by Reitanna -- https://freesound.org/s/323697/ -- License: Creative Commons 0`,
+  //   html: `<a href="https://freesound.org/people/Reitanna/sounds/323697/">clear throat7.wav</a> by <a href="https://freesound.org/people/Reitanna/">Reitanna</a> | License: <a href="http://creativecommons.org/publicdomain/zero/1.0/">Creative Commons 0</a>`
+  // },
 ];
 
+/* 
+  Doing the count tracking, reset number, and reset to number
+  makes it easier to switch to letting the last sound play multiple times
+  cause I may change it to do that at times, idk.
+*/
 const KONAMI_SOUND_STORAGE_KEY = 'fog_of_war_konami_sounds_played';
 const KONAMI_COUNT_STORAGE_KEY = 'fog_of_war_konami_count';
-const KONAMI_RESET_NUMBER = 3;
+const KONAMI_RESET_NUMBER = SOUNDS.length;
+const KONAMI_RESET_TO_NUMBER = SOUNDS.length - 1;
 
 // Track played Konami sounds in localStorage
 function getPlayedKonamiSounds() {
@@ -120,7 +126,7 @@ let konamiIndex = 0;
 function playKonamiSound() {
   let konamiCount = getCurrentKonamiCount();
   if (konamiCount >= KONAMI_RESET_NUMBER) {
-    konamiCount = 0;
+    konamiCount = KONAMI_RESET_TO_NUMBER;
     setCurrentKonamiCount(konamiCount);
   }
   let soundIdx = konamiCount < 3 ? konamiCount : 2;
