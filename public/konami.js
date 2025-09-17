@@ -19,12 +19,12 @@ const SOUNDS = [
   {
     src: "public/sounds/783009__iceofdoom__hurray-excited-male.wav",
     attribution: `"Hurray!" - Excited Male by Iceofdoom -- https://freesound.org/s/783009/ -- License: Attribution 4.0`,
-    html: `<a href="https://freesound.org/people/Iceofdoom/sounds/783009/">"Hurray!" - Excited Male</a> by <a href="https://freesound.org/people/Iceofdoom/">Iceofdoom</a> | License: <a href="https://creativecommons.org/licenses/by/4.0/">Attribution 4.0</a>`
+    html: `<a href="https://freesound.org/people/Iceofdoom/sounds/783009/">"Hurray!" - Excited Male</a> by <a href="https://freesound.org/people/Iceofdoom/">Iceofdoom</a> | License: <a href="https://creativecommons.org/licenses/by/4.0/">Attribution 4.0</a>`,
   },
   {
     src: "public/sounds/802629__jelloapocalypse__dull-hurray.mp3",
     attribution: `Dull Hurray by JelloApocalypse -- https://freesound.org/s/802629/ -- License: Attribution NonCommercial 4.0`,
-    html: `<a href="https://freesound.org/people/JelloApocalypse/sounds/802629/">Dull Hurray</a> by <a href="https://freesound.org/people/JelloApocalypse/">JelloApocalypse</a> | License: <a href="https://creativecommons.org/licenses/by-nc/4.0/">Attribution NonCommercial 4.0</a>`
+    html: `<a href="https://freesound.org/people/JelloApocalypse/sounds/802629/">Dull Hurray</a> by <a href="https://freesound.org/people/JelloApocalypse/">JelloApocalypse</a> | License: <a href="https://creativecommons.org/licenses/by-nc/4.0/">Attribution NonCommercial 4.0</a>`,
   },
   // {
   //   src: "public/sounds/323697__reitanna__clear-throat7.wav",
@@ -38,8 +38,8 @@ const SOUNDS = [
   makes it easier to switch to letting the last sound play multiple times
   cause I may change it to do that at times, idk.
 */
-const KONAMI_SOUND_STORAGE_KEY = 'fog_of_war_konami_sounds_played';
-const KONAMI_COUNT_STORAGE_KEY = 'fog_of_war_konami_count';
+const KONAMI_SOUND_STORAGE_KEY = "fog_of_war_konami_sounds_played";
+const KONAMI_COUNT_STORAGE_KEY = "fog_of_war_konami_count";
 const KONAMI_RESET_NUMBER = SOUNDS.length;
 const KONAMI_RESET_TO_NUMBER = SOUNDS.length - 1;
 
@@ -72,15 +72,15 @@ function setCurrentKonamiCount(count) {
   localStorage.setItem(KONAMI_COUNT_STORAGE_KEY, JSON.stringify(count));
 }
 
-
-
 function updateKonamiAttributions() {
   const played = getPlayedKonamiSounds(); // e.g. ["konami1", "konami2"]
   const ul = document.getElementById("sound-credit-list");
   if (!ul) return;
 
   // Remove all existing konami-credit <li>
-  Array.from(ul.querySelectorAll("li.konami-credit")).forEach(li => li.remove());
+  Array.from(ul.querySelectorAll("li.konami-credit")).forEach((li) =>
+    li.remove(),
+  );
 
   // Find the last regular sound-credit <li>
   const allLis = Array.from(ul.querySelectorAll("li.sound-credit"));
@@ -94,7 +94,7 @@ function updateKonamiAttributions() {
 
   // Insert konami attributions in played order (first played at top)
   let insertAfter = lastRegular;
-  played.forEach(soundKey => {
+  played.forEach((soundKey) => {
     const idx = parseInt(soundKey.replace("konami", "")) - 1;
     const sound = SOUNDS[idx];
     if (!sound) return;
@@ -115,7 +115,10 @@ function updateKonamiAttributions() {
 }
 
 // On page load, update attributions if present
-if (document.readyState === "complete" || document.readyState === "interactive") {
+if (
+  document.readyState === "complete" ||
+  document.readyState === "interactive"
+) {
   setTimeout(updateKonamiAttributions, 0);
 } else {
   window.addEventListener("DOMContentLoaded", updateKonamiAttributions);
