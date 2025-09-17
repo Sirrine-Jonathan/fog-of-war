@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <title>Fog of War</title>
@@ -274,10 +274,13 @@
                           move
                         </li>
                         <li>
-                          <strong>Move Queue:</strong> Multiple moves are queued and executed automatically each turn
+                          <strong>Move Queue:</strong> Multiple moves are queued
+                          and executed automatically each turn
                         </li>
                         <li>
-                          <strong>Cycle Tiles:</strong> Press the space bar to cycle through your general, cities, and captured enemy generals
+                          <strong>Cycle Tiles:</strong> Press the space bar to
+                          cycle through your general, cities, and captured enemy
+                          generals
                         </li>
                         <li>
                           <strong>Map:</strong> Shift+drag to pan, scroll to
@@ -413,72 +416,72 @@
               </div>
 
               <div class="info">
-              <div
-                id="gameEndNotification"
-                style="
-                  display: none;
-                  background: #f0f8ff;
-                  border: 2px solid #4caf50;
-                  padding: 15px;
-                  margin: 10px 0;
-                  border-radius: 5px;
-                  text-align: center;
-                "
-              >
                 <div
-                  id="gameEndText"
+                  id="gameEndNotification"
                   style="
-                    font-weight: bold;
-                    font-size: 18px;
-                    margin-bottom: 10px;
+                    display: none;
+                    background: #f0f8ff;
+                    border: 2px solid #4caf50;
+                    padding: 15px;
+                    margin: 10px 0;
+                    border-radius: 5px;
+                    text-align: center;
                   "
-                ></div>
-                <div style="font-size: 14px; color: #666">
-                  Game has ended. Players can rejoin for the next game.
+                >
+                  <div
+                    id="gameEndText"
+                    style="
+                      font-weight: bold;
+                      font-size: 18px;
+                      margin-bottom: 10px;
+                    "
+                  ></div>
+                  <div style="font-size: 14px; color: #666">
+                    Game has ended. Players can rejoin for the next game.
+                  </div>
+                </div>
+                <div class="players-list empty">
+                  <h4 style="margin-top: 0; color: #333">Players & Stats</h4>
+                  <div id="players"></div>
+                  <ul id="playersMobile" class="players-mobile-list"></ul>
                 </div>
               </div>
-              <div class="players-list empty">
-                <h4 style="margin-top: 0; color: #333">Players & Stats</h4>
-                <div id="players"></div>
-                <ul id="playersMobile" class="players-mobile-list"></ul>
-              </div>
-            </div>
 
-            <div class="info">
-              <div id="joinControls">
-                <input
-                  type="text"
-                  id="usernameInput"
-                  placeholder="Enter your username"
-                />
-                <button id="joinBtn" class="btn">Join</button>
-                <button id="leaveBtn" class="btn" style="display: none">
-                  Leave Game
+              <div class="info">
+                <div id="joinControls">
+                  <input
+                    type="text"
+                    id="usernameInput"
+                    placeholder="Enter your username"
+                  />
+                  <button id="joinBtn" class="btn">Join</button>
+                  <button id="leaveBtn" class="btn" style="display: none">
+                    Leave Game
+                  </button>
+                </div>
+                <button
+                  id="abandonBtn"
+                  class="btn"
+                  style="
+                    display: none;
+                    background: #dc3545;
+                    border-color: #dc3545;
+                  "
+                >
+                  Abandon Game
+                </button>
+                <button
+                  id="endBotGameBtn"
+                  class="btn"
+                  style="
+                    display: none;
+                    background: #ff9800;
+                    border-color: #ff9800;
+                  "
+                >
+                  End Bot Game
                 </button>
               </div>
-              <button
-                id="abandonBtn"
-                class="btn"
-                style="
-                  display: none;
-                  background: #dc3545;
-                  border-color: #dc3545;
-                "
-              >
-                Abandon Game
-              </button>
-              <button
-                id="endBotGameBtn"
-                class="btn"
-                style="
-                  display: none;
-                  background: #ff9800;
-                  border-color: #ff9800;
-                "
-              >
-                End Bot Game
-              </button>
-            </div>
             </div>
 
             <div id="chatTab" class="sidebar-tab-content">
@@ -493,7 +496,11 @@
             </div>
 
             <div id="optionsTab" class="sidebar-tab-content">
-              <div class="options-section" id="gameSettingsSection" style="display: none;">
+              <div
+                class="options-section"
+                id="gameSettingsSection"
+                style="display: none"
+              >
                 <h3>Game Settings</h3>
                 <div class="option-item">
                   <label class="option-label">
@@ -510,9 +517,6 @@
                     step="50"
                     value="200"
                   />
-                  <div id="turnDurationWarning" class="warning-note" style="display: none;">
-                    Move queueing system is less reliable at turn durations below 500ms
-                  </div>
                 </div>
               </div>
 
@@ -541,61 +545,117 @@
 
                   <div class="sound-options">
                     <label class="sound-option">
-                      <input type="checkbox" id="sound-captureUnowned" data-sound="captureUnowned" />
+                      <input
+                        type="checkbox"
+                        id="sound-captureUnowned"
+                        data-sound="captureUnowned"
+                      />
                       <span>Capture Territory</span>
                     </label>
                     <label class="sound-option">
-                      <input type="checkbox" id="sound-moveToOwned" data-sound="moveToOwned" />
+                      <input
+                        type="checkbox"
+                        id="sound-moveToOwned"
+                        data-sound="moveToOwned"
+                      />
                       <span>Move to Own Territory</span>
                     </label>
                     <label class="sound-option">
-                      <input type="checkbox" id="sound-mountainAdjacent" data-sound="mountainAdjacent" />
+                      <input
+                        type="checkbox"
+                        id="sound-mountainAdjacent"
+                        data-sound="mountainAdjacent"
+                      />
                       <span>Attack Mountain (Error)</span>
                     </label>
                     <label class="sound-option">
-                      <input type="checkbox" id="sound-insufficientArmies" data-sound="insufficientArmies" />
+                      <input
+                        type="checkbox"
+                        id="sound-insufficientArmies"
+                        data-sound="insufficientArmies"
+                      />
                       <span>Insufficient Armies (Error)</span>
                     </label>
                     <label class="sound-option">
-                      <input type="checkbox" id="sound-attackSpecial" data-sound="attackSpecial" />
+                      <input
+                        type="checkbox"
+                        id="sound-attackSpecial"
+                        data-sound="attackSpecial"
+                      />
                       <span>Attack City/Tower</span>
                     </label>
                     <label class="sound-option">
-                      <input type="checkbox" id="sound-captureSpecial" data-sound="captureSpecial" />
+                      <input
+                        type="checkbox"
+                        id="sound-captureSpecial"
+                        data-sound="captureSpecial"
+                      />
                       <span>Capture City/Tower</span>
                     </label>
                     <label class="sound-option">
-                      <input type="checkbox" id="sound-attackEnemy" data-sound="attackEnemy" />
+                      <input
+                        type="checkbox"
+                        id="sound-attackEnemy"
+                        data-sound="attackEnemy"
+                      />
                       <span>Attack Enemy</span>
                     </label>
                     <label class="sound-option">
-                      <input type="checkbox" id="sound-attackGeneral" data-sound="attackGeneral" />
+                      <input
+                        type="checkbox"
+                        id="sound-attackGeneral"
+                        data-sound="attackGeneral"
+                      />
                       <span>Attack General</span>
                     </label>
                     <label class="sound-option">
-                      <input type="checkbox" id="sound-captureGeneral" data-sound="captureGeneral" />
+                      <input
+                        type="checkbox"
+                        id="sound-captureGeneral"
+                        data-sound="captureGeneral"
+                      />
                       <span>Capture General</span>
                     </label>
                     <label class="sound-option">
-                      <input type="checkbox" id="sound-generalLost" data-sound="generalLost" />
+                      <input
+                        type="checkbox"
+                        id="sound-generalLost"
+                        data-sound="generalLost"
+                      />
                       <span>Your General Captured</span>
                     </label>
                     <label class="sound-option">
-                      <input type="checkbox" id="sound-territoryLost" data-sound="territoryLost" />
+                      <input
+                        type="checkbox"
+                        id="sound-territoryLost"
+                        data-sound="territoryLost"
+                      />
                       <span>Your Territory Captured</span>
                     </label>
                     <label class="sound-option">
-                      <input type="checkbox" id="sound-armyBonus" data-sound="armyBonus" />
+                      <input
+                        type="checkbox"
+                        id="sound-armyBonus"
+                        data-sound="armyBonus"
+                      />
                       <span>Army Bonus (Turn 25)</span>
                     </label>
-<label class="sound-option">
-  <input type="checkbox" id="sound-gameStart" data-sound="gameStart" />
-  <span>Game Start</span>
-</label>
-<label class="sound-option">
-  <input type="checkbox" id="sound-cycleTiles" data-sound="cycleTiles" />
-  <span>Cycle Tiles (Spacebar)</span>
-</label>
+                    <label class="sound-option">
+                      <input
+                        type="checkbox"
+                        id="sound-gameStart"
+                        data-sound="gameStart"
+                      />
+                      <span>Game Start</span>
+                    </label>
+                    <label class="sound-option">
+                      <input
+                        type="checkbox"
+                        id="sound-cycleTiles"
+                        data-sound="cycleTiles"
+                      />
+                      <span>Cycle Tiles (Spacebar)</span>
+                    </label>
                   </div>
                 </div>
 
@@ -651,12 +711,13 @@
     <!-- P5.js for intricate tiling animation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
     <script src="/optionsManager.js"></script>
-    <script src="/soundManager.js"></script>
     <script src="/game.js"></script>
     <script>
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register("/sw.js");
       }
     </script>
+    <script src="/soundManager.js"></script>
+    <script src="/konami.js"></script>
   </body>
 </html>

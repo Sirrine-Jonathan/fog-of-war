@@ -4,7 +4,7 @@ import { Server } from "socket.io";
 import path from "path";
 import { Game } from "./game";
 import { BotManager } from "./botManager";
-import { MOVES_PER_TURN } from "./types";
+import { TILE_EMPTY, TILE_MOUNTAIN, TILE_CITY, MOVES_PER_TURN } from "./types";
 
 const app = express();
 const server = createServer(app);
@@ -13,7 +13,7 @@ const io = new Server(server);
 function getPersonalizedGenerals(
   allGenerals: number[],
   playerIndex: number,
-  gameState: any
+  gameState: any,
 ): number[] {
   const personalizedGenerals = new Array(allGenerals.length).fill(-1);
 
@@ -44,7 +44,7 @@ function getPersonalizedGenerals(
 function isPositionVisibleToPlayer(
   position: number,
   playerIndex: number,
-  gameState: any
+  gameState: any,
 ): boolean {
   // Enemy general is visible if:
   // 1. It's on player's territory (captured)
@@ -132,7 +132,7 @@ function isBot(socket: any, userId: string, username: string): boolean {
 // Helper function to find best available host using priority system
 async function findBestHost(
   gameId: string,
-  excludeSocketId?: string
+  excludeSocketId?: string,
 ): Promise<any> {
   const sockets = await io.in(gameId).fetchSockets();
 
@@ -144,7 +144,7 @@ async function findBestHost(
       s.data.playerIndex !== undefined &&
       s.data.playerIndex >= 0 &&
       !isBot(s, s.data.userId || "", s.data.username || "") &&
-      !s.data.username?.includes("Viewer")
+      !s.data.username?.includes("Viewer"),
   );
 
   if (playerHost) {
@@ -156,7 +156,7 @@ async function findBestHost(
     (s) =>
       s.id !== excludeSocketId &&
       !isBot(s, s.data.userId || "", s.data.username || "") &&
-      !s.data.username?.includes("Viewer")
+      !s.data.username?.includes("Viewer"),
   );
 
   return viewerHost;
@@ -208,7 +208,7 @@ function checkTerritoryMilestones(gameId: string, game: Game) {
         if (prevPercentage < milestone) {
           sendSystemMessage(
             gameId,
-            `🏆 ${player.username} controls ${milestone}% of the map!`
+            `🏆 ${player.username} controls ${milestone}% of the map!`,
           );
         }
       }
@@ -237,7 +237,7 @@ function checkTerritoryMilestones(gameId: string, game: Game) {
       ) {
         sendSystemMessage(
           gameId,
-          `🔥 ${player.username} is making a comeback!`
+          `🔥 ${player.username} is making a comeback!`,
         );
         comebackMap.set(playerIndex, now);
       }
@@ -255,7 +255,7 @@ app.use(
       res.setHeader("Pragma", "no-cache");
       res.setHeader("Expires", "0");
     },
-  })
+  }),
 );
 
 // Root route - serve welcome page
@@ -372,7 +372,7 @@ io.on("connection", (socket) => {
       if (game.isStarted()) {
         const gameState = game.getState();
         const existingPlayerIndex = gameState.players.findIndex(
-          (p) => p.id === userId
+          (p) => p.id === userId,
         );
 
         if (existingPlayerIndex >= 0) {
@@ -382,17 +382,17 @@ io.on("connection", (socket) => {
             // Eliminated players can only rejoin as viewers during the same game
             socket.data.isViewer = true;
             socket.data.playerIndex = -1; // No active player index
-            
+
             // Send current game state to viewer
             const mapData = game.getMapData();
-            socket.emit('game_start', {
+            socket.emit("game_start", {
               playerIndex: -1, // Viewer has no player index
               replay_id: gameId,
-              usernames: gameState.players.map(p => p.username),
+              usernames: gameState.players.map((p) => p.username),
               mapData: mapData,
-              movesPerTurn: MOVES_PER_TURN
+              movesPerTurn: MOVES_PER_TURN,
             });
-            
+
             await sendGameInfo(gameId);
             return;
           }
@@ -432,7 +432,7 @@ io.on("connection", (socket) => {
       // Check for duplicate username (but allow same user to rejoin)
       const currentGameState = game.getState();
       const existingPlayer = currentGameState.players.find(
-        (p) => p.username === username
+        (p) => p.username === username,
       );
 
       if (existingPlayer && socket.data.userId !== existingPlayer.id) {
@@ -492,7 +492,7 @@ io.on("connection", (socket) => {
         const currentHostId = gameHosts.get(gameId);
         const currentHostSocket = currentHostId
           ? (await io.in(gameId).fetchSockets()).find(
-              (s) => s.id === currentHostId
+              (s) => s.id === currentHostId,
             )
           : null;
 
@@ -513,7 +513,7 @@ io.on("connection", (socket) => {
   socket.on("transfer_host", async (gameId: string, targetSocketId: string) => {
     if (socket.data.isHost && gameHosts.get(gameId) === socket.id) {
       const targetSocket = (await io.in(gameId).fetchSockets()).find(
-        (s) => s.id === targetSocketId
+        (s) => s.id === targetSocketId,
       );
       // Allow transfer to players only (not viewers), but from any host type
       if (
@@ -521,7 +521,7 @@ io.on("connection", (socket) => {
         !isBot(
           targetSocket,
           targetSocket.data.userId || "",
-          targetSocket.data.username || ""
+          targetSocket.data.username || "",
         ) &&
         !targetSocket.data.isViewer
       ) {
@@ -548,7 +548,7 @@ io.on("connection", (socket) => {
 
     const gameState = game.getState();
     const botPlayer = gameState.players.find(
-      (p) => p.id === botUserId && p.isBot
+      (p) => p.id === botUserId && p.isBot,
     );
 
     if (!botPlayer || typeof botUserId !== "string" || !botUserId) {
@@ -574,7 +574,7 @@ io.on("connection", (socket) => {
       // Send system message
       sendSystemMessage(
         gameId,
-        `${botPlayer.username} was removed from the game`
+        `${botPlayer.username} was removed from the game`,
       );
 
       // Broadcast updated player list
@@ -633,7 +633,7 @@ io.on("connection", (socket) => {
       if (playerCount < 2) {
         socket.emit(
           "game_start_error",
-          "Need at least 2 players to start the game"
+          "Need at least 2 players to start the game",
         );
         return;
       }
@@ -643,7 +643,7 @@ io.on("connection", (socket) => {
       // Send system message for game start
       sendSystemMessage(
         gameId,
-        `🎮 Game has started! Good luck to all players!`
+        `🎮 Game has started! Good luck to all players!`,
       );
 
       // Initialize game tracking
@@ -673,13 +673,13 @@ io.on("connection", (socket) => {
       // Send personalized updates to each player
       gameState.players.forEach((player, playerIndex) => {
         const playerSocket = [...io.sockets.sockets.values()].find(
-          (s) => s.data.userId === player.id
+          (s) => s.data.userId === player.id,
         );
         if (playerSocket) {
           const personalizedGenerals = getPersonalizedGenerals(
             gameState.generals,
             playerIndex,
-            gameState
+            gameState,
           );
           playerSocket.emit("game_update", {
             cities_diff: [0, gameState.cities.length, ...gameState.cities],
@@ -697,11 +697,10 @@ io.on("connection", (socket) => {
         (s) =>
           s.rooms.has(gameId) &&
           s.data.isViewer &&
-          gameState.players.some((p) => p.id === s.data.userId)
+          gameState.players.some((p) => p.id === s.data.userId),
       );
-      
+
       playerViewerSockets.forEach((socket) => {
-        
         socket.emit("game_update", {
           cities_diff: [0, gameState.cities.length, ...gameState.cities],
           map_diff: [0, mapData.length, ...mapData],
@@ -715,11 +714,10 @@ io.on("connection", (socket) => {
       const viewerSockets = [...io.sockets.sockets.values()].filter(
         (s) =>
           s.rooms.has(gameId) &&
-          !gameState.players.some((p) => p.id === s.data.userId)
+          !gameState.players.some((p) => p.id === s.data.userId),
       );
-      
+
       viewerSockets.forEach((socket) => {
-        
         socket.emit("game_update", {
           cities_diff: [0, gameState.cities.length, ...gameState.cities],
           map_diff: [0, mapData.length, ...mapData],
@@ -730,40 +728,24 @@ io.on("connection", (socket) => {
       });
 
       // Start sending updates
+      let lastTurn = -1;
+      let updatesThisTurn = 0;
       const updateInterval = setInterval(async () => {
         const gameState = game.getState();
 
-        // Log map state every 25 ticks
-        if (gameState.turn % 25 === 0) {
-          const playerStats = gameState.players.map((p) => {
-            const territories = gameState.terrain.filter(
-              (t) => t === p.index
-            ).length;
-            const totalArmies = gameState.armies.reduce(
-              (sum, armies, i) =>
-                gameState.terrain[i] === p.index ? sum + armies : sum,
-              0
-            );
-            return `${p.username}(P${p.index}): ${territories} territories, ${totalArmies} armies`;
-          });
-        }
-
         if (gameState.gameEnded) {
           // Notify players of game end
-          
 
           io.to(gameId).emit("game_won", { winner: gameState.winner });
 
           // Reset all players to non-viewer status for next game
-          
+
           const gameEndSockets = await io.in(gameId).fetchSockets();
-          gameEndSockets.forEach(socket => {
-            if (gameState.players.some(p => p.id === socket.data.userId)) {
-              
+          gameEndSockets.forEach((socket) => {
+            if (gameState.players.some((p) => p.id === socket.data.userId)) {
               socket.data.isViewer = false;
             }
           });
-          
 
           // Store game data for replay/analysis before resetting
           const completedGame = {
@@ -809,15 +791,14 @@ io.on("connection", (socket) => {
           game.reset();
 
           // Re-add human players to the reset game
-          
+
           humanPlayers.forEach((player, index) => {
             const newIndex = game.addPlayer(player.id, player.username, false);
             // Update socket data for human players
             const playerSocket = botCleanupSockets.find(
-              (s) => s.data.userId === player.id
+              (s) => s.data.userId === player.id,
             );
             if (playerSocket) {
-              
               playerSocket.data.playerIndex = newIndex;
               playerSocket.data.isViewer = false;
 
@@ -845,35 +826,78 @@ io.on("connection", (socket) => {
           return;
         }
 
-        const mapData = game.getMapData();
+        // Send updates twice per turn
+        if (gameState.turn !== lastTurn) {
+          lastTurn = gameState.turn;
+          updatesThisTurn = 0;
+        }
+        if (updatesThisTurn < 2) {
+          updatesThisTurn++;
+          const mapData = game.getMapData();
 
-        // Send personalized updates to each player with fog of war
-        gameState.players.forEach((player, playerIndex) => {
-          const playerSocket = [...io.sockets.sockets.values()].find(
-            (s) => s.data.userId === player.id
-          );
-          if (playerSocket) {
-            // Log viewer status every 10 turns for debugging
-            if (gameState.turn % 10 === 0) {
-              
-            }
-            
-            const personalizedGenerals = getPersonalizedGenerals(
-              gameState.generals,
-              playerIndex,
-              gameState
+          // Send personalized updates to each player with fog of war
+          gameState.players.forEach((player, playerIndex) => {
+            const playerSocket = [...io.sockets.sockets.values()].find(
+              (s) => s.data.userId === player.id,
             );
+            if (playerSocket) {
+              const personalizedGenerals = getPersonalizedGenerals(
+                gameState.generals,
+                playerIndex,
+                gameState,
+              );
 
-            // Debug logging for general data integrity - Spiral only
-            if (gameState.turn % 50 === 0 && player.username === "Spiral") {
-              console.log(`🔍 General data for ${player.username}:`, {
-                allGenerals: gameState.generals,
-                personalizedGenerals,
-                visibleCount: personalizedGenerals.filter((g) => g >= 0).length,
+              // Debug logging for general data integrity - Spiral only
+              if (player.username === "Spiral") {
+                console.log(`TURN: ${gameState.turn}`);
+                if (gameState.turn % 5 === 0) {
+                  // display map
+                  let map = "";
+                  mapData.forEach((tile, i) => {
+                    switch (tile) {
+                      case TILE_EMPTY:
+                        map += "E";
+                        break;
+                      case TILE_CITY:
+                        map += "C";
+                        break;
+                      case TILE_MOUNTAIN:
+                        map += "M";
+                        break;
+                      default:
+                        map += tile;
+                    }
+                    if (i % gameState.width === 0) map += "\n";
+                  });
+                }
+              }
+
+              playerSocket.emit("game_update", {
+                cities_diff: [0, gameState.cities.length, ...gameState.cities],
+                lookoutTowers_diff: [
+                  0,
+                  gameState.lookoutTowers.length,
+                  ...gameState.lookoutTowers,
+                ],
+                map_diff: [0, mapData.length, ...mapData],
+                generals: personalizedGenerals,
+                players: gameState.players,
+                turn: gameState.turn,
+                remainingMoves: game.getRemainingMoves(playerIndex),
               });
             }
+          });
 
-            playerSocket.emit("game_update", {
+          // Send full map data to player viewers (eliminated/abandoned players)
+          const playerViewerSockets = [...io.sockets.sockets.values()].filter(
+            (s) =>
+              s.rooms.has(gameId) &&
+              s.data.isViewer &&
+              gameState.players.some((p) => p.id === s.data.userId),
+          );
+
+          playerViewerSockets.forEach((socket) => {
+            socket.emit("game_update", {
               cities_diff: [0, gameState.cities.length, ...gameState.cities],
               lookoutTowers_diff: [
                 0,
@@ -881,73 +905,34 @@ io.on("connection", (socket) => {
                 ...gameState.lookoutTowers,
               ],
               map_diff: [0, mapData.length, ...mapData],
-              generals: personalizedGenerals,
+              generals: gameState.generals, // Player viewers see all generals
               players: gameState.players,
               turn: gameState.turn,
-              remainingMoves: game.getRemainingMoves(playerIndex),
             });
-          }
-        });
+          });
 
-        // Send full map data to player viewers (eliminated/abandoned players)
-        const playerViewerSockets = [...io.sockets.sockets.values()].filter(
-          (s) =>
-            s.rooms.has(gameId) &&
-            s.data.isViewer &&
-            gameState.players.some((p) => p.id === s.data.userId)
-        );
-        
-        if (gameState.turn % 10 === 0 && playerViewerSockets.length > 0) {
-          
-          playerViewerSockets.forEach(socket => {
-            
+          // Send full data to viewers
+          const viewerSockets = [...io.sockets.sockets.values()].filter(
+            (s) =>
+              s.rooms.has(gameId) &&
+              !gameState.players.some((p) => p.id === s.data.userId),
+          );
+
+          viewerSockets.forEach((socket) => {
+            socket.emit("game_update", {
+              cities_diff: [0, gameState.cities.length, ...gameState.cities],
+              lookoutTowers_diff: [
+                0,
+                gameState.lookoutTowers.length,
+                ...gameState.lookoutTowers,
+              ],
+              map_diff: [0, mapData.length, ...mapData],
+              generals: gameState.generals, // Viewers see all generals
+              players: gameState.players,
+              turn: gameState.turn,
+            });
           });
         }
-        
-        playerViewerSockets.forEach((socket) => {
-          socket.emit("game_update", {
-            cities_diff: [0, gameState.cities.length, ...gameState.cities],
-            lookoutTowers_diff: [
-              0,
-              gameState.lookoutTowers.length,
-              ...gameState.lookoutTowers,
-            ],
-            map_diff: [0, mapData.length, ...mapData],
-            generals: gameState.generals, // Player viewers see all generals
-            players: gameState.players,
-            turn: gameState.turn,
-          });
-        });
-
-        // Send full data to viewers
-        const viewerSockets = [...io.sockets.sockets.values()].filter(
-          (s) =>
-            s.rooms.has(gameId) &&
-            !gameState.players.some((p) => p.id === s.data.userId)
-        );
-        
-        // Log viewer status every 10 turns
-        if (gameState.turn % 10 === 0 && viewerSockets.length > 0) {
-          
-          viewerSockets.forEach(socket => {
-            
-          });
-        }
-        
-        viewerSockets.forEach((socket) => {
-          socket.emit("game_update", {
-            cities_diff: [0, gameState.cities.length, ...gameState.cities],
-            lookoutTowers_diff: [
-              0,
-              gameState.lookoutTowers.length,
-              ...gameState.lookoutTowers,
-            ],
-            map_diff: [0, mapData.length, ...mapData],
-            generals: gameState.generals, // Viewers see all generals
-            players: gameState.players,
-            turn: gameState.turn,
-          });
-        });
       }, 100);
     } else {
     }
@@ -980,13 +965,12 @@ io.on("connection", (socket) => {
         playerIndex: playerIndex,
         timestamp: new Date().toISOString(),
       });
-    }
+    },
   );
 
   socket.on("attack", async (from: number, to: number) => {
     const roomId = playerRooms.get(socket.id);
     const game = games.get(roomId || "");
-    const playerIndex = socket.data.playerIndex;
     const playerName = socket.data.username || "Unknown";
 
     // Enhanced logging with strategic context
@@ -998,16 +982,12 @@ io.on("connection", (socket) => {
       const fromTerrain = gameMap[from + size + 2]; // terrain starts after armies
       const toTerrain = gameMap[to + size + 2];
 
-      let moveType = "EXPAND";
-      if (toTerrain >= 0 && toTerrain !== playerIndex) {
-        moveType = "ATTACK";
-      }
-
       // Only log Spiral moves
       if (playerName === "Spiral") {
+        console.log(
+          `From ${from} (${fromArmies} armies, ${fromTerrain} terrain) to ${to} (${toArmies} armies, ${toTerrain} terrain)`,
+        );
       }
-    } else {
-      // Remove this log
     }
 
     // Prevent viewers from attacking
@@ -1033,7 +1013,7 @@ io.on("connection", (socket) => {
           gameFirstBlood.set(roomId || "", true);
           sendSystemMessage(
             roomId || "",
-            "⚔️ First blood! The battle has begun!"
+            "⚔️ First blood! The battle has begun!",
           );
         }
       }
@@ -1060,7 +1040,7 @@ io.on("connection", (socket) => {
         // Find the socket for the captured player and notify them
         const sockets = await io.in(roomId || "").fetchSockets();
         const capturedSocket = sockets.find(
-          (s) => s.data.playerIndex === capturedPlayerIndex
+          (s) => s.data.playerIndex === capturedPlayerIndex,
         );
         if (capturedSocket) {
           capturedSocket.emit("generalCaptured");
@@ -1081,7 +1061,7 @@ io.on("connection", (socket) => {
         // Find the socket for the player who lost territory and notify them
         const sockets = await io.in(roomId || "").fetchSockets();
         const capturedSocket = sockets.find(
-          (s) => s.data.playerIndex === capturedPlayerIndex
+          (s) => s.data.playerIndex === capturedPlayerIndex,
         );
         if (capturedSocket) {
           capturedSocket.emit("territoryCaptured");
@@ -1112,7 +1092,7 @@ io.on("connection", (socket) => {
         timestamp: Date.now(),
         isSystem: true,
       });
-    }
+    },
   );
 
   socket.on("end_bot_game", (gameId: string) => {
@@ -1128,7 +1108,7 @@ io.on("connection", (socket) => {
     if (humanPlayers.length > 0) {
       socket.emit(
         "end_game_error",
-        "Cannot end game while human players are active"
+        "Cannot end game while human players are active",
       );
       return;
     }
@@ -1160,7 +1140,7 @@ io.on("connection", (socket) => {
     sendSystemMessage(gameId, `${player.username} abandoned the game`);
 
     // Convert player to viewer
-    
+
     socket.data.playerIndex = -1;
     socket.data.isViewer = true;
 
@@ -1206,7 +1186,7 @@ io.on("connection", (socket) => {
       sendSystemMessage(gameId, `${player.username} left the game`);
 
       // Reset player data
-      
+
       socket.data.playerIndex = -1;
       socket.data.isViewer = true;
 
@@ -1228,7 +1208,7 @@ io.on("connection", (socket) => {
     "update_game_settings",
     (
       gameId: string,
-      settings: { turnIntervalMs?: number; movesPerTurn?: number }
+      settings: { turnIntervalMs?: number; movesPerTurn?: number },
     ) => {
       // Only allow host to update settings
       if (!socket.data.isHost || gameHosts.get(gameId) !== socket.id) {
@@ -1252,13 +1232,13 @@ io.on("connection", (socket) => {
       ) {
         game.setGameSettings(
           settings.turnIntervalMs || 1000,
-          settings.movesPerTurn || 1
+          settings.movesPerTurn || 1,
         );
 
         // Broadcast settings update to all players in the room
         io.to(gameId).emit("game_settings_updated", settings);
       }
-    }
+    },
   );
 
   socket.on("disconnect", () => {
@@ -1277,8 +1257,8 @@ io.on("connection", (socket) => {
             const botType = userId.toLowerCase().includes("blob")
               ? "blob"
               : userId.toLowerCase().includes("arrow")
-              ? "arrow"
-              : null;
+                ? "arrow"
+                : null;
 
             if (botType) {
               // Check if bot still exists in bot manager before trying to remove
@@ -1312,7 +1292,7 @@ io.on("connection", (socket) => {
 
           const gameState = game.getState();
           const player = gameState.players.find(
-            (p) => p.index === socket.data.playerIndex
+            (p) => p.index === socket.data.playerIndex,
           );
 
           if (player && !player.eliminated) {
@@ -1324,7 +1304,7 @@ io.on("connection", (socket) => {
 
             // Check for victory condition
             const remainingPlayers = gameState.players.filter(
-              (p) => !p.eliminated
+              (p) => !p.eliminated,
             );
 
             if (remainingPlayers.length === 1) {
@@ -1339,7 +1319,7 @@ io.on("connection", (socket) => {
           }
 
           // Convert socket to viewer
-          
+
           socket.data.playerIndex = -1;
           socket.data.isViewer = true;
 
@@ -1386,7 +1366,7 @@ io.on("connection", (socket) => {
         (s) =>
           s.data.playerIndex !== undefined &&
           s.data.playerIndex >= 0 &&
-          !isBot(s, s.data.userId || "", s.data.username || "")
+          !isBot(s, s.data.userId || "", s.data.username || ""),
       );
 
       if (connectedHumans.length === 0) {
@@ -1394,7 +1374,7 @@ io.on("connection", (socket) => {
         if (game && game.isStarted()) {
           sendSystemMessage(
             gameId,
-            "Game abandoned - no human players remaining"
+            "Game abandoned - no human players remaining",
           );
           setTimeout(() => {
             game.endGame(-1);
