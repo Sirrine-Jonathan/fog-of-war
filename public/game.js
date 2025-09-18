@@ -1671,7 +1671,7 @@ function updateQueuedPath() {
     // Use existing intent system to show the path
     if (queuedPath.length > 0) {
       const newIntent = {
-        fromTile: selectedTile,
+        fromTile: moveQueue[0]?.fromTile ?? selectedTile,
         targetTile: queuedPath[queuedPath.length - 1],
         path: queuedPath,
         currentStep: 0,
@@ -2201,48 +2201,62 @@ function drawGame() {
 
     // Draw intent path
     if (activeIntent && activeIntent.path.map(move => move.toTile).includes(i)) {
+      const move = activeIntent.path.find(move => move.toTile === i);
+      const isValid = !('fromArmies' in move) || move.fromArmies > 1;
+
+      ctx.save();
+
       if (activeIntent.isQueuedPath) {
-        const move = activeIntent.path.find(move => move.toTile === i);
-        const isValid = !('fromArmies' in move) || move.fromArmies > 1;
-
-        // Queued moves - much more prominent highlight
+        // Style each queued path block with a neat, static look (no animation, no icons)
         ctx.save();
-        const playerColor = getPlayerColor(playerIndex);
-        const brightColor = brightenColor(playerColor, 0.6); // 60% brighter
-
-        // Stronger shadow/glow
-        ctx.shadowColor = isValid ? "#DDD" : "#333"; // brightColor;
-
-        // More opaque fill (80%)
-        // ctx.fillStyle = brightColor + "CC"; // 80% opacity
-        // ctx.fillRect(x, y, tileSize, tileSize);
-
-        // Optional: white outline for extra contrast
-        ctx.strokeStyle = isValid ? "#FFF" : "#bc1111ff";
-        ctx.lineWidth = 6 * camera.zoom;
-        ctx.setLineDash([]);
-        ctx.strokeRect(x, y, tileSize, tileSize);
-
-        // Brighter colored outline on top
-        ctx.strokeStyle = brightColor;
-        ctx.lineWidth = 4 * camera.zoom;
-        ctx.setLineDash([4 * camera.zoom, 4 * camera.zoom]); // Larger dots
+        ctx.globalAlpha = 1.0;
+        // Fill
+        ctx.fillStyle = isValid ?  playerColors[playerIndex] : darkenColor(playerColors[playerIndex], 50);
+        ctx.fillRect(x + 2 * camera.zoom, y + 2 * camera.zoom, tileSize - 4 * camera.zoom, tileSize - 4 * camera.zoom);
+        // Border (thinner, square, slightly inset, no rounded corners)
+        ctx.lineWidth = 3 * camera.zoom;
+        ctx.strokeStyle = isValid ? darkenColor(playerColors[playerIndex], 10) : "#e97b7b";
         const inset = 2 * camera.zoom;
         ctx.strokeRect(
           x + inset,
           y + inset,
-          tileSize - inset * 2,
-          tileSize - inset * 2,
+          tileSize - 2 * inset,
+          tileSize - 2 * inset
         );
-
         ctx.restore();
       } else {
-        // Regular intent path
-        ctx.strokeStyle = "#ff6b6b";
-        ctx.lineWidth = 3 * camera.zoom;
-        ctx.setLineDash([5 * camera.zoom, 5 * camera.zoom]);
-        ctx.strokeRect(x, y, tileSize, tileSize);
+        // Click path (non-queued): solid blue outline, warning icon for invalid
+        // Click path (non-queued): solid/dashed square outline, slightly inset, no rounded corners
+        const inset = 2 * camera.zoom;
+        ctx.strokeStyle = isValid ? darkenColor(playerColors[playerIndex], 50) : "#ffa726";
+        ctx.lineWidth = 2 * camera.zoom;
+        ctx.setLineDash(isValid ? [] : [4 * camera.zoom, 4 * camera.zoom]);
+        ctx.strokeRect(
+          x + inset,
+          y + inset,
+          tileSize - 2 * inset,
+          tileSize - 2 * inset
+        );
+
+        // Fill for valid/invalid
+        ctx.globalAlpha = 0.13;
+        ctx.fillStyle = isValid ? "#2196f3" : "#ffa726";
+        ctx.fillRect(x, y, tileSize, tileSize);
+        ctx.globalAlpha = 1.0;
+
+        // Overlay icon for invalid only (no dot for valid)
+        if (!isValid) {
+          ctx.font = `${Math.max(16, 20 * camera.zoom)}px Arial`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillStyle = "#ffa726";
+          ctx.globalAlpha = 0.7;
+          ctx.fillText("⚠", x + tileSize / 2, y + tileSize / 2 + 10 * camera.zoom);
+          ctx.globalAlpha = 1.0;
+        }
       }
+
+      ctx.restore();
       ctx.setLineDash([]);
     }
 
@@ -2251,44 +2265,34 @@ function drawGame() {
       playerGenerals.has(playerIndex) && playerGenerals.get(playerIndex) === i;
     const isSelected = selectedTile === i;
 
-    if (isPlayerGeneral) {
+    // Improved selected tile style (matches queue/intent genre)
+    if (isSelected) {
+      ctx.save();
+      // Subtle blue fill
+      ctx.globalAlpha = 1.0;
+      ctx.fillStyle = "rgba(67,167,233,0.18)";
+      ctx.fillRect(x + 2 * camera.zoom, y + 2 * camera.zoom, tileSize - 4 * camera.zoom, tileSize - 4 * camera.zoom);
+      // Thinner, square blue border, slightly inset, no blur, no rounded corners
+      ctx.lineWidth = 2 * camera.zoom;
+      ctx.strokeStyle = appColors.gold;
+      const inset = 2 * camera.zoom;
+      ctx.strokeRect(
+        x + inset,
+        y + inset,
+        tileSize - 2 * inset,
+        tileSize - 2 * inset
+      );
+      ctx.restore();
+    } else if (isPlayerGeneral) {
       // Only current player's general gets special border
-      if (isSelected) {
-        const armyCount = gameState.armies[i];
-        const canMoveArmies = armyCount > 1;
-        ctx.strokeStyle =
-          canMoveArmies || isPlayerGeneral ? "#ffd700" : "#888888";
-      } else {
-        ctx.strokeStyle = "#FFF";
-      }
-      ctx.lineWidth = isSelected ? 3 * camera.zoom : 2 * camera.zoom;
+      ctx.strokeStyle = "#FFF";
+      ctx.lineWidth = 2 * camera.zoom;
+      ctx.strokeRect(x, y, tileSize, tileSize);
     } else {
       // Regular tiles (including enemy generals) only get border when selected
-      if (isSelected) {
-        const armyCount = gameState.armies[i];
-        const canMoveArmies = armyCount > 1;
-        ctx.strokeStyle = canMoveArmies ? "#ffd700" : "#888888";
-      } else {
-        ctx.strokeStyle = "#FFF";
-      }
-      ctx.lineWidth = isSelected ? 3 * camera.zoom : 1 * camera.zoom;
-    }
-    ctx.strokeRect(x, y, tileSize, tileSize);
-
-    // Add glow effect for selected tile
-    if (selectedTile === i) {
-      const armyCount = gameState.armies[i];
-      const canMoveArmies = armyCount > 1;
-      if (isPlayerGeneral) {
-        // Bright gold for tiles that can move armies
-        ctx.shadowColor = "#ffed4e"; // Brighter gold
-      } else if (!canMoveArmies) {
-        // Gray for tiles that cannot move armies
-        ctx.shadowColor = "#888888"; // Clear gray
-      }
-      ctx.shadowBlur = 10 * camera.zoom;
+      ctx.strokeStyle = "#FFF";
+      ctx.lineWidth = 1 * camera.zoom;
       ctx.strokeRect(x, y, tileSize, tileSize);
-      ctx.shadowBlur = 0;
     }
   }
 
