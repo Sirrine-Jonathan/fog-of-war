@@ -2,6 +2,85 @@ const canvas = document.getElementById("gameBoard");
 const ctx = canvas.getContext("2d");
 const socket = io();
 
+/**
+ * Disconnect warning overlay
+ */
+let disconnectWarningTimeout = null;
+let disconnectCountdown = 60;
+let disconnectOverlay = null;
+
+function showDisconnectWarning(seconds) {
+  if (!disconnectOverlay) {
+    disconnectOverlay = document.createElement("div");
+    disconnectOverlay.id = "disconnectWarningOverlay";
+    disconnectOverlay.style.position = "fixed";
+    disconnectOverlay.style.top = "0";
+    disconnectOverlay.style.left = "0";
+    disconnectOverlay.style.width = "100vw";
+    disconnectOverlay.style.height = "100vh";
+    disconnectOverlay.style.background = "rgba(0,0,0,0.7)";
+    disconnectOverlay.style.display = "flex";
+    disconnectOverlay.style.flexDirection = "column";
+    disconnectOverlay.style.justifyContent = "center";
+    disconnectOverlay.style.alignItems = "center";
+    disconnectOverlay.style.zIndex = "9999";
+    disconnectOverlay.style.color = "#fff";
+    disconnectOverlay.style.fontSize = "2rem";
+    disconnectOverlay.innerHTML = `
+      <div id="disconnectWarningText"></div>
+    `;
+    document.body.appendChild(disconnectOverlay);
+  }
+  disconnectOverlay.style.display = "flex";
+  disconnectCountdown = seconds;
+  // Add a visible red border to the body for debugging
+  document.body.style.border = "8px solid red";
+  // Show a toast for extra visibility
+  if (typeof showToast === "function") {
+    showToast("Disconnected! Attempting to reconnect...", "error");
+  }
+  console.log(`[CLIENT-DISCONNECT] Showing disconnect warning overlay (countdown: ${disconnectCountdown}s)`);
+  updateDisconnectWarningText();
+
+  if (disconnectWarningTimeout) clearInterval(disconnectWarningTimeout);
+  disconnectWarningTimeout = setInterval(() => {
+    disconnectCountdown--;
+    updateDisconnectWarningText();
+    if (disconnectCountdown <= 0) {
+      hideDisconnectWarning();
+    }
+  }, 1000);
+}
+
+function updateDisconnectWarningText() {
+  const text = document.getElementById("disconnectWarningText");
+  if (text) {
+    text.textContent = `Connection lost. Attempting to reconnect... You will be removed from the game in ${disconnectCountdown} seconds.`;
+  }
+}
+
+function hideDisconnectWarning() {
+  if (disconnectOverlay && disconnectOverlay.style.display !== "none") {
+    disconnectOverlay.style.display = "none";
+    // Remove the red border
+    document.body.style.border = "";
+    // Show a toast for extra visibility
+    if (typeof showToast === "function") {
+      showToast("Reconnected!", "success");
+    }
+    console.log("[CLIENT-DISCONNECT] Hiding disconnect warning overlay (reconnected or timeout expired)");
+  }
+  if (disconnectWarningTimeout) clearInterval(disconnectWarningTimeout);
+}
+
+socket.on("disconnect", () => {
+  showDisconnectWarning(60);
+});
+
+socket.on("connect", () => {
+  hideDisconnectWarning();
+});
+
 // Animation variables
 let animationId = null;
 let animationTime = 0;
@@ -889,17 +968,21 @@ socket.on("disconnect", () => {
 });
 
 socket.on("connect", () => {
+  hideDisconnectWarning();
   // Hide reconnection message
   const notification = document.getElementById("gameEndNotification");
   if (notification.style.display === "block") {
     notification.style.display = "none";
   }
-
-  // Attempt to rejoin only if we were previously in an active game
-  if (playerIndex >= 0 && lastUsername && gameStarted) {
-    const userId = "human_" + Date.now();
-    socket.emit("set_username", userId, lastUsername);
-    socket.emit("join_private", roomId, userId);
+  // Attempt to rejoin if we have a stored userId and username
+  const storedUserId = localStorage.getItem("userId");
+  const storedUsername = localStorage.getItem("username");
+  if (storedUserId && storedUsername) {
+    currentUserId = storedUserId;
+    lastUsername = storedUsername;
+    console.log(`[CLIENT-RECONNECT] Attempting to rejoin as player: userId=${currentUserId}, username=${lastUsername}`);
+    socket.emit("set_username", currentUserId, lastUsername);
+    socket.emit("join_private", roomId, currentUserId);
   }
 });
 
@@ -2143,8 +2226,8 @@ function drawGame() {
         ctx.shadowBlur = 20 * camera.zoom;
 
         // More opaque fill (80%)
-        ctx.fillStyle = brightColor + "CC"; // 80% opacity
-        ctx.fillRect(x, y, tileSize, tileSize);
+        // ctx.fillStyle = brightColor + "CC"; // 80% opacity
+        // ctx.fillRect(x, y, tileSize, tileSize);
 
         // Optional: white outline for extra contrast
         ctx.strokeStyle = "#FFF";
@@ -3303,7 +3386,16 @@ function joinAsPlayer() {
   }
 
   lastUsername = username; // Remember this username
-  currentUserId = "human_" + Date.now();
+
+  // Persist userId and username in localStorage for reconnects
+  let storedUserId = localStorage.getItem("userId");
+  if (!storedUserId) {
+    storedUserId = "human_" + Date.now();
+    localStorage.setItem("userId", storedUserId);
+  }
+  localStorage.setItem("username", username);
+
+  currentUserId = storedUserId;
   socket.emit("set_username", currentUserId, username);
   socket.emit("join_private", roomId, currentUserId);
 }
@@ -3399,8 +3491,9 @@ socket.on("end_game_error", (error) => {
 let cycleIndex = 0;
 
 function selectGeneral() {
+  if (!gameState || !Array.isArray(gameState.generals)) return;
   const generalPos = gameState.generals[playerIndex];
-  if (generalPos >= 0) {
+  if (generalPos !== undefined && generalPos >= 0) {
     setSelectedTile(generalPos);
   }
 }

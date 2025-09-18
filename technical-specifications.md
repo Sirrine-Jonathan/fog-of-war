@@ -492,7 +492,7 @@ function chebyshevDistance(pos1, pos2, width) {
 1. **Off-by-one errors** in tile indexing
 2. **Diagonal movement** attempts (not allowed)
 3. **Invalid army counts** (must leave 1 army behind)
-4. **Mountain pathfinding** (mountains block movement)
+4. **Mountain path finding** (mountains block movement)
 5. **Vision assumptions** (fog of war limits visibility)
 6. **Move limit per turn** (bots must not exceed allowed moves)
 7. **Ghost territory handling** (eliminated player tiles become neutral, armies halved, ghostTerrain updated)

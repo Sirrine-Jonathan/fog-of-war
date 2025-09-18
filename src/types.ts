@@ -2,12 +2,13 @@ export interface Player {
   id: string;
   username: string;
   index: number;
-  isBot: boolean;
+  isBot?: boolean;
   eliminated?: boolean;
   eliminationStats?: {
     territories: number;
     armies: number;
   };
+  activeSocket?: string; // Socket ID if connected, undefined if disconnected
 }
 
 export interface GameState {

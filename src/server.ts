@@ -94,6 +94,10 @@ const playerRooms = new Map<string, string>();
 const gameHosts = new Map<string, string>(); // gameId -> socketId of host
 const gameHistory = new Map<string, any[]>(); // gameId -> array of completed games
 
+// Disconnect timeout tracking: Map<playerId, NodeJS.Timeout>
+const disconnectTimeouts = new Map<string, NodeJS.Timeout>();
+const DISCONNECT_TIMEOUT_MS = 5000;
+
 // Game event tracking
 const gameFirstBlood = new Map<string, boolean>(); // gameId -> has first blood occurred
 const playerTerritoryHistory = new Map<string, Map<number, number[]>>(); // gameId -> playerIndex -> territory counts over time
@@ -397,14 +401,36 @@ io.on("connection", (socket) => {
             return;
           }
 
-          // Allow reconnection by setting up socket data
+          // Always re-associate reconnecting socket with player if userId matches and not eliminated
           socket.data.playerIndex = existingPlayerIndex;
           socket.data.userId = userId;
           socket.data.isViewer = false;
 
-          sendSystemMessage(gameId, `${username} reconnected`);
+          // Set activeSocket on player object
+          gameState.players[existingPlayerIndex].activeSocket = socket.id;
 
-          // Send current game state to reconnected player
+          // Only treat as a true reconnect if a disconnect timeout is pending for this userId
+          if (disconnectTimeouts.has(userId)) {
+            clearTimeout(disconnectTimeouts.get(userId)!);
+            disconnectTimeouts.delete(userId);
+            console.log(
+              `[DISCONNECT-TIMEOUT] CLEARED for playerId=${userId}, username=${username}, room=${gameId} (reconnected)`
+            );
+            console.log(
+              `[RECONNECT] playerId=${userId}, username=${username}, room=${gameId} reconnected and restored`
+            );
+            sendSystemMessage(gameId, `${username} reconnected`);
+          } else {
+            // Not a true reconnect (likely initial join or duplicate join)
+            console.log(
+              `[JOIN] playerId=${userId}, username=${username}, room=${gameId} joined as player (initial join or duplicate join)`
+            );
+          }
+
+          // Ensure playerRooms is updated for this socket
+          playerRooms.set(socket.id, gameId);
+
+          // Send current game state to player
           const mapData = game.getMapData();
           socket.emit("game_start", {
             playerIndex: existingPlayerIndex,
@@ -446,6 +472,21 @@ io.on("connection", (socket) => {
         socket.data.playerIndex = playerIndex;
         socket.data.userId = userId;
         socket.data.isViewer = false;
+
+        // Set activeSocket on player object
+        game.getPlayers()[playerIndex].activeSocket = socket.id;
+
+        // Clear disconnect timeout if present
+        if (disconnectTimeouts.has(userId)) {
+          clearTimeout(disconnectTimeouts.get(userId)!);
+          disconnectTimeouts.delete(userId);
+          console.log(
+            `[DISCONNECT-TIMEOUT] CLEARED for playerId=${userId}, username=${username}, room=${gameId} (reconnected)`
+          );
+        }
+        console.log(
+          `[RECONNECT] playerId=${userId}, username=${username}, room=${gameId} reconnected and restored`
+        );
 
         // Assign host if no host exists and this is a real player (not bot)
         if (!gameHosts.has(gameId) && !botDetected) {
@@ -786,6 +827,21 @@ io.on("connection", (socket) => {
 
           // Remove bots from game but keep human players
           const humanPlayers = gameState.players.filter((p) => !p.isBot);
+
+          // Remove eliminated players who are disconnected (not spectating)
+          const eliminatedPlayers = gameState.players.filter(
+            (p) => p.eliminated
+          );
+          for (const eliminated of eliminatedPlayers) {
+            // Check if a socket with this userId is still connected in the room
+            const sockets = await io.in(gameId).fetchSockets();
+            const stillConnected = sockets.some(
+              (s) => s.data.userId === eliminated.id
+            );
+            if (!stillConnected) {
+              game.removePlayer(eliminated.id);
+            }
+          }
 
           // Reset game state but preserve human players
           game.reset();
@@ -1246,102 +1302,82 @@ io.on("connection", (socket) => {
 
     if (roomId) {
       const game = games.get(roomId);
-      if (game && socket.data.playerIndex >= 0) {
-        if (!game.isStarted()) {
-          // Game hasn't started - remove player immediately
-          const userId = socket.data.userId;
-          const username = socket.data.username;
+      const userId = socket.data.userId;
+      const username = socket.data.username;
 
-          // Check if this is a bot and remove from bot manager (only if not already removed)
-          if (userId && userId.startsWith("bot_")) {
-            const botType = userId.toLowerCase().includes("blob")
-              ? "blob"
-              : userId.toLowerCase().includes("arrow")
-                ? "arrow"
-                : null;
+      if (game && userId) {
+        // Clear activeSocket on player object if present
+        const player = game.getPlayers().find((p) => p.id === userId);
+        if (player) {
+          player.activeSocket = undefined;
 
-            if (botType) {
-              // Check if bot still exists in bot manager before trying to remove
-              const hasBot = botManager.hasBot(botType, roomId);
-
-              if (hasBot) {
-                botManager.removeBot(botType, roomId);
-              } else {
-              }
-            }
+          // Start disconnect timeout for this player
+          if (disconnectTimeouts.has(player.id)) {
+            clearTimeout(disconnectTimeouts.get(player.id)!);
           }
-
-          // Send system message for disconnect
-          if (username) {
-            sendSystemMessage(roomId, `${username} disconnected`);
-          }
-
-          game.removePlayer(userId);
-
-          // Broadcast updated player list
-          io.to(roomId).emit("player_joined", {
-            players: game.getPlayers().map((p) => ({
-              username: p.username,
-              index: p.index,
-              isBot: p.isBot,
-              eliminated: p.eliminated,
-            })),
-          });
-        } else {
-          // Game is started - immediately abandon the game
-
-          const gameState = game.getState();
-          const player = gameState.players.find(
-            (p) => p.index === socket.data.playerIndex,
+          console.log(
+            `[DISCONNECT-TIMEOUT] Started for playerId=${player.id}, username=${player.username}, room=${roomId}, timeout=${DISCONNECT_TIMEOUT_MS}ms`
           );
-
-          if (player && !player.eliminated) {
-            // Mark player as eliminated
-            player.eliminated = true;
-
-            // Send system message
-            sendSystemMessage(roomId, `${player.username} abandoned the game`);
-
-            // Check for victory condition
-            const remainingPlayers = gameState.players.filter(
-              (p) => !p.eliminated,
-            );
-
-            if (remainingPlayers.length === 1) {
-              const winner = remainingPlayers[0];
-              sendSystemMessage(roomId, `🎉 ${winner.username} wins the game!`);
-
-              // End the game after a short delay
-              setTimeout(() => {
-                game.endGame(winner.index || 0);
-              }, 2000);
-            }
-          }
-
-          // Convert socket to viewer
-
-          socket.data.playerIndex = -1;
-          socket.data.isViewer = true;
-
-          // Don't remove from game immediately - let cleanup timer handle it
-          playerRooms.delete(socket.id);
-          socket.leave(roomId);
-          sendGameInfo(roomId);
-
-          return;
+          disconnectTimeouts.set(
+            player.id,
+            setTimeout(() => {
+              // If still disconnected after timeout, remove or eliminate
+              if (!player.activeSocket) {
+                // If not already eliminated, mark as eliminated
+                if (!player.eliminated) {
+                  player.eliminated = true;
+                  console.log(
+                    `[DISCONNECT-TIMEOUT] ELIMINATED playerId=${player.id}, username=${player.username}, room=${roomId} (timeout expired)`
+                  );
+                }
+                // Optionally, remove player from game entirely:
+                // game.removePlayer(player.id);
+                // Broadcast update
+                io.to(roomId).emit("player_joined", {
+                  players: game.getPlayers().map((p) => ({
+                    username: p.username,
+                    index: p.index,
+                    isBot: p.isBot,
+                    eliminated: p.eliminated,
+                  })),
+                });
+                sendSystemMessage(roomId, `${player.username} was removed due to disconnect timeout`);
+              }
+              disconnectTimeouts.delete(player.id);
+            }, DISCONNECT_TIMEOUT_MS)
+          );
         }
+
+        // Do NOT eliminate or end the game immediately on disconnect.
+        // Only start the disconnect timeout and wait for reconnection or timeout expiry.
+        // The elimination/game end logic is now handled exclusively in the disconnect timeout callback above.
+
+        // Convert socket to viewer
+        socket.data.playerIndex = -1;
+        socket.data.isViewer = true;
+
+        // Remove from playerRooms and leave room
+        playerRooms.delete(socket.id);
+        socket.leave(roomId);
+        sendGameInfo(roomId);
+
+        // Transfer host if disconnecting player was host
+        if (socket.data.isHost && gameHosts.get(roomId) === socket.id) {
+          transferHostToNextPlayer(roomId);
+        }
+
+        return;
       }
+
+      // Remove from playerRooms and leave room
+      playerRooms.delete(socket.id);
+      socket.leave(roomId);
+      sendGameInfo(roomId);
 
       // Transfer host if disconnecting player was host
       if (socket.data.isHost && gameHosts.get(roomId) === socket.id) {
         transferHostToNextPlayer(roomId);
       }
-
-      playerRooms.delete(socket.id);
-      socket.leave(roomId);
-
-      // Update game info for remaining players
-      sendGameInfo(roomId);
     } else {
     }
   });

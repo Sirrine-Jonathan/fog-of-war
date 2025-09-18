@@ -126,6 +126,19 @@ export class Game {
     return this.state.players;
   }
 
+  handlePlayerDisconnect(playerId: string): boolean {
+    if (!this.state.gameStarted) {
+      // Remove player before game starts
+      return this.removePlayer(playerId);
+    }
+    // Eliminate player after game starts
+    const playerIndex = this.state.players.findIndex((p) => p.id === playerId);
+    if (playerIndex === -1) return false;
+    if (this.state.players[playerIndex].eliminated) return false;
+    this.eliminatePlayer(playerIndex);
+    return true;
+  }
+
   private findOptimalGeneralPosition(): number {
     // Special testing layout: place generals exactly 5 tiles apart
     if (this.roomId === "testing") {
