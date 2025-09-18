@@ -39,7 +39,6 @@ function showDisconnectWarning(seconds) {
   if (typeof showToast === "function") {
     showToast("Disconnected! Attempting to reconnect...", "error");
   }
-  console.log(`[CLIENT-DISCONNECT] Showing disconnect warning overlay (countdown: ${disconnectCountdown}s)`);
   updateDisconnectWarningText();
 
   if (disconnectWarningTimeout) clearInterval(disconnectWarningTimeout);
@@ -68,7 +67,6 @@ function hideDisconnectWarning() {
     if (typeof showToast === "function") {
       showToast("Reconnected!", "success");
     }
-    console.log("[CLIENT-DISCONNECT] Hiding disconnect warning overlay (reconnected or timeout expired)");
   }
   if (disconnectWarningTimeout) clearInterval(disconnectWarningTimeout);
 }
@@ -615,7 +613,8 @@ let remainingMoves = 0; // Current remaining moves
 
 // Intent-based movement system
 let activeIntent = null; // { fromTile, targetTile, path, currentStep }
-let moveQueue = []; // Queue of relative directions: 'up', 'down', 'left', 'right'
+let moveQueue = []; // Queued moves
+let projectedQueue = []; // Queued moves with projects of their number of armies
 let lastInputTime = 0;
 let inputDebounceMs = 50; // Minimum time between inputs
 
@@ -974,16 +973,7 @@ socket.on("connect", () => {
   if (notification.style.display === "block") {
     notification.style.display = "none";
   }
-  // Attempt to rejoin if we have a stored userId and username
-  const storedUserId = localStorage.getItem("userId");
-  const storedUsername = localStorage.getItem("username");
-  if (storedUserId && storedUsername) {
-    currentUserId = storedUserId;
-    lastUsername = storedUsername;
-    console.log(`[CLIENT-RECONNECT] Attempting to rejoin as player: userId=${currentUserId}, username=${lastUsername}`);
-    socket.emit("set_username", currentUserId, lastUsername);
-    socket.emit("join_private", roomId, currentUserId);
-  }
+  // No auto-rejoin or localStorage username/userId logic
 });
 
 socket.on("username_taken", (data) => {
@@ -1110,6 +1100,19 @@ socket.on("attack_result", (data) => {
   drawGame();
 });
 
+function projectQueue(moveQueue){
+  [...moveQueue].forEach((move, index, queue) => {
+    const nextTileArmies = index < queue.length - 1 ? queue[index + 1].fromArmies || 0 : 0;
+    const accumulatedArmies = ((move.fromArmies || 0) - 1) + nextTileArmies;
+    queue[index].toArmies = Math.max(accumulatedArmies, 0);
+    if (queue?.[index + 1]){
+      queue[index + 1].fromArmies = Math.max(queue[index].toArmies, 0);
+    }
+  })
+
+  return moveQueue;
+}
+
 // Track last turn we played army bonus sound for
 let lastArmyBonusTurn = -1;
 
@@ -1122,11 +1125,14 @@ socket.on("game_update", (data) => {
 
     gameState = parseMapData(patchedMap);
 
-    // Log all player positions
-    gameState.terrain.forEach((terrain, index) => {
-      if (terrain >= 0) {
-      }
-    });
+    // set up projected queue with latest data
+    const enhancedQueue = moveQueue ? moveQueue.map((move) => ({
+      ...move,
+      fromArmies: gameState.armies[move.fromTile] || 0,
+      toArmies: gameState.armies[move.toTile] || 0
+    })) : [];
+    moveQueue = projectQueue(enhancedQueue);
+
 
     // Update players data if provided
     if (data.players) {
@@ -1253,10 +1259,10 @@ socket.on("game_update", (data) => {
       const currentTile =
         activeIntent.currentStep === 0
           ? activeIntent.fromTile
-          : activeIntent.path[activeIntent.currentStep - 1];
+          : activeIntent.path[activeIntent.currentStep - 1].toTile;
       const nextTile =
         activeIntent.currentStep < activeIntent.path.length
-          ? activeIntent.path[activeIntent.currentStep]
+          ? activeIntent.path[activeIntent.currentStep]?.toTile || activeIntent.path[activeIntent.currentStep]
           : activeIntent.targetTile;
 
       if (
@@ -1269,31 +1275,12 @@ socket.on("game_update", (data) => {
         // Try to re-pathfind from current position to target
         const newPath = findPath(currentTile, activeIntent.targetTile);
         if (newPath && newPath.length > 0) {
-          activeIntent.path = newPath;
+          activeIntent.path = newPath.map(tile => ({ toTile: tile }));
           activeIntent.fromTile = currentTile;
           activeIntent.currentStep = 0;
         } else {
           activeIntent = null; // Clear invalid intent
         }
-      }
-    }
-    function getTargetTileFromDirection(fromTile, direction) {
-      if (!gameState || fromTile === null) return null;
-
-      const row = Math.floor(fromTile / gameState.width);
-      const col = fromTile % gameState.width;
-
-      switch (direction) {
-        case "up":
-          return row > 0 ? fromTile - gameState.width : null;
-        case "down":
-          return row < gameState.height - 1 ? fromTile + gameState.width : null;
-        case "left":
-          return col > 0 ? fromTile - 1 : null;
-        case "right":
-          return col < gameState.width - 1 ? fromTile + 1 : null;
-        default:
-          return null;
       }
     }
 
@@ -1660,7 +1647,6 @@ function updateQueuedPath() {
   // Create a visual path from queued moves for display
   if (moveQueue.length > 0) {
     const queuedPath = [];
-    let currentTile = selectedTile;
 
     // Build path from queued moves
     for (let i = 0; i < moveQueue.length; i++) {
@@ -1668,14 +1654,14 @@ function updateQueuedPath() {
       if (move.fromTile !== undefined && move.toTile !== undefined) {
         // Check if this is an adjacent move or needs pathfinding
         if (isAdjacent(move.fromTile, move.toTile)) {
-          queuedPath.push(move.toTile);
+          queuedPath.push(move);
         } else {
           // Non-adjacent move - use pathfinding
-          const pathSegment = findPath(move.fromTile, move.toTile);
+          const pathSegment = findPath(move.fromTile, move.toTile)?.map(tile => ({ toTile: tile }));
           if (pathSegment && pathSegment.length > 0) {
             queuedPath.push(...pathSegment);
           } else {
-            queuedPath.push(move.toTile);
+            queuedPath.push(move);
           }
         }
         currentTile = move.toTile;
@@ -2214,23 +2200,25 @@ function drawGame() {
     }
 
     // Draw intent path
-    if (activeIntent && activeIntent.path.includes(i)) {
+    if (activeIntent && activeIntent.path.map(move => move.toTile).includes(i)) {
       if (activeIntent.isQueuedPath) {
+        const move = activeIntent.path.find(move => move.toTile === i);
+        const isValid = !('fromArmies' in move) || move.fromArmies > 1;
+
         // Queued moves - much more prominent highlight
         ctx.save();
         const playerColor = getPlayerColor(playerIndex);
         const brightColor = brightenColor(playerColor, 0.6); // 60% brighter
 
         // Stronger shadow/glow
-        ctx.shadowColor = brightColor;
-        ctx.shadowBlur = 20 * camera.zoom;
+        ctx.shadowColor = isValid ? "#DDD" : "#333"; // brightColor;
 
         // More opaque fill (80%)
         // ctx.fillStyle = brightColor + "CC"; // 80% opacity
         // ctx.fillRect(x, y, tileSize, tileSize);
 
         // Optional: white outline for extra contrast
-        ctx.strokeStyle = "#FFF";
+        ctx.strokeStyle = isValid ? "#FFF" : "#bc1111ff";
         ctx.lineWidth = 6 * camera.zoom;
         ctx.setLineDash([]);
         ctx.strokeRect(x, y, tileSize, tileSize);
@@ -2529,7 +2517,7 @@ canvas.addEventListener("click", (e) => {
             activeIntent = {
               fromTile: selectedTile,
               targetTile: tileIndex,
-              path: path,
+              path: path.map(tile => ({ toTile: tile })),
               currentStep: 0,
             };
           }
@@ -2905,7 +2893,7 @@ function handleTouchTap(x, y, isActivationOnly) {
             activeIntent = {
               fromTile: selectedTile,
               targetTile: tileIndex,
-              path: path,
+              path: path.map(tile => ({ toTile: tile })),
               currentStep: 0,
             };
           }
@@ -3387,15 +3375,8 @@ function joinAsPlayer() {
 
   lastUsername = username; // Remember this username
 
-  // Persist userId and username in localStorage for reconnects
-  let storedUserId = localStorage.getItem("userId");
-  if (!storedUserId) {
-    storedUserId = "human_" + Date.now();
-    localStorage.setItem("userId", storedUserId);
-  }
-  localStorage.setItem("username", username);
-
-  currentUserId = storedUserId;
+  // Generate a new userId for each join (no persistence)
+  currentUserId = "human_" + Date.now();
   socket.emit("set_username", currentUserId, username);
   socket.emit("join_private", roomId, currentUserId);
 }

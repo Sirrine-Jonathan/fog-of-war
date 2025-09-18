@@ -91,8 +91,6 @@ export class Game {
   }
 
   removePlayer(playerId: string): boolean {
-    if (this.state.gameStarted) return false; // Can't remove players after game starts
-
     const playerIndex = this.state.players.findIndex((p) => p.id === playerId);
     if (playerIndex === -1) return false;
 
@@ -101,6 +99,18 @@ export class Game {
     if (generalPos !== undefined) {
       this.state.terrain[generalPos] = TILE_EMPTY;
       this.state.armies[generalPos] = 0;
+    }
+
+    // Remove all of this player's territory from the map
+    for (let i = 0; i < this.state.terrain.length; i++) {
+      if (this.state.terrain[i] === playerIndex) {
+        this.state.terrain[i] = TILE_EMPTY;
+        this.state.armies[i] = 0;
+      }
+      // Ghost territory: clear if it belonged to this player
+      if (this.state.ghostTerrain[i] === playerIndex) {
+        this.state.ghostTerrain[i] = TILE_EMPTY;
+      }
     }
 
     // Remove player and reindex
@@ -116,6 +126,19 @@ export class Game {
     for (let i = 0; i < this.state.terrain.length; i++) {
       if (this.state.terrain[i] > playerIndex) {
         this.state.terrain[i]--;
+      }
+      if (this.state.ghostTerrain[i] > playerIndex) {
+        this.state.ghostTerrain[i]--;
+      }
+    }
+
+    // If game is started, check for victory condition
+    if (this.state.gameStarted && !this.state.gameEnded) {
+      const remainingPlayers = this.state.players.filter((p) => !p.eliminated);
+      if (remainingPlayers.length <= 1) {
+        this.endGame(
+          remainingPlayers.length === 1 ? remainingPlayers[0].index : -1,
+        );
       }
     }
 

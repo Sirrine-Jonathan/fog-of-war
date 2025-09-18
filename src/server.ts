@@ -1306,53 +1306,17 @@ io.on("connection", (socket) => {
       const username = socket.data.username;
 
       if (game && userId) {
-        // Clear activeSocket on player object if present
+        // Immediately remove player from game on disconnect
         const player = game.getPlayers().find((p) => p.id === userId);
         if (player) {
-          player.activeSocket = undefined;
-
-          // Start disconnect timeout for this player
-          if (disconnectTimeouts.has(player.id)) {
-            clearTimeout(disconnectTimeouts.get(player.id)!);
-          }
-          console.log(
-            `[DISCONNECT-TIMEOUT] Started for playerId=${player.id}, username=${player.username}, room=${roomId}, timeout=${DISCONNECT_TIMEOUT_MS}ms`
-          );
-          disconnectTimeouts.set(
-            player.id,
-            setTimeout(() => {
-              // If still disconnected after timeout, remove or eliminate
-              if (!player.activeSocket) {
-                // If not already eliminated, mark as eliminated
-                if (!player.eliminated) {
-                  player.eliminated = true;
-                  console.log(
-                    `[DISCONNECT-TIMEOUT] ELIMINATED playerId=${player.id}, username=${player.username}, room=${roomId} (timeout expired)`
-                  );
-                }
-                // Optionally, remove player from game entirely:
-                // game.removePlayer(player.id);
-                // Broadcast update
-                io.to(roomId).emit("player_joined", {
-                  players: game.getPlayers().map((p) => ({
-                    username: p.username,
-                    index: p.index,
-                    isBot: p.isBot,
-                    eliminated: p.eliminated,
-                  })),
-                });
-                sendSystemMessage(roomId, `${player.username} was removed due to disconnect timeout`);
-              }
-              disconnectTimeouts.delete(player.id);
-            }, DISCONNECT_TIMEOUT_MS)
-          );
+          game.removePlayer(userId);
+          sendSystemMessage(roomId, `${player.username} left the game (disconnected)`);
+          io.to(roomId).emit("player_joined", {
+            players: game.getPlayers(),
+          });
         }
 
-        // Do NOT eliminate or end the game immediately on disconnect.
-        // Only start the disconnect timeout and wait for reconnection or timeout expiry.
-        // The elimination/game end logic is now handled exclusively in the disconnect timeout callback above.
-
-        // Convert socket to viewer
+        // Reset player data
         socket.data.playerIndex = -1;
         socket.data.isViewer = true;
 
