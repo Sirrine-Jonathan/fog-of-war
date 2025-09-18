@@ -2224,6 +2224,32 @@ function drawGame() {
           tileSize - 2 * inset
         );
         ctx.restore();
+
+        // Draw continuous white line through the center of the queued path (only once per path)
+        //if (move === activeIntent.path[0]) {
+          ctx.save();
+          ctx.beginPath();
+          const centers = activeIntent.path.map(move => {
+            const idx = move.toTile;
+            const row = Math.floor(idx / gameState.width);
+            const col = idx % gameState.width;
+            return [
+              col * tileSize + tileSize / 2,
+              row * tileSize + tileSize / 2
+            ];
+          });
+          ctx.moveTo(centers[0][0], centers[0][1]);
+          for (let j = 1; j < centers.length; j++) {
+            ctx.lineTo(centers[j][0], centers[j][1]);
+          }
+          ctx.strokeStyle = "#fff";
+          ctx.lineWidth = 3 * camera.zoom;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "miter";
+          ctx.stroke();
+          ctx.restore();
+        //}
+
       } else {
         // Click path (non-queued): solid blue outline, warning icon for invalid
         // Click path (non-queued): solid/dashed square outline, slightly inset, no rounded corners
