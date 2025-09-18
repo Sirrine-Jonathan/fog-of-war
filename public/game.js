@@ -614,7 +614,6 @@ let remainingMoves = 0; // Current remaining moves
 // Intent-based movement system
 let activeIntent = null; // { fromTile, targetTile, path, currentStep }
 let moveQueue = []; // Queued moves
-let projectedQueue = []; // Queued moves with projects of their number of armies
 let lastInputTime = 0;
 let inputDebounceMs = 50; // Minimum time between inputs
 
@@ -2203,6 +2202,10 @@ function drawGame() {
     if (activeIntent && activeIntent.path.map(move => move.toTile).includes(i)) {
       const move = activeIntent.path.find(move => move.toTile === i);
       const isValid = !('fromArmies' in move) || move.fromArmies > 1;
+      if (!isValid && !move.soundPlayed) {
+        soundManager.play("insufficientArmies");
+        move.soundPlayed = true;
+      }
 
       ctx.save();
 
@@ -2248,6 +2251,58 @@ function drawGame() {
           ctx.lineJoin = "miter";
           ctx.stroke();
           ctx.restore();
+
+          // After drawing the white line, draw the army number with circular background for each tile in the path
+          activeIntent.path.forEach(pathMove => {
+            // Use projected armies if available, otherwise fallback to gameState.armies
+            const armies =
+              typeof pathMove.toArmies === "number"
+                ? pathMove.toArmies
+                : (typeof pathMove.toTile === "number" ? gameState.armies[pathMove.toTile] : undefined);
+
+            if (typeof pathMove.toTile === "number" && typeof armies === "number" && armies > 0) {
+              const row = Math.floor(pathMove.toTile / gameState.width);
+              const col = pathMove.toTile % gameState.width;
+              const centerX = col * tileSize + tileSize / 2;
+              const centerY = row * tileSize + tileSize / 2;
+              const circleRadius = tileSize * 0.32;
+              const squareSize = 2 * circleRadius;
+
+              // Draw semi-transparent white square (background)
+              ctx.save();
+              ctx.globalAlpha = 0.85;
+              ctx.fillStyle = "#fff";
+              ctx.fillRect(
+                centerX - squareSize / 2,
+                centerY - squareSize / 2,
+                squareSize,
+                squareSize
+              );
+              ctx.globalAlpha = 1.0;
+              ctx.lineWidth = 2 * camera.zoom;
+              ctx.strokeStyle = "#222";
+              ctx.strokeRect(
+                centerX - squareSize / 2,
+                centerY - squareSize / 2,
+                squareSize,
+                squareSize
+              );
+              ctx.restore();
+
+              // Draw army number (smaller)
+              ctx.save();
+              ctx.font = `bold ${Math.max(9, 11 * camera.zoom)}px 'Courier New', monospace`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillStyle = "#222";
+              ctx.fillText(
+                armies.toString(),
+                centerX,
+                centerY
+              );
+              ctx.restore();
+            }
+          });
         //}
 
       } else {

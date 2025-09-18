@@ -413,18 +413,7 @@ io.on("connection", (socket) => {
           if (disconnectTimeouts.has(userId)) {
             clearTimeout(disconnectTimeouts.get(userId)!);
             disconnectTimeouts.delete(userId);
-            console.log(
-              `[DISCONNECT-TIMEOUT] CLEARED for playerId=${userId}, username=${username}, room=${gameId} (reconnected)`
-            );
-            console.log(
-              `[RECONNECT] playerId=${userId}, username=${username}, room=${gameId} reconnected and restored`
-            );
             sendSystemMessage(gameId, `${username} reconnected`);
-          } else {
-            // Not a true reconnect (likely initial join or duplicate join)
-            console.log(
-              `[JOIN] playerId=${userId}, username=${username}, room=${gameId} joined as player (initial join or duplicate join)`
-            );
           }
 
           // Ensure playerRooms is updated for this socket
@@ -480,13 +469,7 @@ io.on("connection", (socket) => {
         if (disconnectTimeouts.has(userId)) {
           clearTimeout(disconnectTimeouts.get(userId)!);
           disconnectTimeouts.delete(userId);
-          console.log(
-            `[DISCONNECT-TIMEOUT] CLEARED for playerId=${userId}, username=${username}, room=${gameId} (reconnected)`
-          );
         }
-        console.log(
-          `[RECONNECT] playerId=${userId}, username=${username}, room=${gameId} reconnected and restored`
-        );
 
         // Assign host if no host exists and this is a real player (not bot)
         if (!gameHosts.has(gameId) && !botDetected) {

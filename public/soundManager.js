@@ -42,7 +42,7 @@ if (!window.SoundManager) {
       // Load the error sound for insufficient armies
       this.loadSound(
         "insufficientArmies",
-        "/sounds/201767__waveplaysfx__short-burst-of-noise.wav",
+        "/sounds/235652__copyc4t__tf_buzz.flac",
       );
       // Load mountain adjacent move sound
       this.loadSound(

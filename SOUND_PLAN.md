@@ -13,14 +13,24 @@
       JSON:
       {"sound_url": "https://freesound.org/people/Krokulator/sounds/652499/", "sound_name": "error2.wav", "author_url": "https://freesound.org/people/Krokulator/", "author_name": "Krokulator", "license_url": "http://creativecommons.org/publicdomain/zero/1.0/", "license_name": "Creative Commons 0"}
     - when player tries to move armies from an active square that has only 1 army (error)
-      201767**waveplaysfx**short-burst-of-noise.wav
+      235652__copyc4t__tf_buzz.flac
       Attribution:
       Plain text:
-      short burst of noise by waveplaySFX -- https://freesound.org/s/201767/ -- License: Creative Commons 0
+      TF_Buzz.flac by copyc4t -- https://freesound.org/s/235652/ -- License: Attribution 4.0
       HTML:
-      <a href="https://freesound.org/people/waveplaySFX/sounds/201767/">short burst of noise</a> by <a href="https://freesound.org/people/waveplaySFX/">waveplaySFX</a> | License: <a href="http://creativecommons.org/publicdomain/zero/1.0/">Creative Commons 0</a>
+      <a href="https://freesound.org/people/copyc4t/sounds/235652/">TF_Buzz.flac</a> by <a href="https://freesound.org/people/copyc4t/">copyc4t</a> | License: <a href="https://creativecommons.org/licenses/by/4.0/">Attribution 4.0</a>
       JSON:
-      {"sound_url": "https://freesound.org/people/waveplaySFX/sounds/201767/", "sound_name": "short burst of noise", "author_url": "https://freesound.org/people/waveplaySFX/", "author_name": "waveplaySFX", "license_url": "http://creativecommons.org/publicdomain/zero/1.0/", "license_name": "Creative Commons 0"}
+      {"sound_url": "https://freesound.org/people/copyc4t/sounds/235652/", "sound_name": "TF_Buzz.flac", "author_url": "https://freesound.org/people/copyc4t/", "author_name": "copyc4t", "license_url": "https://creativecommons.org/licenses/by/4.0/", "license_name": "Attribution 4.0"}
+
+- Unused sounds:
+  - 201767__waveplaysfx__short-burst-of-noise.wav
+    Attribution:
+    Plain text:
+    short burst of noise by waveplaySFX -- https://freesound.org/s/201767/ -- License: Attribution 4.0
+    HTML:
+    <a href="https://freesound.org/people/waveplaySFX/sounds/201767/">short burst of noise</a> by <a href="https://freesound.org/people/waveplaySFX/">waveplaySFX</a> | License: <a href="https://creativecommons.org/licenses/by/4.0/">Attribution 4.0</a>
+    JSON:
+    {"sound_url": "https://freesound.org/people/waveplaySFX/sounds/201767/", "sound_name": "short burst of noise", "author_url": "https://freesound.org/people/waveplaySFX/", "author_name": "waveplaySFX", "license_url": "https://creativecommons.org/licenses/by/4.0/", "license_name": "Attribution 4.0"}
     - when player moves to owned territory (neutral sound)
       41633**datasoundsample**littleclick.wav
       Attribution:
