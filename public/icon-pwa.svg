@@ -3,7 +3,7 @@
   <rect width="512" height="512" fill="#0f1419"/>
   
   <!-- 9x9 grid of tiles (scaled up) -->
-  <g stroke="#121920" stroke-width="4">
+  <g stroke="#AAAAAA" stroke-width="4">
     <!-- Row 1 -->
     <rect x="32" y="32" width="48" height="48" fill="#0f1419"/>
     <rect x="96" y="32" width="48" height="48" fill="#0f1419"/>
@@ -69,5 +69,5 @@
   </g>
   
   <!-- FOV text in white capital letters -->
-  <text x="256" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="120" font-weight="bold" fill="white">FOV</text>
+  <text x="256" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="125" font-weight="bold" fill="white">FOV</text>
 </svg>

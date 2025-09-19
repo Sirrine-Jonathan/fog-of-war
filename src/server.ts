@@ -1218,7 +1218,7 @@ socket.on('chat_message', (data: { gameId: string, message: string, username: st
   }
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 5173;
 
 // Initialize bot manager with dynamic URL
 const serverUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
