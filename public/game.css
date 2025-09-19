@@ -108,6 +108,7 @@ h4 {
   text-overflow: ellipsis;
   padding: 0 4px;
   min-width: 0;
+  transition: all 0.3s
 }
 
 .territory-segment:first-child {

@@ -1905,22 +1905,24 @@ function drawGame() {
       playerIndex < 0 || isEliminated || visibleTiles.has(i) || gameEnded;
 
     if (!isVisible) {
-      // --- Animated Fog of War Gradient Wave ---
-      // Animate gradient horizontally across all tiles using a slow sine wave
+      // --- Animated Fog of War Gradient Wave with Smooth Perpendicular Modulation ---
+      // Animate gradient with two perpendicular wave patterns, but keep transitions gradual
       const time = animationTime;
-      const wavePhase = Math.sin(time + col * 0.5 + row * 0.3) * 0.5 + 0.5; // 0..1
+      // Horizontal wave: controls gradient offset (lower frequency)
+      const wavePhaseH = Math.sin(time + col * 0.2 + row * 0.1) * 0.5 + 0.5; // 0..1
+      // Vertical wave: color modulation (higher amplitude)
+      const wavePhaseV = Math.sin(time + row * 0.5 + col * 0.3) * 0.5 + 0.5; // 0..1
 
-      // Calculate horizontal offset for gradient
-      const waveOffset = wavePhase * tileSize * 0.5;
+      // Calculate offset for gradient based only on horizontal wave
+      const waveOffsetH = wavePhaseH * tileSize * 0.5;
 
-      // Gradient moves horizontally across all tiles
-      const gradStartX = x + waveOffset;
-      const gradEndX = x + tileSize - waveOffset;
+      // Animate the gradient diagonally, modulated by horizontal wave only
+      const gradStartX = x + waveOffsetH;
+      const gradEndX = x + tileSize - waveOffsetH;
       const gradStartY = y;
       const gradEndY = y + tileSize;
 
-      // Create a diagonal gradient that animates horizontally and colors over time
-      // Animate colors using slow sine/cosine waves
+      // Create a diagonal gradient that animates with horizontal wave and colors over time
       function lerpColor(a, b, t) {
         // a, b: hex strings "#rrggbb", t: 0..1
         const ar = parseInt(a.slice(1, 3), 16);
@@ -1940,13 +1942,16 @@ function drawGame() {
       const baseB = "#888888";
       const baseC = "#b0b0c0";
       // Animate between base colors and lighter/darker variants
-      const t0 = Math.sin(time * 0.7 + col * 0.2 + row * 0.1) * 0.5 + 0.5;
-      const t1 = Math.cos(time * 0.5 + col * 0.3 + row * 0.2) * 0.5 + 0.5;
-      const t2 = Math.sin(time * 0.4 + col * 0.1 + row * 0.3) * 0.5 + 0.5;
+      // Use vertical wave as a stronger perturbation to the color interpolation
+      const t0 = Math.sin(time * 0.7 + col * 0.2 + row * 0.1) * 0.5 + 0.5 + (wavePhaseV - 0.5) * 0.35;
+      const t1 = Math.cos(time * 0.5 + col * 0.3 + row * 0.2) * 0.5 + 0.5 + (wavePhaseV - 0.5) * 0.35;
+      const t2 = Math.sin(time * 0.4 + col * 0.1 + row * 0.3) * 0.5 + 0.5 + (wavePhaseV - 0.5) * 0.35;
 
-      const colorA = lerpColor(baseA, "#44485a", t0); // darken
-      const colorB = lerpColor(baseB, "#a0a0b0", t1); // lighten
-      const colorC = lerpColor(baseC, "#e0e0f0", t2); // lighten
+      // Clamp t values to [0,1]
+      const clamp = (v) => Math.max(0, Math.min(1, v));
+      const colorA = lerpColor(baseA, "#44485a", clamp(t0)); // darken
+      const colorB = lerpColor(baseB, "#a0a0b0", clamp(t1)); // lighten
+      const colorC = lerpColor(baseC, "#e0e0f0", clamp(t2)); // lighten
 
       const fogGradient = ctx.createLinearGradient(gradStartX, gradStartY, gradEndX, gradEndY);
       fogGradient.addColorStop(0, colorA);
