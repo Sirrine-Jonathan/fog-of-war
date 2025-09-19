@@ -1450,16 +1450,19 @@ function drawGame() {
         
         if (!isVisible) {
             // Draw fog of war
-            ctx.fillStyle = fogColor;
+            const fogGradient = ctx.createLinearGradient(x, y, x, y + tileSize);
+            fogGradient.addColorStop(0, 'rgba(205, 212, 233, 0.57)');
+            fogGradient.addColorStop(1, 'rgba(232, 234, 244, 0.72)');
+            ctx.fillStyle = fogGradient;
             ctx.fillRect(x, y, tileSize, tileSize);
             
             // Add fog pattern
-            ctx.fillStyle = '#999';
-            for (let fx = 0; fx < tileSize; fx += 4) {
-                for (let fy = 0; fy < tileSize; fy += 4) {
-                    if ((fx + fy) % 8 === 0) {
-                        ctx.fillRect(x + fx, y + fy, 2, 2);
-                    }
+            ctx.fillStyle = "rgba(255,255,255,0.13)";
+            for (let fx = 0; fx < tileSize; fx += 6) {
+                for (let fy = 0; fy < tileSize; fy += 6) {
+                if ((fx + fy) % 12 === 0) {
+                    ctx.fillRect(x + fx, y + fy, 2, 2);
+                }
                 }
             }
         } else {
