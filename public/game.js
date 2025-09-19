@@ -1000,7 +1000,6 @@ socket.on("game_already_started", () => {
 
 socket.on("game_won", (data) => {
   window.logger("socket.on: game_won", data);
-  console.log("game_won", data);
   gameStarted = false;
   const winnerName = players[data.winner]?.username || "Unknown";
 
@@ -1882,6 +1881,9 @@ function drawGame() {
   ctx.save();
   ctx.translate(-camera.x, -camera.y);
 
+  // Use a time value for animation (constant rate)
+  const animationTime = performance.now() * 0.0015; // Slow animation
+
   for (let i = 0; i < gameState.terrain.length; i++) {
     const row = Math.floor(i / gameState.width);
     const col = i % gameState.width;
@@ -1903,19 +1905,73 @@ function drawGame() {
       playerIndex < 0 || isEliminated || visibleTiles.has(i) || gameEnded;
 
     if (!isVisible) {
-      // Draw fog of war
-      ctx.fillStyle = fogColor;
+      // --- Animated Fog of War Gradient Wave ---
+      // Animate gradient horizontally across all tiles using a slow sine wave
+      const time = animationTime;
+      const wavePhase = Math.sin(time + col * 0.5 + row * 0.3) * 0.5 + 0.5; // 0..1
+
+      // Calculate horizontal offset for gradient
+      const waveOffset = wavePhase * tileSize * 0.5;
+
+      // Gradient moves horizontally across all tiles
+      const gradStartX = x + waveOffset;
+      const gradEndX = x + tileSize - waveOffset;
+      const gradStartY = y;
+      const gradEndY = y + tileSize;
+
+      // Create a diagonal gradient that animates horizontally and colors over time
+      // Animate colors using slow sine/cosine waves
+      function lerpColor(a, b, t) {
+        // a, b: hex strings "#rrggbb", t: 0..1
+        const ar = parseInt(a.slice(1, 3), 16);
+        const ag = parseInt(a.slice(3, 5), 16);
+        const ab = parseInt(a.slice(5, 7), 16);
+        const br = parseInt(b.slice(1, 3), 16);
+        const bg = parseInt(b.slice(3, 5), 16);
+        const bb = parseInt(b.slice(5, 7), 16);
+        const r = Math.round(ar + (br - ar) * t);
+        const g = Math.round(ag + (bg - ag) * t);
+        const b_ = Math.round(ab + (bb - ab) * t);
+        return `rgb(${r},${g},${b_})`;
+      }
+
+      // Base colors (use full 6-digit hex codes)
+      const baseA = "#6a6a7a";
+      const baseB = "#888888";
+      const baseC = "#b0b0c0";
+      // Animate between base colors and lighter/darker variants
+      const t0 = Math.sin(time * 0.7 + col * 0.2 + row * 0.1) * 0.5 + 0.5;
+      const t1 = Math.cos(time * 0.5 + col * 0.3 + row * 0.2) * 0.5 + 0.5;
+      const t2 = Math.sin(time * 0.4 + col * 0.1 + row * 0.3) * 0.5 + 0.5;
+
+      const colorA = lerpColor(baseA, "#44485a", t0); // darken
+      const colorB = lerpColor(baseB, "#a0a0b0", t1); // lighten
+      const colorC = lerpColor(baseC, "#e0e0f0", t2); // lighten
+
+      const fogGradient = ctx.createLinearGradient(gradStartX, gradStartY, gradEndX, gradEndY);
+      fogGradient.addColorStop(0, colorA);
+      fogGradient.addColorStop(0.5, colorB);
+      fogGradient.addColorStop(1, colorC);
+
+      // Clip to tile bounds to prevent overflow
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x, y, tileSize, tileSize);
+      ctx.clip();
+
+      ctx.fillStyle = fogGradient;
       ctx.fillRect(x, y, tileSize, tileSize);
 
-      // Add fog pattern
-      ctx.fillStyle = "#999";
-      for (let fx = 0; fx < tileSize; fx += 4) {
-        for (let fy = 0; fy < tileSize; fy += 4) {
-          if ((fx + fy) % 8 === 0) {
+      // 3. Fog pattern (existing dots, but lighter and more sparse)
+      ctx.fillStyle = "rgba(255,255,255,0.13)";
+      for (let fx = 0; fx < tileSize; fx += 6) {
+        for (let fy = 0; fy < tileSize; fy += 6) {
+          if ((fx + fy) % 12 === 0) {
             ctx.fillRect(x + fx, y + fy, 2, 2);
           }
         }
       }
+      ctx.restore();
     } else {
       // Draw visible tile
       const terrain = gameState.terrain[i];
@@ -2396,6 +2452,42 @@ function drawGame() {
   // Debug overlay
   // drawDebugInfo();
 }
+
+// --- Animation loop for smooth fog animation ---
+let gameAnimationId = null;
+function startGameAnimationLoop() {
+  if (gameAnimationId) return;
+  function animate() {
+    drawGame();
+    gameAnimationId = requestAnimationFrame(animate);
+  }
+  gameAnimationId = requestAnimationFrame(animate);
+}
+function stopGameAnimationLoop() {
+  if (gameAnimationId) {
+    cancelAnimationFrame(gameAnimationId);
+    gameAnimationId = null;
+  }
+}
+
+// --- Hook animation loop into game events ---
+// On game start, start animation loop
+socket.on("game_start", (data) => {
+  // ...existing code...
+  startGameAnimationLoop();
+});
+
+// On game update, just update state (animation loop will keep drawing)
+socket.on("game_update", (data) => {
+  // ...existing code...
+  // Do NOT call drawGame() here, let animation loop handle it
+});
+
+// On game end, stop animation loop
+socket.on("game_end", (data) => {
+  // ...existing code...
+  stopGameAnimationLoop();
+});
 
 function drawDebugInfo() {
   if (!gameState) return;
