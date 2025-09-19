@@ -5,6 +5,7 @@ import path from "path";
 import { Game } from "./game";
 import { BotManager } from "./botManager";
 import { TILE_EMPTY, TILE_MOUNTAIN, TILE_CITY, MOVES_PER_TURN } from "./types";
+import { logger } from "./logger";
 
 const app = express();
 const server = createServer(app);
@@ -96,7 +97,6 @@ const gameHistory = new Map<string, any[]>(); // gameId -> array of completed ga
 
 // Disconnect timeout tracking: Map<playerId, NodeJS.Timeout>
 const disconnectTimeouts = new Map<string, NodeJS.Timeout>();
-const DISCONNECT_TIMEOUT_MS = 5000;
 
 // Game event tracking
 const gameFirstBlood = new Map<string, boolean>(); // gameId -> has first blood occurred
@@ -289,19 +289,24 @@ app.get("/game/:roomId", (req, res) => {
 });
 
 io.on("connection", (socket) => {
+  logger(`socket.on: connection! socket.id: ${socket.id}`);
   // System message for client connection (will be sent when they join a game)
 
   socket.on("set_username", (userId: string, username: string) => {
+    logger("socket.on: set_username");
     socket.data.userId = userId;
     socket.data.username = username;
   });
 
   socket.on("get_current_room", () => {
+    logger("socket.on: get_current_room");
     const currentRoom = playerRooms.get(socket.id);
+    logger("emit: current_room");
     socket.emit("current_room", { room: currentRoom || null });
   });
 
   socket.on("join_private", async (gameId: string, userId: string) => {
+    logger("socket.on: join_private");
     // Leave previous room if any
     const previousRoom = playerRooms.get(socket.id);
     if (previousRoom) {
@@ -330,18 +335,17 @@ io.on("connection", (socket) => {
     // Create game if it doesn't exist
     if (!games.has(gameId)) {
       games.set(gameId, new Game(gameId));
+      logger(`[GAME] New Game instance created: gameId=${gameId}`);
     }
 
     const game = games.get(gameId)!;
     const username = socket.data.username || "Player";
     const botDetected = isBot(socket, userId, username);
 
-    // Check if this is a viewer (username contains "Viewer" or game is actively running)
-    const isViewer =
-      username.includes("Viewer") || (game.isStarted() && !game.isEnded());
-
-    if (isViewer) {
+    // If the game is started, always join as viewer (never as player)
+    if (game.isStarted() && !game.isEnded()) {
       socket.data.isViewer = true;
+      socket.data.playerIndex = -1;
 
       // Viewers cannot be hosts - check if this socket was previously a host
       socket.data.isHost = gameHosts.get(gameId) === socket.id;
@@ -356,151 +360,75 @@ io.on("connection", (socket) => {
       await sendGameInfo(gameId);
 
       // Send current game state to viewer if game is running
-      if (game.isStarted()) {
-        const mapData = game.getMapData();
-        socket.emit("game_start", {
-          playerIndex: -1, // Viewer has no player index
-          replay_id: gameId,
-          usernames: gameState.players.map((p) => p.username),
-          movesPerTurn: MOVES_PER_TURN,
-        });
-        socket.emit("game_update", mapData);
+      const mapData = game.getMapData();
+      socket.emit("game_start", {
+        playerIndex: -1, // Viewer has no player index
+        replay_id: gameId,
+        usernames: gameState.players.map((p) => p.username),
+        movesPerTurn: MOVES_PER_TURN,
+      });
+      socket.emit("game_update", mapData);
+      return;
+    }
+
+    // If not a viewer and game not started, proceed as normal player join
+    // Check for duplicate username (but allow same user to rejoin)
+    const currentGameState = game.getState();
+    const existingPlayer = currentGameState.players.find(
+      (p) => p.username === username,
+    );
+
+    if (existingPlayer && socket.data.userId !== existingPlayer.id) {
+      socket.emit("username_taken", { username });
+      return;
+    }
+
+    // This is a new player - try to join the game
+    const playerIndex = game.addPlayer(userId, username, botDetected);
+    if (playerIndex >= 0) {
+      logger(`[PLAYER] Player joined: gameId=${gameId}, userId=${userId}, username=${username}, playerIndex=${playerIndex}, currentPlayers=${JSON.stringify(game.getState().players)}`);
+      socket.data.playerIndex = playerIndex;
+      socket.data.userId = userId;
+      socket.data.isViewer = false;
+
+      // Set activeSocket on player object
+      game.getPlayers()[playerIndex].activeSocket = socket.id;
+
+      // Clear disconnect timeout if present
+      if (disconnectTimeouts.has(userId)) {
+        clearTimeout(disconnectTimeouts.get(userId)!);
+        disconnectTimeouts.delete(userId);
+      }
+
+      // Assign host if no host exists and this is a real player (not bot)
+      if (!gameHosts.has(gameId) && !botDetected) {
+        gameHosts.set(gameId, socket.id);
+        socket.data.isHost = true;
+      } else {
+        // Check if this socket is already the host
+        socket.data.isHost = gameHosts.get(gameId) === socket.id;
       }
     } else {
-      // Check if this socket is already a player in this game
-      if (socket.data.playerIndex !== undefined && !socket.data.isViewer) {
-        return;
-      }
-
-      // Check for reconnection FIRST, before adding as new player
-      if (game.isStarted()) {
-        const gameState = game.getState();
-        const existingPlayerIndex = gameState.players.findIndex(
-          (p) => p.id === userId,
-        );
-
-        if (existingPlayerIndex >= 0) {
-          // Player already exists in active game - check if eliminated
-          const existingPlayer = gameState.players[existingPlayerIndex];
-          if (existingPlayer.eliminated) {
-            // Eliminated players can only rejoin as viewers during the same game
-            socket.data.isViewer = true;
-            socket.data.playerIndex = -1; // No active player index
-
-            // Send current game state to viewer
-            const mapData = game.getMapData();
-            socket.emit("game_start", {
-              playerIndex: -1, // Viewer has no player index
-              replay_id: gameId,
-              usernames: gameState.players.map((p) => p.username),
-              mapData: mapData,
-              movesPerTurn: MOVES_PER_TURN,
-            });
-
-            await sendGameInfo(gameId);
-            return;
-          }
-
-          // Always re-associate reconnecting socket with player if userId matches and not eliminated
-          socket.data.playerIndex = existingPlayerIndex;
-          socket.data.userId = userId;
-          socket.data.isViewer = false;
-
-          // Set activeSocket on player object
-          gameState.players[existingPlayerIndex].activeSocket = socket.id;
-
-          // Only treat as a true reconnect if a disconnect timeout is pending for this userId
-          if (disconnectTimeouts.has(userId)) {
-            clearTimeout(disconnectTimeouts.get(userId)!);
-            disconnectTimeouts.delete(userId);
-            sendSystemMessage(gameId, `${username} reconnected`);
-          }
-
-          // Ensure playerRooms is updated for this socket
-          playerRooms.set(socket.id, gameId);
-
-          // Send current game state to player
-          const mapData = game.getMapData();
-          socket.emit("game_start", {
-            playerIndex: existingPlayerIndex,
-            replay_id: gameId,
-            movesPerTurn: MOVES_PER_TURN,
-            ...mapData,
-          });
-
-          // Send confirmation and continue with normal flow
-          socket.emit("joined_as_player", { playerIndex: existingPlayerIndex });
-
-          // Notify all players
-          io.to(gameId).emit("player_joined", {
-            players: gameState.players,
-            newPlayerIndex: existingPlayerIndex,
-          });
-
-          return;
-        }
-
-        socket.emit("game_already_started");
-        return;
-      }
-
-      // Check for duplicate username (but allow same user to rejoin)
-      const currentGameState = game.getState();
-      const existingPlayer = currentGameState.players.find(
-        (p) => p.username === username,
-      );
-
-      if (existingPlayer && socket.data.userId !== existingPlayer.id) {
-        socket.emit("username_taken", { username });
-        return;
-      }
-
-      // This is a new player - try to join the game
-      const playerIndex = game.addPlayer(userId, username, botDetected);
-      if (playerIndex >= 0) {
-        socket.data.playerIndex = playerIndex;
-        socket.data.userId = userId;
-        socket.data.isViewer = false;
-
-        // Set activeSocket on player object
-        game.getPlayers()[playerIndex].activeSocket = socket.id;
-
-        // Clear disconnect timeout if present
-        if (disconnectTimeouts.has(userId)) {
-          clearTimeout(disconnectTimeouts.get(userId)!);
-          disconnectTimeouts.delete(userId);
-        }
-
-        // Assign host if no host exists and this is a real player (not bot)
-        if (!gameHosts.has(gameId) && !botDetected) {
-          gameHosts.set(gameId, socket.id);
-          socket.data.isHost = true;
-        } else {
-          // Check if this socket is already the host
-          socket.data.isHost = gameHosts.get(gameId) === socket.id;
-        }
-      } else {
-        socket.emit("game_already_started");
-        return;
-      }
-
-      // Send system message for new player join
-      sendSystemMessage(gameId, `${username} joined the game`);
-
-      // Send confirmation to the joining player
-      socket.emit("joined_as_player", { playerIndex });
-
-      // Notify all players in room about updated player list
-      const gameState = game.getState();
-
-      io.to(gameId).emit("player_joined", {
-        players: gameState.players,
-        newPlayerIndex: playerIndex,
-      });
-
-      // Send updated game info to ensure host status is correct
-      await sendGameInfo(gameId);
+      socket.emit("game_already_started");
+      return;
     }
+
+    // Send system message for new player join
+    sendSystemMessage(gameId, `${username} joined the game`);
+
+    // Send confirmation to the joining player
+    socket.emit("joined_as_player", { playerIndex });
+
+    // Notify all players in room about updated player list
+    const gameState = game.getState();
+
+    io.to(gameId).emit("player_joined", {
+      players: gameState.players,
+      newPlayerIndex: playerIndex,
+    });
+
+    // Send updated game info to ensure host status is correct
+    await sendGameInfo(gameId);
 
     // Check and assign host using priority system
 
@@ -511,7 +439,7 @@ io.on("connection", (socket) => {
         socket.data.isHost = true;
 
         await sendGameInfo(gameId);
-      } else if (!isViewer) {
+      } else if (!socket.data.isViewer) {
         // Player joining when viewer is host - auto-transfer
         const currentHostId = gameHosts.get(gameId);
         const currentHostSocket = currentHostId
@@ -561,6 +489,7 @@ io.on("connection", (socket) => {
 
   // Handle bot kick
   socket.on("kick_bot", async (gameId: string, botUserId: string) => {
+    console.log("kick_bot", { gameId, botUserId });
     if (!socket.data.isHost || gameHosts.get(gameId) !== socket.id) {
       return;
     }
@@ -642,6 +571,7 @@ io.on("connection", (socket) => {
   }
 
   socket.on("set_force_start", async (gameId: string, force: boolean) => {
+    logger("socket.on: set_force_start");
     // Only allow host to start game
     const currentHost = gameHosts.get(gameId);
 
@@ -651,10 +581,24 @@ io.on("connection", (socket) => {
 
     const game = games.get(gameId);
     if (game && force) {
+      // Cleanup: Remove any player whose userId is not in the set of active sockets in the room
+      const activeSockets = await io.in(gameId).fetchSockets();
+      const activeUserIds = new Set(activeSockets.map(s => s.data.userId));
+      const allPlayersBefore = game.getState().players.map(p => ({ id: p.id, username: p.username, isBot: p.isBot, index: p.index }));
+      console.log(`[DEBUG][CLEANUP] Players before cleanup:`, JSON.stringify(allPlayersBefore));
+      const stalePlayers = game.getState().players.filter(p => !activeUserIds.has(p.id));
+      console.log(`[DEBUG][CLEANUP] Stale players to remove:`, JSON.stringify(stalePlayers.map(p => ({ id: p.id, username: p.username, isBot: p.isBot, index: p.index }))));
+      stalePlayers.forEach(p => {
+        game.removePlayer(p.id);
+      });
+      const allPlayersAfter = game.getState().players.map(p => ({ id: p.id, username: p.username, isBot: p.isBot, index: p.index }));
+      console.log(`[DEBUG][CLEANUP] Players after cleanup:`, JSON.stringify(allPlayersAfter));
+
       const playerCount = game.getState().players.length;
 
       // Require at least 2 players
       if (playerCount < 2) {
+        logger("emit: game_start_error");
         socket.emit(
           "game_start_error",
           "Need at least 2 players to start the game",
@@ -684,6 +628,7 @@ io.on("connection", (socket) => {
       const mapData = game.getMapData();
 
       for (const playerSocket of sockets) {
+        logger("emit: game_start");
         playerSocket.emit("game_start", {
           playerIndex: playerSocket.data.playerIndex ?? -1, // -1 for viewers
           replay_id: gameId,
@@ -705,6 +650,7 @@ io.on("connection", (socket) => {
             playerIndex,
             gameState,
           );
+          logger("emit: game_update");
           playerSocket.emit("game_update", {
             cities_diff: [0, gameState.cities.length, ...gameState.cities],
             map_diff: [0, mapData.length, ...mapData],
@@ -725,6 +671,7 @@ io.on("connection", (socket) => {
       );
 
       playerViewerSockets.forEach((socket) => {
+        logger("emit: game_update");
         socket.emit("game_update", {
           cities_diff: [0, gameState.cities.length, ...gameState.cities],
           map_diff: [0, mapData.length, ...mapData],
@@ -742,6 +689,7 @@ io.on("connection", (socket) => {
       );
 
       viewerSockets.forEach((socket) => {
+        logger("emit: game_update");
         socket.emit("game_update", {
           cities_diff: [0, gameState.cities.length, ...gameState.cities],
           map_diff: [0, mapData.length, ...mapData],
@@ -758,6 +706,7 @@ io.on("connection", (socket) => {
         const gameState = game.getState();
 
         if (gameState.gameEnded) {
+          logger('gameState.gameEnded is true');
           // Notify players of game end
 
           io.to(gameId).emit("game_won", { winner: gameState.winner });
@@ -827,6 +776,7 @@ io.on("connection", (socket) => {
           }
 
           // Reset game state but preserve human players
+          logger(`[GAME] Reset called: gameId=${gameId}`);
           game.reset();
 
           // Re-add human players to the reset game
@@ -980,6 +930,7 @@ io.on("connection", (socket) => {
   socket.on(
     "chat_message",
     (data: { gameId: string; message: string; username: string }) => {
+      logger("socket.on: chat_message");
       // Validate and sanitize input
       const sanitizedMessage = data.message
         .trim()
@@ -998,6 +949,7 @@ io.on("connection", (socket) => {
       }
 
       // Broadcast message to all players in the game
+      logger("emit: chat_message");
       io.to(data.gameId).emit("chat_message", {
         username: data.username,
         message: data.message,
@@ -1008,6 +960,7 @@ io.on("connection", (socket) => {
   );
 
   socket.on("attack", async (from: number, to: number) => {
+    logger("socket.on: attack");
     const roomId = playerRooms.get(socket.id);
     const game = games.get(roomId || "");
     const playerName = socket.data.username || "Unknown";
@@ -1063,6 +1016,7 @@ io.on("connection", (socket) => {
       }
 
       // Send attack result back to client
+      logger("emit: attack_result");
       socket.emit("attack_result", {
         from,
         to,
@@ -1082,10 +1036,12 @@ io.on("connection", (socket) => {
           (s) => s.data.playerIndex === capturedPlayerIndex,
         );
         if (capturedSocket) {
+          logger("emit: generalCaptured");
           capturedSocket.emit("generalCaptured");
         }
 
         // Broadcast updated player list immediately when someone is eliminated
+        logger("emit: player_joined");
         io.to(roomId || "").emit("player_joined", {
           players: gameState.players,
         });
@@ -1103,6 +1059,7 @@ io.on("connection", (socket) => {
           (s) => s.data.playerIndex === capturedPlayerIndex,
         );
         if (capturedSocket) {
+          logger("emit: territoryCaptured");
           capturedSocket.emit("territoryCaptured");
         }
       }
@@ -1113,15 +1070,19 @@ io.on("connection", (socket) => {
   socket.on(
     "invite_bot",
     (gameId: string, botType: "blob" | "arrow" | "spiral") => {
+      logger("socket.on: invite_bot");
       if (!games.has(gameId)) {
+        logger("emit: bot_invite_error");
         socket.emit("bot_invite_error", "Game not found");
         return;
       }
 
       const result = botManager.inviteBot(botType, gameId);
+      logger("emit: bot_invite_result");
       socket.emit("bot_invite_result", result);
 
       // Notify all players in the room
+      logger("emit: chat_message");
       io.to(gameId).emit("chat_message", {
         username: "System",
         message: `${
@@ -1135,6 +1096,7 @@ io.on("connection", (socket) => {
   );
 
   socket.on("end_bot_game", (gameId: string) => {
+    logger("socket.on: end_bot_game");
     const game = games.get(gameId);
     if (!game || !game.isStarted() || game.isEnded()) {
       return;
@@ -1145,6 +1107,7 @@ io.on("connection", (socket) => {
     const humanPlayers = activePlayers.filter((p) => !p.isBot);
 
     if (humanPlayers.length > 0) {
+      logger("emit: end_game_error");
       socket.emit(
         "end_game_error",
         "Cannot end game while human players are active",
@@ -1155,11 +1118,13 @@ io.on("connection", (socket) => {
     sendSystemMessage(gameId, `Game ended by viewer - only bots remaining`);
 
     setTimeout(() => {
+      logger("emit: endGame(-1)");
       game.endGame(-1); // No winner
     }, 1000);
   });
 
   socket.on("abandon_game", (gameId: string, userId: string) => {
+    logger("socket.on: abandon_game");
     if (!games.has(gameId)) {
       return;
     }
@@ -1192,17 +1157,20 @@ io.on("connection", (socket) => {
 
       // End the game after a short delay
       setTimeout(() => {
+        logger("emit: endGame(winner)");
         game.endGame(winner.index || 0);
       }, 2000);
     } else if (remainingPlayers.length === 0) {
       // No players left - end game with no winner
       sendSystemMessage(gameId, `Game ended - no players remaining`);
       setTimeout(() => {
+        logger("emit: endGame(-1)");
         game.endGame(-1);
       }, 2000);
     }
 
     // Broadcast updated player list
+    logger("emit: player_joined");
     io.to(gameId).emit("player_joined", {
       players: gameState.players,
     });
@@ -1212,6 +1180,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("leave_game", (gameId: string, userId: string) => {
+    logger("socket.on: leave_game");
     if (!games.has(gameId)) {
       return;
     }
@@ -1235,6 +1204,7 @@ io.on("connection", (socket) => {
       }
 
       // Broadcast updated player list
+      logger("emit: player_joined");
       io.to(gameId).emit("player_joined", {
         players: game.getPlayers(),
       });
@@ -1249,6 +1219,7 @@ io.on("connection", (socket) => {
       gameId: string,
       settings: { turnIntervalMs?: number; movesPerTurn?: number },
     ) => {
+      logger("socket.on: update_game_settings");
       // Only allow host to update settings
       if (!socket.data.isHost || gameHosts.get(gameId) !== socket.id) {
         return;
@@ -1275,29 +1246,33 @@ io.on("connection", (socket) => {
         );
 
         // Broadcast settings update to all players in the room
+        logger("emit: game_settings_updated");
         io.to(gameId).emit("game_settings_updated", settings);
       }
     },
   );
 
   socket.on("disconnect", () => {
+    logger("socket.on: disconnect");
     const roomId = playerRooms.get(socket.id);
 
     if (roomId) {
       const game = games.get(roomId);
       const userId = socket.data.userId;
-      const username = socket.data.username;
 
       if (game && userId) {
         // Immediately remove player from game on disconnect
         const player = game.getPlayers().find((p) => p.id === userId);
         if (player) {
+          logger(`[PLAYER] Player disconnected: gameId=${roomId}, userId=${userId}, username=${player.username}, currentPlayers=${JSON.stringify(game.getPlayers())}`);
           game.removePlayer(userId);
           sendSystemMessage(roomId, `${player.username} left the game (disconnected)`);
+          logger("emit: player_joined");
           io.to(roomId).emit("player_joined", {
             players: game.getPlayers(),
           });
         }
+        console.log('Players after disconnect: ', game.getPlayers());
 
         // Reset player data
         socket.data.playerIndex = -1;
@@ -1325,7 +1300,6 @@ io.on("connection", (socket) => {
       if (socket.data.isHost && gameHosts.get(roomId) === socket.id) {
         transferHostToNextPlayer(roomId);
       }
-    } else {
     }
   });
 

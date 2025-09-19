@@ -9,6 +9,8 @@ import {
   TURN_INTERVAL_MS,
 } from "./types";
 
+import { logger } from "./logger";
+
 export class Game {
   private state: GameState;
   private gameInterval?: NodeJS.Timeout;
@@ -79,6 +81,8 @@ export class Game {
 
     this.state.players.push({ id, username, index: playerIndex, isBot });
 
+    logger(`[PLAYER] Added: gameId=${this.roomId}, userId=${id}, username=${username}, isBot=${isBot}, playerIndex=${playerIndex}, currentPlayers=${JSON.stringify(this.state.players)}`);
+
     // Place general - this should always succeed with proper map size
 
     const generalPos = this.findOptimalGeneralPosition();
@@ -92,7 +96,14 @@ export class Game {
 
   removePlayer(playerId: string): boolean {
     const playerIndex = this.state.players.findIndex((p) => p.id === playerId);
-    if (playerIndex === -1) return false;
+    if (playerIndex === -1) {
+      console.log(`[DEBUG][REMOVE] Player ${playerId} not found in players:`, JSON.stringify(this.state.players.map(p => ({id: p.id, username: p.username, isBot: p.isBot, index: p.index}))));
+      return false;
+    }
+
+    console.log(`[DEBUG][REMOVE] Players before removal:`, JSON.stringify(this.state.players.map(p => ({id: p.id, username: p.username, isBot: p.isBot, index: p.index}))));
+    const player = this.state.players[playerIndex];
+    logger(`[PLAYER] Removed: gameId=${this.roomId}, userId=${playerId}, username=${player?.username}, isBot=${player?.isBot}, playerIndex=${playerIndex}, currentPlayers=${JSON.stringify(this.state.players)}`);
 
     // Remove player's general from map
     const generalPos = this.state.generals[playerIndex];
@@ -117,6 +128,8 @@ export class Game {
     this.state.players.splice(playerIndex, 1);
     this.state.generals.splice(playerIndex, 1);
 
+    console.log(`[DEBUG][REMOVE] Players after removal:`, JSON.stringify(this.state.players.map(p => ({id: p.id, username: p.username, isBot: p.isBot, index: p.index}))));
+
     // Reindex remaining players and their territories
     this.state.players.forEach((player, newIndex) => {
       player.index = newIndex;
@@ -135,10 +148,15 @@ export class Game {
     // If game is started, check for victory condition
     if (this.state.gameStarted && !this.state.gameEnded) {
       const remainingPlayers = this.state.players.filter((p) => !p.eliminated);
-      if (remainingPlayers.length <= 1) {
-        this.endGame(
-          remainingPlayers.length === 1 ? remainingPlayers[0].index : -1,
-        );
+      if (remainingPlayers.length === 1) {
+        // If the only remaining player is a bot, set winner to -1 (no winner)
+        if (remainingPlayers[0].isBot) {
+          this.endGame(-1);
+        } else {
+          this.endGame(remainingPlayers[0].index);
+        }
+      } else if (remainingPlayers.length === 0) {
+        this.endGame(-1);
       }
     }
 
@@ -308,6 +326,16 @@ export class Game {
   }
 
   startGame(): void {
+    // Always reset gameEnded and winner at the start of a new game
+    this.state.gameEnded = false;
+    this.state.winner = -1;
+
+    console.log(`[DEBUG][STARTGAME] State at start:`, JSON.stringify({
+      players: this.state.players.map(p => ({id: p.id, username: p.username, isBot: p.isBot, index: p.index})),
+      gameStarted: this.state.gameStarted,
+      gameEnded: this.state.gameEnded
+    }));
+
     // Log all current generals
     this.state.generals.forEach((pos, index) => {});
 
@@ -323,6 +351,12 @@ export class Game {
     this.gameInterval = setInterval(() => {
       this.processTurn();
     }, this.turnIntervalMs);
+
+    console.log(`[DEBUG][STARTGAME] State after start:`, JSON.stringify({
+      players: this.state.players.map(p => ({id: p.id, username: p.username, isBot: p.isBot, index: p.index})),
+      gameStarted: this.state.gameStarted,
+      gameEnded: this.state.gameEnded
+    }));
   }
 
   private createTestingLayout(): void {
@@ -770,11 +804,25 @@ export class Game {
   }
 
   endGame(winner: number): void {
+    console.log(`[DEBUG][ENDGAME] State at end:`, JSON.stringify({
+      players: this.state.players.map(p => ({id: p.id, username: p.username, isBot: p.isBot, index: p.index, eliminated: p.eliminated})),
+      winner,
+      gameStarted: this.state.gameStarted,
+      gameEnded: this.state.gameEnded
+    }));
+    console.log("Game ended. Winner:", winner);
+    console.trace();
     this.state.gameEnded = true;
     this.state.winner = winner;
     if (this.gameInterval) {
       clearInterval(this.gameInterval);
     }
+    console.log(`[DEBUG][ENDGAME] State after end:`, JSON.stringify({
+      players: this.state.players.map(p => ({id: p.id, username: p.username, isBot: p.isBot, index: p.index, eliminated: p.eliminated})),
+      winner,
+      gameStarted: this.state.gameStarted,
+      gameEnded: this.state.gameEnded
+    }));
   }
 
   getMapData(): number[] {
@@ -815,6 +863,12 @@ export class Game {
       clearInterval(this.gameInterval);
     }
     this.state = this.initializeGame();
+    console.log(`[DEBUG][RESET] State after reset:`, JSON.stringify({
+      players: this.state.players.map(p => ({id: p.id, username: p.username, isBot: p.isBot, index: p.index})),
+      gameStarted: this.state.gameStarted,
+      gameEnded: this.state.gameEnded,
+      winner: this.state.winner
+    }));
   }
 
   isStarted(): boolean {

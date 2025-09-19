@@ -72,10 +72,12 @@ function hideDisconnectWarning() {
 }
 
 socket.on("disconnect", () => {
+  window.logger("socket.on: disconnect");
   showDisconnectWarning(60);
 });
 
 socket.on("connect", () => {
+  window.logger("socket.on: connect");
   hideDisconnectWarning();
 });
 
@@ -707,10 +709,6 @@ function switchMobileTab(tab) {
   }
 }
 
-// Connect as viewer initially, then try auto-rejoin
-socket.emit("set_username", "viewer_" + Date.now(), "Viewer");
-socket.emit("join_private", roomId, "viewer_" + Date.now());
-
 // No persistence - users must manually rejoin after refresh
 setTimeout(attemptAutoRejoin, 100); // Small delay to ensure connection
 
@@ -766,6 +764,7 @@ function initAccordion() {
 }
 
 socket.on("game_start", (data) => {
+  window.logger("socket.on: game_start", data);
   // Play game start sound
   soundManager.play("gameStart");
 
@@ -824,6 +823,7 @@ socket.on("game_start", (data) => {
 });
 
 socket.on("game_info", (data) => {
+  window.logger("socket.on: game_info", data);
   document.getElementById("spectatorCount").textContent = data.spectatorCount;
   document.getElementById("hostName").textContent = data.hostName || "-";
   hostSocketId = data.hostSocketId;
@@ -930,11 +930,13 @@ function updateButtonVisibility() {
 }
 
 socket.on("joined_as_player", (data) => {
+  window.logger("socket.on: joined_as_player", data);
   playerIndex = data.playerIndex;
   updateButtonVisibility(); // Update button visibility
 });
 
 socket.on("player_joined", (data) => {
+  window.logger("socket.on: player_joined", data);
   players = data.players;
 
   // Check if current player is eliminated
@@ -976,6 +978,7 @@ socket.on("connect", () => {
 });
 
 socket.on("username_taken", (data) => {
+  window.logger("socket.on: username_taken", data);
   showModal({
     title: "Username Taken",
     message: `Username "${data.username}" is already taken. Please choose a different username.`,
@@ -989,12 +992,15 @@ socket.on("username_taken", (data) => {
 });
 
 socket.on("game_already_started", () => {
+  window.logger("socket.on: game_already_started");
   alert("Cannot join - game has already started. You can spectate instead.");
   // Switch to viewer mode
   socket.emit("join_as_viewer", { gameId: currentGameId });
 });
 
 socket.on("game_won", (data) => {
+  window.logger("socket.on: game_won", data);
+  console.log("game_won", data);
   gameStarted = false;
   const winnerName = players[data.winner]?.username || "Unknown";
 
@@ -1021,6 +1027,7 @@ socket.on("game_won", (data) => {
 });
 
 socket.on("attack_result", (data) => {
+  window.logger("socket.on: attack_result", data);
   if (data.success) {
     // Only update selected tile if we don't have queued moves (to preserve virtual position)
     if (moveQueue.length === 0) {
@@ -1116,6 +1123,7 @@ function projectQueue(moveQueue){
 let lastArmyBonusTurn = -1;
 
 socket.on("game_update", (data) => {
+  window.logger("socket.on: game_update", data);
   // Stop animation when game state is received
   stopAnimation();
 
@@ -1290,14 +1298,17 @@ socket.on("game_update", (data) => {
 });
 
 socket.on("generalCaptured", () => {
+  window.logger("socket.on: generalCaptured");
   soundManager.play("generalLost");
 });
 
 socket.on("territoryCaptured", () => {
+  window.logger("socket.on: territoryCaptured");
   soundManager.play("territoryLost");
 });
 
 socket.on("game_settings_updated", (settings) => {
+  window.logger("socket.on: game_settings_updated", settings);
   // Update game details for all players
   if (settings.turnIntervalMs !== undefined) {
     updateGameDetailsSettings(settings.turnIntervalMs);
@@ -1312,6 +1323,7 @@ socket.on("game_settings_updated", (settings) => {
 });
 
 socket.on("reset_vision", () => {
+  window.logger("socket.on: reset_vision");
   // Reset client-side vision state when transitioning from viewer back to player
   isEliminated = false; // Reset elimination status
   clearState();
@@ -1320,6 +1332,7 @@ socket.on("reset_vision", () => {
 });
 
 socket.on("game_end", (data) => {
+  window.logger("socket.on: game_end", data);
   gameEnded = true;
 
   // Start animation when game ends
@@ -1753,7 +1766,7 @@ function executeMove(fromTile, toTile) {
   }
 
   // Send attack to server
-
+  window.logger("socket.emit: attack", fromTile, toTile);
   socket.emit("attack", fromTile, toTile);
 }
 
@@ -3347,6 +3360,7 @@ function updatePlayersList() {
 function transferHost(targetPlayerIndex) {
   const targetSocketId = playerSocketMap.get(targetPlayerIndex.toString());
   if (targetSocketId) {
+    window.logger("socket.emit: transfer_host", roomId, targetSocketId);
     socket.emit("transfer_host", roomId, targetSocketId);
   } else {
     console.error("No socket ID found for player index:", targetPlayerIndex);
@@ -3360,6 +3374,7 @@ function kickBot(botUserId) {
     confirmText: "Kick Bot",
     confirmClass: "danger",
     onConfirm: () => {
+      window.logger("socket.emit: kick_bot", roomId, botUserId);
       socket.emit("kick_bot", roomId, botUserId);
     },
   });
@@ -3462,14 +3477,17 @@ function joinAsPlayer() {
 
   // Generate a new userId for each join (no persistence)
   currentUserId = "human_" + Date.now();
-  socket.emit("set_username", currentUserId, username);
-  socket.emit("join_private", roomId, currentUserId);
+window.logger("socket.emit: set_username", currentUserId, username);
+socket.emit("set_username", currentUserId, username);
+window.logger("socket.emit: join_private", roomId, currentUserId);
+socket.emit("join_private", roomId, currentUserId);
 }
 
 function leaveGame() {
   if (playerIndex < 0 || gameStarted) return;
 
   // Emit leave event to server with current user ID
+  window.logger("socket.emit: leave_game", roomId, currentUserId);
   socket.emit("leave_game", roomId, currentUserId);
 
   // Reset player state
@@ -3492,6 +3510,7 @@ function abandonGame() {
     confirmText: "Abandon",
     confirmClass: "danger",
     onConfirm: () => {
+      window.logger("socket.emit: abandon_game", roomId, currentUserId);
       socket.emit("abandon_game", roomId, currentUserId);
     },
   });
@@ -3504,12 +3523,14 @@ function endBotGame() {
     confirmText: "End Game",
     confirmClass: "danger",
     onConfirm: () => {
+      window.logger("socket.emit: end_bot_game", roomId);
       socket.emit("end_bot_game", roomId);
     },
   });
 }
 
 function startGame() {
+  window.logger("socket.emit: set_force_start", roomId, true);
   socket.emit("set_force_start", roomId, true);
 }
 
@@ -3533,6 +3554,7 @@ function copyGameUrl() {
 }
 
 function inviteBot(botType) {
+  window.logger("socket.emit: invite_bot", roomId, botType);
   socket.emit("invite_bot", roomId, botType);
 }
 
@@ -3678,6 +3700,11 @@ const sendChatBtn = document.getElementById("sendChatBtn");
 function sendChatMessage() {
   const message = chatInput.value.trim();
   if (message && roomId) {
+    window.logger("socket.emit: chat_message", {
+      gameId: roomId,
+      message: message,
+      username: lastUsername || "Anonymous",
+    });
     socket.emit("chat_message", {
       gameId: roomId,
       message: message,
@@ -3697,6 +3724,7 @@ chatInput.addEventListener("keydown", (e) => {
 });
 
 socket.on("chat_message", (data) => {
+  window.logger("socket.on: chat_message", data);
   const messageDiv = document.createElement("div");
   messageDiv.style.marginBottom = "3px";
   messageDiv.style.fontSize = "13px";
