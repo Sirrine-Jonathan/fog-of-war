@@ -356,8 +356,8 @@ export class Game {
   }
 
   private spawnCities(): void {
-    const cityCount = Math.max(1, Math.floor(this.state.players.length * 3.0));
-    const MIN_CITY_DISTANCE = 8; // Cities must be at least 8 tiles apart
+    const cityCount = Math.max(1, Math.floor(this.state.players.length * 6.0));
+    const MIN_CITY_DISTANCE = 3; // Cities must be at least n tiles apart
     console.log(`🏙️  Spawning ${cityCount} cities with ${MIN_CITY_DISTANCE} tile separation...`);
     
     const placedCities: number[] = [];

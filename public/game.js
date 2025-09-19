@@ -724,7 +724,7 @@ function updateButtonVisibility() {
     // Show start button only when there are 2+ players and user is host
     const playerCount = players ? players.length : 0;
     const canStart = isHost && !gameStarted && playerCount >= 2;
-    console.log(`Button visibility: isHost=${isHost}, gameStarted=${gameStarted}, playerCount=${playerCount}, canStart=${canStart}`);
+    
     if (overlayStartBtn) {
         overlayStartBtn.style.opacity = canStart ? 1 : 0;
     }
@@ -742,7 +742,7 @@ socket.on('joined_as_player', (data) => {
 });
 
 socket.on('player_joined', (data) => {
-    console.log('player_joined', data);
+    
     players = data.players;
     
     // Check if current player is eliminated
@@ -838,7 +838,7 @@ socket.on('attack_result', (data) => {
     
     // Show attack/defense animations for player vs player attacks only
     if (data.attackInfo) {
-        console.log('🎯 attackInfo:', data.attackInfo);
+        
         // Play sound based on territory type (regardless of success)
         switch (data.attackInfo.territoryType) {
             case 'neutral':
@@ -912,7 +912,7 @@ socket.on('game_update', (data) => {
         
         // Update players data if provided
         if (data.players) {
-            console.log('game_update updating players', data);
+            
             gameState.players = data.players;
         }
         
@@ -923,7 +923,7 @@ socket.on('game_update', (data) => {
             
             // Play army bonus sound on turn 25 and multiples (only once per turn)
             if (gameState.turn > 0 && gameState.turn % 25 === 0 && gameState.turn !== lastArmyBonusTurn) {
-                console.log(`🔊 Playing armyBonus sound for turn ${gameState.turn}`);
+                
                 soundManager.play('armyBonus');
                 lastArmyBonusTurn = gameState.turn;
             }
@@ -988,10 +988,10 @@ socket.on('game_update', (data) => {
             const currentTile = activeIntent.currentStep === 0 ? activeIntent.fromTile : activeIntent.path[activeIntent.currentStep - 1];
             const nextTile = activeIntent.currentStep < activeIntent.path.length ? activeIntent.path[activeIntent.currentStep] : activeIntent.targetTile;
             
-            console.log(`[Intent] step ${activeIntent.currentStep}/${activeIntent.path.length}: from ${currentTile} to ${nextTile}, armies: ${gameState.armies[currentTile]}, adjacent: ${isAdjacent(currentTile, nextTile)}`);
+            
             
             if (gameState.armies[currentTile] > 1 && isAdjacent(currentTile, nextTile)) {
-                console.log(`[Intent] Executing move from ${currentTile} to ${nextTile}`);
+                
                 
                 // Capture defense value before attack for special tiles
                 if (gameState.lookoutTowers?.includes(nextTile) || gameState.cities?.includes(nextTile)) {
@@ -1010,12 +1010,12 @@ socket.on('game_update', (data) => {
                 
                 // Check if we've reached the target
                 if (activeIntent.currentStep > activeIntent.path.length) {
-                    console.log(`Intent completed, setting target ${activeIntent.targetTile} as selected`);
+                    
                     setSelectedTile(activeIntent.targetTile);
                     activeIntent = null; // Clear completed intent
                 }
             } else {
-                console.log(`[Intent] Failed: armies=${gameState.armies[currentTile]}, adjacent=${isAdjacent(currentTile, nextTile)}`);
+                
                 activeIntent = null; // Clear invalid intent
             }
         }
@@ -1492,7 +1492,7 @@ function drawGame() {
                 ctx.fillStyle = gradient;
             } else if (terrain >= 0) { // Player owned
                 // Check if this is a general tile
-                const isGeneral = gameState.generals && Object.values(gameState.generals).includes(i);
+                const isGeneral = (gameState.generals && Object.values(gameState.generals).includes(i)) || discoveredEnemyGenerals.has(i);
                 if (isGeneral && terrain === playerIndex) {
                     // Player's general gets gold gradient
                     const gradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
@@ -1855,11 +1855,6 @@ canvas.addEventListener('click', (e) => {
     const col = Math.floor(worldX / 35);
     const row = Math.floor(worldY / 35);
     
-    // Debug logging for coordinate conversion (remove in production)
-    if (window.debugClicks) {
-        console.log(`Click Debug: screen(${screenX.toFixed(1)}, ${screenY.toFixed(1)}) -> world(${worldX.toFixed(1)}, ${worldY.toFixed(1)}) -> tile(${col}, ${row}) zoom=${camera.zoom.toFixed(2)}`);
-    }
-    
     // Bounds checking to prevent out-of-bounds tile access
     if (col < 0 || col >= gameState.width || row < 0 || row >= gameState.height) {
         return;
@@ -1902,7 +1897,7 @@ canvas.addEventListener('click', (e) => {
                         path: path,
                         currentStep: 0
                     };
-                    console.log(`Created intent from ${selectedTile} to ${tileIndex}, path: [${path.join(', ')}]`);
+                    
                 }
             }
         }
@@ -2259,7 +2254,7 @@ function handleTouchTap(x, y, isActivationOnly) {
                         path: path,
                         currentStep: 0
                     };
-                    console.log(`Created intent from ${selectedTile} to ${tileIndex}, path: [${path.join(', ')}]`);
+                    
                 }
             }
         }
@@ -2351,7 +2346,7 @@ function calculatePlayerStats() {
 }
 
 function updatePlayersList() {
-    console.log('updatePlayersList', { players });
+    
     const playersDiv = document.getElementById('players');
     const playersList = document.querySelector('.players-list');
     playersDiv.innerHTML = '';
@@ -2467,7 +2462,7 @@ function updatePlayersList() {
         if (isHost && !gameStarted) {
             const actionsCell = document.createElement('td');
             if (player.isBot) {
-                console.log('bot player', player);
+                
                 const kickBtn = document.createElement('button');
                 kickBtn.textContent = 'Kick';
                 kickBtn.className = 'transfer-btn kick-bot-btn';
@@ -2733,13 +2728,13 @@ function copyGameUrl() {
 }
 
 function inviteBot(botType) {
-    console.log(`Inviting bot of type: ${botType}`);
+    
     socket.emit('invite_bot', roomId, botType);
 }
 
 // Bot invite result handlers
 socket.on('bot_invite_result', (message) => {
-    console.log('Bot invite result:', message);
+    
     if (!message.includes('already in room')) {
         showToast(message, 'success');
     }
@@ -2756,10 +2751,62 @@ socket.on('end_game_error', (error) => {
 });
 
 function selectGeneral() {
+    if (!gameState || !Array.isArray(gameState.generals)) return;
     const generalPos = gameState.generals[playerIndex];
     if (generalPos >= 0) {
         setSelectedTile(generalPos);
     }
+}
+
+// Track cycling state for space bar
+let cycleIndex = 0;
+
+function cycleOwnedTiles() {
+    if (!gameState || playerIndex < 0) return;
+
+    // Get all owned tiles (general, cities, captured enemy generals)
+    const ownedTiles = [];
+
+    // Add player's own general
+    const playerGeneral = gameState.generals[playerIndex];
+    if (playerGeneral >= 0) {
+        ownedTiles.push(playerGeneral);
+    }
+
+    // Add owned cities
+    if (gameState.cities) {
+        gameState.cities.forEach((cityPos) => {
+        if (gameState.terrain[cityPos] === playerIndex) {
+            ownedTiles.push(cityPos);
+        }
+        });
+    }
+
+    // Add captured enemy generals
+    if (gameState.generals) {
+        gameState.generals.forEach((generalPos, index) => {
+        if (
+            index !== playerIndex &&
+            generalPos >= 0 &&
+            gameState.terrain[generalPos] === playerIndex
+        ) {
+            ownedTiles.push(generalPos);
+        }
+        });
+    }
+
+    if (ownedTiles.length === 0) return;
+
+    // Cycle through owned tiles
+    cycleIndex = cycleIndex % ownedTiles.length;
+    if (selectedTile === ownedTiles[cycleIndex]) {
+        cycleIndex = (cycleIndex + 1) % ownedTiles.length;
+    }
+    if (selectedTile !== ownedTiles[cycleIndex]) {
+        soundManager.play("cycleTiles");
+    }
+    setSelectedTile(ownedTiles[cycleIndex]);
+    cycleIndex = (cycleIndex + 1) % ownedTiles.length;
 }
 
 // Make canvas focusable
@@ -2775,13 +2822,13 @@ document.addEventListener('keydown', (e) => {
         canvas.style.cursor = 'grab';
     }
     
-    // Spacebar: Make general the active tile
-    if (e.key === ' ' || e.key === 'Spacebar') {
+    // Spacebar: Cycle through owned tiles (general, cities, captured generals)
+    if (e.key === " " || e.key === "Spacebar") {
         if (gameState && playerIndex >= 0) {
-            selectGeneral();
-            e.preventDefault();
-            e.stopPropagation();
-            return;
+        cycleOwnedTiles();
+        e.preventDefault();
+        e.stopPropagation();
+        return;
         }
     }
     
