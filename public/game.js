@@ -92,7 +92,7 @@ function drawTilingAnimation() {
         const finalRippleY = transformedY + canvasCenterY;
 
         const distance = Math.sqrt(
-          (centerX - finalRippleX) ** 2 + (centerY - finalRippleY) ** 2,
+          (centerX - finalRippleX) ** 2 + (centerY - finalRippleY) ** 2
         );
         if (distance < ripple.radius + 30) {
           const influence = Math.max(0, 1 - distance / (ripple.radius + 30));
@@ -135,7 +135,7 @@ function drawTilingAnimation() {
         const finalRippleY = transformedY + canvasCenterY;
 
         const distance = Math.sqrt(
-          (centerX - finalRippleX) ** 2 + (centerY - finalRippleY) ** 2,
+          (centerX - finalRippleX) ** 2 + (centerY - finalRippleY) ** 2
         );
         if (distance < ripple.radius + 20) {
           // Tighter area for shimmer
@@ -154,13 +154,13 @@ function drawTilingAnimation() {
         const slateRGB = [15, 20, 25]; // #0f1419
 
         const r = Math.round(
-          slateRGB[0] + (whiteRGB[0] - slateRGB[0]) * shimmerIntensity * 0.8,
+          slateRGB[0] + (whiteRGB[0] - slateRGB[0]) * shimmerIntensity * 0.8
         );
         const g = Math.round(
-          slateRGB[1] + (whiteRGB[1] - slateRGB[1]) * shimmerIntensity * 0.8,
+          slateRGB[1] + (whiteRGB[1] - slateRGB[1]) * shimmerIntensity * 0.8
         );
         const b = Math.round(
-          slateRGB[2] + (whiteRGB[2] - slateRGB[2]) * shimmerIntensity * 0.8,
+          slateRGB[2] + (whiteRGB[2] - slateRGB[2]) * shimmerIntensity * 0.8
         );
 
         tileColor = `rgb(${r}, ${g}, ${b})`;
@@ -188,13 +188,13 @@ function drawTilingAnimation() {
           ];
 
           const r = Math.round(
-            slateRGB[0] + (playerRGB[0] - slateRGB[0]) * fadeAmount,
+            slateRGB[0] + (playerRGB[0] - slateRGB[0]) * fadeAmount
           );
           const g = Math.round(
-            slateRGB[1] + (playerRGB[1] - slateRGB[1]) * fadeAmount,
+            slateRGB[1] + (playerRGB[1] - slateRGB[1]) * fadeAmount
           );
           const b = Math.round(
-            slateRGB[2] + (playerRGB[2] - slateRGB[2]) * fadeAmount,
+            slateRGB[2] + (playerRGB[2] - slateRGB[2]) * fadeAmount
           );
 
           tileColor = `rgb(${r}, ${g}, ${b})`;
@@ -206,7 +206,7 @@ function drawTilingAnimation() {
         const lightness = (waveOffset - 0.75) / 0.25; // 0 to 1
         const centerLightness = Math.max(
           0,
-          1 - Math.abs(waveOffset - 0.875) / 0.125,
+          1 - Math.abs(waveOffset - 0.875) / 0.125
         ); // Peak at 0.875
         const finalLightness = lightness * 0.4 + centerLightness * 0.3; // Subtle effect
 
@@ -223,7 +223,7 @@ function drawTilingAnimation() {
         centerX - scaledSize / 2,
         centerY - scaledSize / 2,
         scaledSize,
-        scaledSize,
+        scaledSize
       );
     }
   }
@@ -327,7 +327,7 @@ function renderAnimatedNumber(
   tileSize,
   camera,
   display,
-  isPlayerAttack = false,
+  isPlayerAttack = false
 ) {
   const elapsed = Date.now() - display.startTime;
   const duration = 1500;
@@ -359,7 +359,7 @@ function renderAnimatedNumber(
     ctx.fillStyle = `rgba(${color}, ${opacity})`;
     ctx.font = `bold ${Math.max(
       10,
-      12 * camera.zoom,
+      12 * camera.zoom
     )}px 'Courier New', monospace`;
     ctx.textAlign = "center";
     ctx.fillText(text, 0, 3 * camera.zoom);
@@ -387,7 +387,7 @@ function drawCrownIcon(ctx, x, y, size, color = "#FFD700") {
     centerX - crownWidth / 2,
     centerY + crownHeight / 4,
     crownWidth,
-    crownHeight / 4,
+    crownHeight / 4
   );
 
   // Crown points
@@ -417,13 +417,13 @@ function drawTowerIcon(ctx, x, y, size, color = "#4169E1") {
     centerX - towerWidth / 2,
     centerY - towerHeight / 2,
     towerWidth,
-    towerHeight,
+    towerHeight
   );
   ctx.strokeRect(
     centerX - towerWidth / 2,
     centerY - towerHeight / 2,
     towerWidth,
-    towerHeight,
+    towerHeight
   );
 
   // Tower top
@@ -432,13 +432,13 @@ function drawTowerIcon(ctx, x, y, size, color = "#4169E1") {
     centerX - topWidth / 2,
     centerY - towerHeight / 2,
     topWidth,
-    towerHeight / 4,
+    towerHeight / 4
   );
   ctx.strokeRect(
     centerX - topWidth / 2,
     centerY - towerHeight / 2,
     topWidth,
-    towerHeight / 4,
+    towerHeight / 4
   );
 }
 
@@ -460,13 +460,13 @@ function drawCityIcon(ctx, x, y, size, color = "#FF6347") {
       centerX + offsetX - buildingWidth / 2,
       centerY + buildingHeight / 2 - height,
       buildingWidth,
-      height,
+      height
     );
     ctx.strokeRect(
       centerX + offsetX - buildingWidth / 2,
       centerY + buildingHeight / 2 - height,
       buildingWidth,
-      height,
+      height
     );
   }
 }
@@ -566,7 +566,7 @@ function checkIsMobile() {
   const width = window.innerWidth;
   const isMobileUA =
     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent,
+      navigator.userAgent
     );
   const isMobileWidth = width <= 768;
   return isMobileWidth || isMobileUA;
@@ -600,7 +600,7 @@ function switchMobileTab(tab) {
   document.body.classList.remove(
     "mobile-game-active",
     "mobile-controls-active",
-    "mobile-chat-active",
+    "mobile-chat-active"
   );
   document
     .querySelectorAll(".mobile-tab")
@@ -869,7 +869,7 @@ socket.on("connect", () => {
 
 socket.on("username_taken", (data) => {
   alert(
-    `Username "${data.username}" is already taken. Please choose a different username.`,
+    `Username "${data.username}" is already taken. Please choose a different username.`
   );
   document.getElementById("usernameInput").focus();
 });
@@ -1017,7 +1017,7 @@ socket.on("game_update", (data) => {
     if (data.lookoutTowers_diff) {
       gameState.lookoutTowers = patch(
         gameState.lookoutTowers || [],
-        data.lookoutTowers_diff,
+        data.lookoutTowers_diff
       );
     }
 
@@ -1038,11 +1038,11 @@ socket.on("game_update", (data) => {
 
       // Debug log for data integrity issues
       const invalidCount = data.generals.filter(
-        (pos, i) => pos !== validatedGenerals[i],
+        (pos, i) => pos !== validatedGenerals[i]
       ).length;
       if (invalidCount > 0) {
         console.warn(
-          `🚨 Data integrity issue: ${invalidCount} invalid general positions received`,
+          `🚨 Data integrity issue: ${invalidCount} invalid general positions received`
         );
       }
     }
@@ -1109,7 +1109,7 @@ socket.on("game_update", (data) => {
               startTime: Date.now(),
               defense: Math.max(
                 0,
-                preAttackDefense - (gameState.armies[currentTile] - 1),
+                preAttackDefense - (gameState.armies[currentTile] - 1)
               ),
             });
           }
@@ -1205,7 +1205,7 @@ function updateTerritoryProgressBar() {
   const stats = calculatePlayerStats();
   const totalTerritories = Object.values(stats).reduce(
     (sum, stat) => sum + stat.tiles,
-    0,
+    0
   );
 
   if (totalTerritories === 0) {
@@ -1387,7 +1387,7 @@ function parseMapData(mapData) {
   const towerDefense = mapData.slice(size + 2 + size, size + 2 + size + size);
   const ghostTerrain = mapData.slice(
     size + 2 + size + size,
-    size + 2 + size + size + size,
+    size + 2 + size + size + size
   );
 
   return {
@@ -1458,7 +1458,7 @@ function attemptMove(fromTile, toTile) {
           startTime: Date.now(),
           defense: Math.max(
             0,
-            preAttackDefense - (gameState.armies[fromTile] - 1),
+            preAttackDefense - (gameState.armies[fromTile] - 1)
           ),
         });
       }
@@ -1552,14 +1552,14 @@ function updateCamera() {
   if (canvas.width <= mapWidth) {
     camera.targetX = Math.max(
       0,
-      Math.min(camera.targetX, mapWidth - canvas.width),
+      Math.min(camera.targetX, mapWidth - canvas.width)
     );
   }
 
   if (canvas.height <= mapHeight) {
     camera.targetY = Math.max(
       0,
-      Math.min(camera.targetY, mapHeight - canvas.height),
+      Math.min(camera.targetY, mapHeight - canvas.height)
     );
   }
 
@@ -1643,7 +1643,7 @@ function drawGame() {
           x,
           y,
           x + tileSize,
-          y + tileSize,
+          y + tileSize
         );
         gradient.addColorStop(0, "#FF6347"); // Tomato
         gradient.addColorStop(0.3, "#FFB6C1"); // Light pink
@@ -1657,7 +1657,7 @@ function drawGame() {
           x,
           y,
           x + tileSize,
-          y + tileSize,
+          y + tileSize
         );
         gradient.addColorStop(0, "#4169E1"); // Royal blue
         gradient.addColorStop(0.3, "#87CEEB"); // Sky blue
@@ -1677,7 +1677,7 @@ function drawGame() {
             x,
             y,
             x + tileSize,
-            y + tileSize,
+            y + tileSize
           );
           gradient.addColorStop(0, "#FFD700"); // Gold
           gradient.addColorStop(0.3, "#FFF8DC"); // Cornsilk (lighter)
@@ -1690,7 +1690,7 @@ function drawGame() {
             x,
             y,
             x + tileSize,
-            y + tileSize,
+            y + tileSize
           );
           gradient.addColorStop(0, "#C0C0C0"); // Silver
           gradient.addColorStop(0.3, "#F5F5F5"); // White smoke (lighter)
@@ -1716,7 +1716,7 @@ function drawGame() {
           x,
           y,
           x + tileSize,
-          y + tileSize,
+          y + tileSize
         );
         gradient.addColorStop(0, "#C0C0C0"); // Silver
         gradient.addColorStop(0.3, "#F5F5F5"); // White smoke (lighter)
@@ -1729,7 +1729,7 @@ function drawGame() {
           x,
           y,
           x + tileSize,
-          y + tileSize,
+          y + tileSize
         );
         gradient.addColorStop(0, "#C0C0C0"); // Silver
         gradient.addColorStop(0.3, "#F5F5F5"); // White smoke (lighter)
@@ -1767,7 +1767,7 @@ function drawGame() {
             x,
             y,
             x + tileSize * 0.6,
-            y + tileSize * 0.6,
+            y + tileSize * 0.6
           );
           shineGradient.addColorStop(0, "rgba(255, 255, 255, 0.4)");
           shineGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
@@ -1782,11 +1782,11 @@ function drawGame() {
             x,
             y,
             x + tileSize * 0.6,
-            y + tileSize * 0.6,
+            y + tileSize * 0.6
           );
           shineGradient.addColorStop(
             0,
-            `rgba(255, 255, 255, ${pulseIntensity})`,
+            `rgba(255, 255, 255, ${pulseIntensity})`
           );
           shineGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
           ctx.fillStyle = shineGradient;
@@ -1801,15 +1801,15 @@ function drawGame() {
             x,
             y,
             x + tileSize * 0.6,
-            y + tileSize * 0.6,
+            y + tileSize * 0.6
           );
           shineGradient.addColorStop(
             0,
-            `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)`,
+            `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)`
           );
           shineGradient.addColorStop(
             1,
-            `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`,
+            `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`
           );
           ctx.fillStyle = shineGradient;
           ctx.fillRect(x, y, tileSize, tileSize);
@@ -1820,7 +1820,7 @@ function drawGame() {
           x,
           y,
           x + tileSize * 0.6,
-          y + tileSize * 0.6,
+          y + tileSize * 0.6
         );
         shineGradient.addColorStop(0, "rgba(255, 255, 255, 0.3)");
         shineGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
@@ -1849,13 +1849,13 @@ function drawGame() {
         ctx.fillStyle = terrain === -2 ? "white" : "black";
         ctx.font = `bold ${Math.max(
           10,
-          12 * camera.zoom,
+          12 * camera.zoom
         )}px 'Courier New', monospace`;
         ctx.textAlign = "center";
         ctx.fillText(
           gameState.armies[i].toString(),
           x + tileSize / 2,
-          y + tileSize / 2 + 3 * camera.zoom,
+          y + tileSize / 2 + 3 * camera.zoom
         );
       } else if (
         gameState.armies[i] > 0 &&
@@ -1866,13 +1866,13 @@ function drawGame() {
         ctx.fillStyle = "black";
         ctx.font = `bold ${Math.max(
           10,
-          12 * camera.zoom,
+          12 * camera.zoom
         )}px 'Courier New', monospace`;
         ctx.textAlign = "center";
         ctx.fillText(
           gameState.armies[i].toString(),
           x + tileSize / 2,
-          y + tileSize / 2 + 3 * camera.zoom,
+          y + tileSize / 2 + 3 * camera.zoom
         );
       } else if ((isTower || isCity) && terrain < 0) {
         // Handle neutral special tile defense display (only when attacked)
@@ -1887,7 +1887,7 @@ function drawGame() {
               tileSize,
               camera,
               defenseDisplay,
-              false,
+              false
             )
           ) {
             specialTileDefenseDisplay.delete(i);
@@ -1906,7 +1906,7 @@ function drawGame() {
             tileSize,
             camera,
             playerDisplay,
-            true,
+            true
           )
         ) {
           playerAttackDisplay.delete(i);
@@ -2043,7 +2043,7 @@ function drawGameEndOverlay() {
   ctx.fillText(
     "Click anywhere to continue viewing",
     canvas.width / 2,
-    canvas.height / 2 + 60,
+    canvas.height / 2 + 60
   );
 }
 
@@ -2086,10 +2086,10 @@ function showGameOverWithStats(winnerName, gameData) {
                     <div class="rank">#${rank + 1}</div>
                     <div class="player-name">${player.username}</div>
                     <div class="player-score">${player.tiles} territories • ${
-                      player.armies
-                    } armies</div>
+                  player.armies
+                } armies</div>
                 </div>
-            `,
+            `
               )
               .join("")}
         </div>
@@ -2097,7 +2097,7 @@ function showGameOverWithStats(winnerName, gameData) {
             <p>Game Duration: ${gameState?.turn || 0} turns</p>
             <p>Total Territories: ${Object.values(stats).reduce(
               (sum, stat) => sum + stat.tiles,
-              0,
+              0
             )}</p>
         </div>
     `;
@@ -2295,7 +2295,7 @@ canvas.addEventListener("wheel", (e) => {
   const zoomFactor = e.deltaY > 0 ? 0.95 : 1.05;
   const newZoom = Math.max(
     calculatedMinZoom,
-    Math.min(camera.maxZoom, camera.zoom * zoomFactor),
+    Math.min(camera.maxZoom, camera.zoom * zoomFactor)
   );
 
   if (newZoom !== camera.zoom) {
@@ -2402,7 +2402,7 @@ canvas.addEventListener("touchmove", (e) => {
     // Check if we've moved enough to start panning
     const moveDistance = Math.hypot(
       currentX - touchStartPos.x,
-      currentY - touchStartPos.y,
+      currentY - touchStartPos.y
     );
 
     if (moveDistance > TOUCH_MOVE_THRESHOLD) {
@@ -2448,11 +2448,11 @@ canvas.addEventListener("touchmove", (e) => {
 
     const oldDistance = Math.hypot(
       touches[0].clientX - touches[1].clientX,
-      touches[0].clientY - touches[1].clientY,
+      touches[0].clientY - touches[1].clientY
     );
     const newDistance = Math.hypot(
       newTouches[0].clientX - newTouches[1].clientX,
-      newTouches[0].clientY - newTouches[1].clientY,
+      newTouches[0].clientY - newTouches[1].clientY
     );
 
     const zoomFactor = newDistance / oldDistance;
@@ -2460,7 +2460,7 @@ canvas.addEventListener("touchmove", (e) => {
 
     camera.zoom = Math.max(
       calculatedMinZoom,
-      Math.min(camera.maxZoom, camera.zoom * zoomFactor),
+      Math.min(camera.maxZoom, camera.zoom * zoomFactor)
     );
     drawGame();
   }
@@ -2572,15 +2572,17 @@ function isAdjacent(from, to) {
   return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
 }
 
-// Simple pathfinding for intent-based movement
+// Weighted pathfinding for intent-based movement with preferences
 function findPath(from, to) {
   if (!gameState) return null;
 
-  const queue = [{ tile: from, path: [from] }];
-  const visited = new Set([from]);
+  const queue = [{ tile: from, path: [from], cost: 0 }];
+  const visited = new Map([[from, 0]]); // tile -> best cost
 
   while (queue.length > 0) {
-    const { tile, path } = queue.shift();
+    // Sort queue by cost (simple priority queue)
+    queue.sort((a, b) => a.cost - b.cost);
+    const { tile, path, cost } = queue.shift();
 
     if (tile === to) {
       return path.slice(1); // Remove starting tile
@@ -2602,17 +2604,54 @@ function findPath(from, to) {
         continue;
 
       const neighborTile = r * gameState.width + c;
-      if (visited.has(neighborTile)) continue;
 
-      // Skip mountains (terrain -2) - but allow pathfinding through fog and other terrain
+      // Skip mountains (terrain -2)
       if (
         visibleTiles.has(neighborTile) &&
         gameState.terrain[neighborTile] === -2
       )
         continue;
 
-      visited.add(neighborTile);
-      queue.push({ tile: neighborTile, path: [...path, neighborTile] });
+      // Calculate movement cost with preferences
+      let moveCost = 1; // Base cost
+
+      if (visibleTiles.has(neighborTile)) {
+        // Check for avoidance first (before owned territory bonus)
+        if (
+          neighborTile !== to &&
+          ((gameState.lookoutTowers?.includes(neighborTile) &&
+            gameState.terrain[neighborTile] !== playerIndex) ||
+            (gameState.cities?.includes(neighborTile) &&
+              gameState.terrain[neighborTile] !== playerIndex) ||
+            gameState.generals?.includes(neighborTile))
+        ) {
+          moveCost = 3; // Higher cost to avoid
+        }
+        // Prefer owned territory (lower cost) - but only if not avoiding
+        else if (gameState.terrain[neighborTile] === playerIndex) {
+          moveCost = 0.5;
+        }
+        // Neutral/enemy territory has normal cost
+        else {
+          moveCost = 1;
+        }
+      }
+      // Unknown territory (fog) has slightly higher cost
+      else {
+        moveCost = 1.2;
+      }
+
+      const newCost = cost + moveCost;
+
+      // Only proceed if we haven't visited or found a better path
+      if (!visited.has(neighborTile) || visited.get(neighborTile) > newCost) {
+        visited.set(neighborTile, newCost);
+        queue.push({
+          tile: neighborTile,
+          path: [...path, neighborTile],
+          cost: newCost,
+        });
+      }
     }
   }
 
@@ -3295,8 +3334,8 @@ function updateMobilePlayersAccordion() {
 
     playerDiv.innerHTML = `
             <span style="color: ${playerColor}; font-weight: 600;">${
-              isHostPlayer ? "👑 " : ""
-            }${player.username}${player.isBot ? " (Bot)" : ""}</span>
+      isHostPlayer ? "👑 " : ""
+    }${player.username}${player.isBot ? " (Bot)" : ""}</span>
             <span style="color: #666; font-size: 12px;">
                 ${playerStats.tiles} tiles, ${playerStats.armies} armies
             </span>
