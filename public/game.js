@@ -1608,20 +1608,42 @@ function drawGame() {
     const isVisible = playerIndex < 0 || visibleTiles.has(i) || gameEnded;
 
     if (!isVisible) {
-      // Draw fog of war with subtle animation
-      const time = Date.now() * 0.0005; // Very slow animation
-      const wave = Math.sin(time + (row + col) * 0.3) * 0.5 + 0.5; // Value between 0 and 1
+      // Draw fog of war with multidimensional shimmer wave
+      const time = Date.now() * 0.001;
+
+      // Make fog adjustments here:
+      // - WAVE_SPEED: Controls how fast the waves move (default: 2)
+      // - INTENSITY: Controls shimmer strength (default: 0.15, range: 0.05-0.3)
+      // - DOT_MULTIPLIER: Controls dot shimmer (default: 0.6, range: 0.3-1.2)
+      // Higher values = more dramatic effect, lower = more subtle
+      const WAVE_SPEED = 2;
+      const INTENSITY = 0.2;
+      const DOT_MULTIPLIER = 0.7;
+
+      // Multidimensional wave - like ripples in water from multiple sources
+      // Each wave has different direction and frequency for natural interaction
+      const wave1 = Math.sin(time * WAVE_SPEED + (row + col) * 0.5) * 0.5 + 0.5;
+      const wave2 =
+        Math.sin(time * WAVE_SPEED * 0.7 + (row - col) * 0.4) * 0.5 + 0.5;
+      const wave3 =
+        Math.sin(time * WAVE_SPEED * 1.3 + row * 0.3 + col * 0.2) * 0.5 + 0.5;
+
+      // Combine waves for interference pattern (like water ripples)
+      const combinedWave = (wave1 + wave2 + wave3) / 3;
+      const shimmerIntensity = combinedWave * INTENSITY;
 
       const fogGradient = ctx.createLinearGradient(x, y, x, y + tileSize);
-      const baseOpacity1 = 0.57 + wave * 0.08; // Subtle opacity variation
-      const baseOpacity2 = 0.72 + wave * 0.08;
+      const baseOpacity1 = 0.57 + shimmerIntensity;
+      const baseOpacity2 = 0.72 + shimmerIntensity;
       fogGradient.addColorStop(0, `rgba(205, 212, 233, ${baseOpacity1})`);
       fogGradient.addColorStop(1, `rgba(232, 234, 244, ${baseOpacity2})`);
       ctx.fillStyle = fogGradient;
       ctx.fillRect(x, y, tileSize, tileSize);
 
-      // Add animated fog pattern
-      ctx.fillStyle = `rgba(255,255,255,${0.13 + wave * 0.05})`;
+      // Add animated fog pattern with shimmer
+      ctx.fillStyle = `rgba(255,255,255,${
+        0.13 + shimmerIntensity * DOT_MULTIPLIER
+      })`;
       for (let fx = 0; fx < tileSize; fx += 6) {
         for (let fy = 0; fy < tileSize; fy += 6) {
           if ((fx + fy) % 12 === 0) {
