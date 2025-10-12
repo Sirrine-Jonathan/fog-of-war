@@ -309,8 +309,8 @@ function calculateMinZoom() {
   const minZoomX = canvas.width / mapPixelWidth;
   const minZoomY = canvas.height / mapPixelHeight;
 
-  // Use the smaller ratio to ensure entire map fits
-  return Math.min(minZoomX, minZoomY);
+  // Use the smaller ratio and allow zooming out further to see space around board
+  return Math.min(minZoomX, minZoomY) * 0.7; // Allow 30% more zoom out
 }
 
 // Special tile defense display tracking
@@ -516,6 +516,7 @@ function darkenColor(hex, percent = 20) {
 let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
+let hasPanned = false; // Track if we actually moved during drag
 
 let gameState = null;
 let selectedTile = null;
@@ -1607,15 +1608,20 @@ function drawGame() {
     const isVisible = playerIndex < 0 || visibleTiles.has(i) || gameEnded;
 
     if (!isVisible) {
-      // Draw fog of war
+      // Draw fog of war with subtle animation
+      const time = Date.now() * 0.0005; // Very slow animation
+      const wave = Math.sin(time + (row + col) * 0.3) * 0.5 + 0.5; // Value between 0 and 1
+
       const fogGradient = ctx.createLinearGradient(x, y, x, y + tileSize);
-      fogGradient.addColorStop(0, "rgba(205, 212, 233, 0.57)");
-      fogGradient.addColorStop(1, "rgba(232, 234, 244, 0.72)");
+      const baseOpacity1 = 0.57 + wave * 0.08; // Subtle opacity variation
+      const baseOpacity2 = 0.72 + wave * 0.08;
+      fogGradient.addColorStop(0, `rgba(205, 212, 233, ${baseOpacity1})`);
+      fogGradient.addColorStop(1, `rgba(232, 234, 244, ${baseOpacity2})`);
       ctx.fillStyle = fogGradient;
       ctx.fillRect(x, y, tileSize, tileSize);
 
-      // Add fog pattern
-      ctx.fillStyle = "rgba(255,255,255,0.13)";
+      // Add animated fog pattern
+      ctx.fillStyle = `rgba(255,255,255,${0.13 + wave * 0.05})`;
       for (let fx = 0; fx < tileSize; fx += 6) {
         for (let fy = 0; fy < tileSize; fy += 6) {
           if ((fx + fy) % 12 === 0) {
@@ -2153,8 +2159,11 @@ canvas.addEventListener("click", (e) => {
 
   const tileIndex = row * gameState.width + col;
 
-  // Only allow interaction with visible tiles (except mobile users can click through fog)
-  if (!visibleTiles.has(tileIndex) && !isMobile) return;
+  // Check if selected tile can launch intent (has armies to move and is owned by player)
+  const canLaunchIntent =
+    selectedTile !== null &&
+    gameState.terrain[selectedTile] === playerIndex &&
+    gameState.armies[selectedTile] > 1;
 
   if (selectedTile === null) {
     // No active tile: clicking owned tile makes it active, otherwise no action
@@ -2163,8 +2172,8 @@ canvas.addEventListener("click", (e) => {
     }
   } else {
     // There is an active tile
-    if (e.altKey || e.shiftKey) {
-      // Alt+click OR Shift+click: only activate clicked tile (no launched intent)
+    if (e.altKey || e.shiftKey || !canLaunchIntent) {
+      // Alt+click OR Shift+click OR can't launch intent: only activate clicked tile (no launched intent)
       if (gameState.terrain[tileIndex] === playerIndex) {
         setSelectedTile(tileIndex);
       } else {
@@ -2175,22 +2184,66 @@ canvas.addEventListener("click", (e) => {
       activeIntent = null; // Clear any existing intent
       attemptMove(selectedTile, tileIndex);
     } else {
-      // Non-adjacent click: launch intent if visible, otherwise no action
-      if (gameState.armies[selectedTile] > 1) {
-        // Regular click: Start intent-based movement
-        activeIntent = null; // Clear any existing intent first
+      // Non-adjacent click: launch intent if possible
+      // Regular click: Start intent-based movement
+      activeIntent = null; // Clear any existing intent first
 
-        const path = findPath(selectedTile, tileIndex);
-        if (path && path.length > 0) {
-          activeIntent = {
-            fromTile: selectedTile,
-            targetTile: tileIndex,
-            path: path,
-            currentStep: 0,
-          };
-        }
+      const path = findPath(selectedTile, tileIndex);
+      if (path && path.length > 0) {
+        activeIntent = {
+          fromTile: selectedTile,
+          targetTile: tileIndex,
+          path: path,
+          currentStep: 0,
+        };
       }
     }
+  }
+});
+
+// Right-click handler for activation without intent
+canvas.addEventListener("contextmenu", (e) => {
+  // Prevent default context menu
+  e.preventDefault();
+
+  // If we don't have game state or player, do nothing
+  if (!gameState || playerIndex < 0) {
+    return;
+  }
+
+  // If we actually panned (not just a click), don't activate a tile
+  if (hasPanned) {
+    return;
+  }
+
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+
+  const screenX = (e.clientX - rect.left) * scaleX;
+  const screenY = (e.clientY - rect.top) * scaleY;
+
+  const worldX = (screenX + camera.x) / camera.zoom;
+  const worldY = (screenY + camera.y) / camera.zoom;
+
+  const col = Math.floor(worldX / 35);
+  const row = Math.floor(worldY / 35);
+
+  if (col < 0 || col >= gameState.width || row < 0 || row >= gameState.height) {
+    e.preventDefault();
+    return;
+  }
+
+  const tileIndex = row * gameState.width + col;
+
+  // Right-click activates tile without launching intent (only works on visible owned tiles)
+  if (
+    visibleTiles.has(tileIndex) &&
+    gameState.terrain[tileIndex] === playerIndex
+  ) {
+    setSelectedTile(tileIndex);
+  } else if (visibleTiles.has(tileIndex)) {
+    setSelectedTile(null);
   }
 });
 
@@ -2199,6 +2252,7 @@ canvas.addEventListener("mousedown", (e) => {
   // Allow panning with right-click, middle-click, or Shift+left-click
   if (e.button === 2 || e.button === 1 || (e.button === 0 && e.shiftKey)) {
     isDragging = true;
+    hasPanned = false; // Reset pan tracking
     lastMouseX = e.clientX;
     lastMouseY = e.clientY;
     canvas.style.cursor = "grabbing";
@@ -2220,6 +2274,11 @@ canvas.addEventListener("mousemove", (e) => {
   if (isDragging) {
     const deltaX = e.clientX - lastMouseX;
     const deltaY = e.clientY - lastMouseY;
+
+    // Mark as panned if we actually moved
+    if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
+      hasPanned = true;
+    }
 
     camera.x -= deltaX;
     camera.y -= deltaY;
@@ -2260,13 +2319,9 @@ canvas.addEventListener("mousemove", (e) => {
 
 canvas.addEventListener("mouseup", () => {
   isDragging = false;
+  hasPanned = false;
   // Reset cursor based on current shift state
   canvas.style.cursor = "default";
-});
-
-// Prevent context menu on right-click
-canvas.addEventListener("contextmenu", (e) => {
-  e.preventDefault();
 });
 
 document.addEventListener("keyup", (e) => {
@@ -2516,9 +2571,6 @@ function handleTouchTap(x, y, isActivationOnly) {
   }
 
   const tileIndex = row * gameState.width + col;
-
-  // Only allow interaction with visible tiles (except mobile users can click through fog)
-  if (!visibleTiles.has(tileIndex) && !isMobile) return;
 
   if (selectedTile === null) {
     // No active tile: clicking owned tile makes it active, otherwise no action
