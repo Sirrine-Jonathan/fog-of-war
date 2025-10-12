@@ -7,7 +7,7 @@
       content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <meta name="theme-color" content="#0f1419" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" />
     <link
       href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&display=swap"
@@ -20,19 +20,21 @@
     <div class="fullDisplay">
       <div class="header">
         <div id="headerActions">
-          <button
-            id="copyUrlBtn"
-            class="btn pill"
-          >
+          <button id="copyUrlBtn" class="btn pill">
             <span class="btn-text">Copy URL</span>
-            <img src="/icons/file-copy-svgrepo-com-light.svg" alt="Copy" class="btn-icon" />
+            <img
+              src="/icons/file-copy-svgrepo-com-light.svg"
+              alt="Copy"
+              class="btn-icon"
+            />
           </button>
-          <button
-            id="installBtn"
-            class="btn pill"
-          >
+          <button id="installBtn" class="btn pill">
             <span class="btn-text">Install App</span>
-            <img src="/icons/download-svgrepo-com-light.svg" alt="Install" class="btn-icon" />
+            <img
+              src="/icons/download-svgrepo-com-light.svg"
+              alt="Install"
+              class="btn-icon"
+            />
           </button>
           <!-- Territory Control Progress Bar -->
           <div id="territoryProgressBar" class="territory-progress-bar"></div>
@@ -41,13 +43,36 @@
             <span id="armyCountdown" class="army-countdown"></span>
           </div>
         </div>
-        
-        
+
         <!-- Gear icon in header (only visible when sidebar is closed) -->
-        <button id="headerGearButton" class="header-gear-button" onclick="toggleSidebar()" title="Open Sidebar" style="display: none;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12C9 10.3431 10.3431 9 12 9C13.6569 9 15 10.3431 15 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12.9046 3.06005C12.6988 3 12.4659 3 12 3C11.5341 3 11.3012 3 11.0954 3.06005C10.7942 3.14794 10.5281 3.32808 10.3346 3.57511C10.2024 3.74388 10.1159 3.96016 9.94291 4.39272C9.69419 5.01452 9.00393 5.33471 8.36857 5.123L7.79779 4.93281C7.3929 4.79785 7.19045 4.73036 6.99196 4.7188C6.70039 4.70181 6.4102 4.77032 6.15701 4.9159C5.98465 5.01501 5.83376 5.16591 5.53197 5.4677C5.21122 5.78845 5.05084 5.94882 4.94896 6.13189C4.79927 6.40084 4.73595 6.70934 4.76759 7.01551C4.78912 7.2239 4.87335 7.43449 5.04182 7.85566C5.30565 8.51523 5.05184 9.26878 4.44272 9.63433L4.16521 9.80087C3.74031 10.0558 3.52786 10.1833 3.37354 10.3588C3.23698 10.5141 3.13401 10.696 3.07109 10.893C3 11.1156 3 11.3658 3 11.8663C3 12.4589 3 12.7551 3.09462 13.0088C3.17823 13.2329 3.31422 13.4337 3.49124 13.5946C3.69158 13.7766 3.96395 13.8856 4.50866 14.1035C5.06534 14.3261 5.35196 14.9441 5.16236 15.5129L4.94721 16.1584C4.79819 16.6054 4.72367 16.829 4.7169 17.0486C4.70875 17.3127 4.77049 17.5742 4.89587 17.8067C5.00015 18.0002 5.16678 18.1668 5.5 18.5C5.83323 18.8332 5.99985 18.9998 6.19325 19.1041C6.4258 19.2295 6.68733 19.2913 6.9514 19.2831C7.17102 19.2763 7.39456 19.2018 7.84164 19.0528L8.36862 18.8771C9.00393 18.6654 9.6942 18.9855 9.94291 19.6073C10.1159 20.0398 10.2024 20.2561 10.3346 20.4249C10.5281 20.6719 10.7942 20.8521 11.0954 20.94C11.3012 21 11.5341 21 12 21C12.4659 21 12.6988 21 12.9046 20.94C13.2058 20.8521 13.4719 20.6719 13.6654 20.4249C13.7976 20.2561 13.8841 20.0398 14.0571 19.6073C14.3058 18.9855 14.9961 18.6654 15.6313 18.8773L16.1579 19.0529C16.605 19.2019 16.8286 19.2764 17.0482 19.2832C17.3123 19.2913 17.5738 19.2296 17.8063 19.1042C17.9997 18.9999 18.1664 18.8333 18.4996 18.5001C18.8328 18.1669 18.9994 18.0002 19.1037 17.8068C19.2291 17.5743 19.2908 17.3127 19.2827 17.0487C19.2759 16.8291 19.2014 16.6055 19.0524 16.1584L18.8374 15.5134C18.6477 14.9444 18.9344 14.3262 19.4913 14.1035C20.036 13.8856 20.3084 13.7766 20.5088 13.5946C20.6858 13.4337 20.8218 13.2329 20.9054 13.0088C21 12.7551 21 12.4589 21 11.8663C21 11.3658 21 11.1156 20.9289 10.893C20.866 10.696 20.763 10.5141 20.6265 10.3588C20.4721 10.1833 20.2597 10.0558 19.8348 9.80087L19.5569 9.63416C18.9478 9.26867 18.6939 8.51514 18.9578 7.85558C19.1262 7.43443 19.2105 7.22383 19.232 7.01543C19.2636 6.70926 19.2003 6.40077 19.0506 6.13181C18.9487 5.94875 18.7884 5.78837 18.4676 5.46762C18.1658 5.16584 18.0149 5.01494 17.8426 4.91583C17.5894 4.77024 17.2992 4.70174 17.0076 4.71872C16.8091 4.73029 16.6067 4.79777 16.2018 4.93273L15.6314 5.12287C14.9961 5.33464 14.3058 5.0145 14.0571 4.39272C13.8841 3.96016 13.7976 3.74388 13.6654 3.57511C13.4719 3.32808 13.2058 3.14794 12.9046 3.06005Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <button
+          id="headerGearButton"
+          class="header-gear-button"
+          onclick="toggleSidebar()"
+          title="Open Sidebar"
+          style="display: none"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12C9 10.3431 10.3431 9 12 9C13.6569 9 15 10.3431 15 12Z"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M12.9046 3.06005C12.6988 3 12.4659 3 12 3C11.5341 3 11.3012 3 11.0954 3.06005C10.7942 3.14794 10.5281 3.32808 10.3346 3.57511C10.2024 3.74388 10.1159 3.96016 9.94291 4.39272C9.69419 5.01452 9.00393 5.33471 8.36857 5.123L7.79779 4.93281C7.3929 4.79785 7.19045 4.73036 6.99196 4.7188C6.70039 4.70181 6.4102 4.77032 6.15701 4.9159C5.98465 5.01501 5.83376 5.16591 5.53197 5.4677C5.21122 5.78845 5.05084 5.94882 4.94896 6.13189C4.79927 6.40084 4.73595 6.70934 4.76759 7.01551C4.78912 7.2239 4.87335 7.43449 5.04182 7.85566C5.30565 8.51523 5.05184 9.26878 4.44272 9.63433L4.16521 9.80087C3.74031 10.0558 3.52786 10.1833 3.37354 10.3588C3.23698 10.5141 3.13401 10.696 3.07109 10.893C3 11.1156 3 11.3658 3 11.8663C3 12.4589 3 12.7551 3.09462 13.0088C3.17823 13.2329 3.31422 13.4337 3.49124 13.5946C3.69158 13.7766 3.96395 13.8856 4.50866 14.1035C5.06534 14.3261 5.35196 14.9441 5.16236 15.5129L4.94721 16.1584C4.79819 16.6054 4.72367 16.829 4.7169 17.0486C4.70875 17.3127 4.77049 17.5742 4.89587 17.8067C5.00015 18.0002 5.16678 18.1668 5.5 18.5C5.83323 18.8332 5.99985 18.9998 6.19325 19.1041C6.4258 19.2295 6.68733 19.2913 6.9514 19.2831C7.17102 19.2763 7.39456 19.2018 7.84164 19.0528L8.36862 18.8771C9.00393 18.6654 9.6942 18.9855 9.94291 19.6073C10.1159 20.0398 10.2024 20.2561 10.3346 20.4249C10.5281 20.6719 10.7942 20.8521 11.0954 20.94C11.3012 21 11.5341 21 12 21C12.4659 21 12.6988 21 12.9046 20.94C13.2058 20.8521 13.4719 20.6719 13.6654 20.4249C13.7976 20.2561 13.8841 20.0398 14.0571 19.6073C14.3058 18.9855 14.9961 18.6654 15.6313 18.8773L16.1579 19.0529C16.605 19.2019 16.8286 19.2764 17.0482 19.2832C17.3123 19.2913 17.5738 19.2296 17.8063 19.1042C17.9997 18.9999 18.1664 18.8333 18.4996 18.5001C18.8328 18.1669 18.9994 18.0002 19.1037 17.8068C19.2291 17.5743 19.2908 17.3127 19.2827 17.0487C19.2759 16.8291 19.2014 16.6055 19.0524 16.1584L18.8374 15.5134C18.6477 14.9444 18.9344 14.3262 19.4913 14.1035C20.036 13.8856 20.3084 13.7766 20.5088 13.5946C20.6858 13.4337 20.8218 13.2329 20.9054 13.0088C21 12.7551 21 12.4589 21 11.8663C21 11.3658 21 11.1156 20.9289 10.893C20.866 10.696 20.763 10.5141 20.6265 10.3588C20.4721 10.1833 20.2597 10.0558 19.8348 9.80087L19.5569 9.63416C18.9478 9.26867 18.6939 8.51514 18.9578 7.85558C19.1262 7.43443 19.2105 7.22383 19.232 7.01543C19.2636 6.70926 19.2003 6.40077 19.0506 6.13181C18.9487 5.94875 18.7884 5.78837 18.4676 5.46762C18.1658 5.16584 18.0149 5.01494 17.8426 4.91583C17.5894 4.77024 17.2992 4.70174 17.0076 4.71872C16.8091 4.73029 16.6067 4.79777 16.2018 4.93273L15.6314 5.12287C14.9961 5.33464 14.3058 5.0145 14.0571 4.39272C13.8841 3.96016 13.7976 3.74388 13.6654 3.57511C13.4719 3.32808 13.2058 3.14794 12.9046 3.06005Z"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
         </button>
       </div>
@@ -59,9 +84,11 @@
               <h1 id="gameTitle">Fog of War</h1>
               <button id="overlayStartBtn" class="btn">Start Game</button>
             </div>
-            <div id="gameOverContent" style="display: none;">
+            <div id="gameOverContent" style="display: none">
               <div class="game-over-text">Game Over</div>
-              <div class="winner-text" id="overlayWinnerText">The winner is Player</div>
+              <div class="winner-text" id="overlayWinnerText">
+                The winner is Player
+              </div>
               <div id="gameStats" class="game-stats"></div>
               <button id="overlayStartBtn2" class="btn">Start New Game</button>
             </div>
@@ -70,11 +97,33 @@
 
         <div id="gameControls">
           <!-- Gear icon that replaces entire sidebar when collapsed -->
-          <div id="gearIconContainer" style="display: none;">
-            <button class="gear-button" onclick="toggleSidebar()" title="Open Sidebar">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12C9 10.3431 10.3431 9 12 9C13.6569 9 15 10.3431 15 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M12.9046 3.06005C12.6988 3 12.4659 3 12 3C11.5341 3 11.3012 3 11.0954 3.06005C10.7942 3.14794 10.5281 3.32808 10.3346 3.57511C10.2024 3.74388 10.1159 3.96016 9.94291 4.39272C9.69419 5.01452 9.00393 5.33471 8.36857 5.123L7.79779 4.93281C7.3929 4.79785 7.19045 4.73036 6.99196 4.7188C6.70039 4.70181 6.4102 4.77032 6.15701 4.9159C5.98465 5.01501 5.83376 5.16591 5.53197 5.4677C5.21122 5.78845 5.05084 5.94882 4.94896 6.13189C4.79927 6.40084 4.73595 6.70934 4.76759 7.01551C4.78912 7.2239 4.87335 7.43449 5.04182 7.85566C5.30565 8.51523 5.05184 9.26878 4.44272 9.63433L4.16521 9.80087C3.74031 10.0558 3.52786 10.1833 3.37354 10.3588C3.23698 10.5141 3.13401 10.696 3.07109 10.893C3 11.1156 3 11.3658 3 11.8663C3 12.4589 3 12.7551 3.09462 13.0088C3.17823 13.2329 3.31422 13.4337 3.49124 13.5946C3.69158 13.7766 3.96395 13.8856 4.50866 14.1035C5.06534 14.3261 5.35196 14.9441 5.16236 15.5129L4.94721 16.1584C4.79819 16.6054 4.72367 16.829 4.7169 17.0486C4.70875 17.3127 4.77049 17.5742 4.89587 17.8067C5.00015 18.0002 5.16678 18.1668 5.5 18.5C5.83323 18.8332 5.99985 18.9998 6.19325 19.1041C6.4258 19.2295 6.68733 19.2913 6.9514 19.2831C7.17102 19.2763 7.39456 19.2018 7.84164 19.0528L8.36862 18.8771C9.00393 18.6654 9.6942 18.9855 9.94291 19.6073C10.1159 20.0398 10.2024 20.2561 10.3346 20.4249C10.5281 20.6719 10.7942 20.8521 11.0954 20.94C11.3012 21 11.5341 21 12 21C12.4659 21 12.6988 21 12.9046 20.94C13.2058 20.8521 13.4719 20.6719 13.6654 20.4249C13.7976 20.2561 13.8841 20.0398 14.0571 19.6073C14.3058 18.9855 14.9961 18.6654 15.6313 18.8773L16.1579 19.0529C16.605 19.2019 16.8286 19.2764 17.0482 19.2832C17.3123 19.2913 17.5738 19.2296 17.8063 19.1042C17.9997 18.9999 18.1664 18.8333 18.4996 18.5001C18.8328 18.1669 18.9994 18.0002 19.1037 17.8068C19.2291 17.5743 19.2908 17.3127 19.2827 17.0487C19.2759 16.8291 19.2014 16.6055 19.0524 16.1584L18.8374 15.5134C18.6477 14.9444 18.9344 14.3262 19.4913 14.1035C20.036 13.8856 20.3084 13.7766 20.5088 13.5946C20.6858 13.4337 20.8218 13.2329 20.9054 13.0088C21 12.7551 21 12.4589 21 11.8663C21 11.3658 21 11.1156 20.9289 10.893C20.866 10.696 20.763 10.5141 20.6265 10.3588C20.4721 10.1833 20.2597 10.0558 19.8348 9.80087L19.5569 9.63416C18.9478 9.26867 18.6939 8.51514 18.9578 7.85558C19.1262 7.43443 19.2105 7.22383 19.232 7.01543C19.2636 6.70926 19.2003 6.40077 19.0506 6.13181C18.9487 5.94875 18.7884 5.78837 18.4676 5.46762C18.1658 5.16584 18.0149 5.01494 17.8426 4.91583C17.5894 4.77024 17.2992 4.70174 17.0076 4.71872C16.8091 4.73029 16.6067 4.79777 16.2018 4.93273L15.6314 5.12287C14.9961 5.33464 14.3058 5.0145 14.0571 4.39272C13.8841 3.96016 13.7976 3.74388 13.6654 3.57511C13.4719 3.32808 13.2058 3.14794 12.9046 3.06005Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <div id="gearIconContainer" style="display: none">
+            <button
+              class="gear-button"
+              onclick="toggleSidebar()"
+              title="Open Sidebar"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12C9 10.3431 10.3431 9 12 9C13.6569 9 15 10.3431 15 12Z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M12.9046 3.06005C12.6988 3 12.4659 3 12 3C11.5341 3 11.3012 3 11.0954 3.06005C10.7942 3.14794 10.5281 3.32808 10.3346 3.57511C10.2024 3.74388 10.1159 3.96016 9.94291 4.39272C9.69419 5.01452 9.00393 5.33471 8.36857 5.123L7.79779 4.93281C7.3929 4.79785 7.19045 4.73036 6.99196 4.7188C6.70039 4.70181 6.4102 4.77032 6.15701 4.9159C5.98465 5.01501 5.83376 5.16591 5.53197 5.4677C5.21122 5.78845 5.05084 5.94882 4.94896 6.13189C4.79927 6.40084 4.73595 6.70934 4.76759 7.01551C4.78912 7.2239 4.87335 7.43449 5.04182 7.85566C5.30565 8.51523 5.05184 9.26878 4.44272 9.63433L4.16521 9.80087C3.74031 10.0558 3.52786 10.1833 3.37354 10.3588C3.23698 10.5141 3.13401 10.696 3.07109 10.893C3 11.1156 3 11.3658 3 11.8663C3 12.4589 3 12.7551 3.09462 13.0088C3.17823 13.2329 3.31422 13.4337 3.49124 13.5946C3.69158 13.7766 3.96395 13.8856 4.50866 14.1035C5.06534 14.3261 5.35196 14.9441 5.16236 15.5129L4.94721 16.1584C4.79819 16.6054 4.72367 16.829 4.7169 17.0486C4.70875 17.3127 4.77049 17.5742 4.89587 17.8067C5.00015 18.0002 5.16678 18.1668 5.5 18.5C5.83323 18.8332 5.99985 18.9998 6.19325 19.1041C6.4258 19.2295 6.68733 19.2913 6.9514 19.2831C7.17102 19.2763 7.39456 19.2018 7.84164 19.0528L8.36862 18.8771C9.00393 18.6654 9.6942 18.9855 9.94291 19.6073C10.1159 20.0398 10.2024 20.2561 10.3346 20.4249C10.5281 20.6719 10.7942 20.8521 11.0954 20.94C11.3012 21 11.5341 21 12 21C12.4659 21 12.6988 21 12.9046 20.94C13.2058 20.8521 13.4719 20.6719 13.6654 20.4249C13.7976 20.2561 13.8841 20.0398 14.0571 19.6073C14.3058 18.9855 14.9961 18.6654 15.6313 18.8773L16.1579 19.0529C16.605 19.2019 16.8286 19.2764 17.0482 19.2832C17.3123 19.2913 17.5738 19.2296 17.8063 19.1042C17.9997 18.9999 18.1664 18.8333 18.4996 18.5001C18.8328 18.1669 18.9994 18.0002 19.1037 17.8068C19.2291 17.5743 19.2908 17.3127 19.2827 17.0487C19.2759 16.8291 19.2014 16.6055 19.0524 16.1584L18.8374 15.5134C18.6477 14.9444 18.9344 14.3262 19.4913 14.1035C20.036 13.8856 20.3084 13.7766 20.5088 13.5946C20.6858 13.4337 20.8218 13.2329 20.9054 13.0088C21 12.7551 21 12.4589 21 11.8663C21 11.3658 21 11.1156 20.9289 10.893C20.866 10.696 20.763 10.5141 20.6265 10.3588C20.4721 10.1833 20.2597 10.0558 19.8348 9.80087L19.5569 9.63416C18.9478 9.26867 18.6939 8.51514 18.9578 7.85558C19.1262 7.43443 19.2105 7.22383 19.232 7.01543C19.2636 6.70926 19.2003 6.40077 19.0506 6.13181C18.9487 5.94875 18.7884 5.78837 18.4676 5.46762C18.1658 5.16584 18.0149 5.01494 17.8426 4.91583C17.5894 4.77024 17.2992 4.70174 17.0076 4.71872C16.8091 4.73029 16.6067 4.79777 16.2018 4.93273L15.6314 5.12287C14.9961 5.33464 14.3058 5.0145 14.0571 4.39272C13.8841 3.96016 13.7976 3.74388 13.6654 3.57511C13.4719 3.32808 13.2058 3.14794 12.9046 3.06005Z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
               </svg>
             </button>
           </div>
@@ -82,256 +131,385 @@
           <!-- Sidebar content (hidden when collapsed) -->
           <div id="sidebarContent">
             <!-- Close button (only visible when sidebar is open) -->
-            <button id="sidebarToggle" class="sidebar-toggle" onclick="toggleSidebar()" title="Close Sidebar">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <button
+              id="sidebarToggle"
+              class="sidebar-toggle"
+              onclick="toggleSidebar()"
+              title="Close Sidebar"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M18 6L6 18M6 6l12 12"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
               </svg>
             </button>
             <div class="sidebar-tabs">
-              <button class="sidebar-tab active" onclick="switchSidebarTab('gameInfo')">Game Info</button>
-              <button class="sidebar-tab" onclick="switchSidebarTab('chat')">Chat</button>
-              <button class="sidebar-tab" onclick="switchSidebarTab('options')">Options</button>
-            </div>
-            
-            <div id="gameInfoTab" class="sidebar-tab-content active">
-            <div class="game-info">
-              <div id="hostIndicator" style="display: none; background: #e8f5e8; border: 1px solid #4CAF50; padding: 8px; margin-bottom: 10px; border-radius: 4px; font-size: 12px; color: #2e7d32;">
-                👑 You are the host - you can start the game and manage players
-              </div>
-              <!-- Game details section (collapsible) -->
-              <div class="accordion-section">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
-                  <span>Game Details</span>
-                  <span class="accordion-arrow">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M4.2433 17.6513L10.5859 5.67095C11.0445 4.80456 11.2739 4.37136 11.5798 4.22973C11.8463 4.10637 12.1535 4.10637 12.42 4.22973C12.726 4.37136 12.9553 4.80456 13.414 5.67094L19.7565 17.6513C20.1668 18.4263 20.372 18.8138 20.3305 19.13C20.2943 19.4059 20.1448 19.6543 19.9179 19.8154C19.6579 19.9999 19.2194 19.9999 18.3425 19.9999H5.65737C4.78044 19.9999 4.34198 19.9999 4.08198 19.8154C3.85505 19.6543 3.70551 19.4059 3.66932 19.13C3.62785 18.8138 3.833 18.4263 4.2433 17.6513Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </span>
-                </div>
-                <div class="accordion-content">
-                  <ul class="game-stats">
-                    <li><strong>Room:</strong> <span id="roomId"></span></li>
-                    <li>
-                      <strong>Status:</strong>
-                      <span id="gameStarted">Waiting</span>
-                    </li>
-                    <li><strong>Host:</strong> <span id="hostName">-</span></li>
-                    <li>
-                      <strong>Spectators:</strong>
-                      <span id="spectatorCount">0</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              <!-- How to play section (closed by default) -->
-              <div class="accordion-section">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
-                  <span>How to play</span>
-                  <span class="accordion-arrow">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M4.2433 17.6513L10.5859 5.67095C11.0445 4.80456 11.2739 4.37136 11.5798 4.22973C11.8463 4.10637 12.1535 4.10637 12.42 4.22973C12.726 4.37136 12.9553 4.80456 13.414 5.67094L19.7565 17.6513C20.1668 18.4263 20.372 18.8138 20.3305 19.13C20.2943 19.4059 20.1448 19.6543 19.9179 19.8154C19.6579 19.9999 19.2194 19.9999 18.3425 19.9999H5.65737C4.78044 19.9999 4.34198 19.9999 4.08198 19.8154C3.85505 19.6543 3.70551 19.4059 3.66932 19.13C3.62785 18.8138 3.833 18.4263 4.2433 17.6513Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </span>
-                </div>
-                <div class="accordion-content">
-                  <div id="desktopControls" class="controls-section">
-                    <ul
-                      style="margin: 8px 0; padding-left: 20px; font-size: 13px"
-                    >
-                      <li>
-                        <strong>Click:</strong> Click a visible tile to move
-                        armies there from the active tile
-                      </li>
-                      <li>
-                        <strong>Shift+Click:</strong> Activate a tile without
-                        moving armies
-                      </li>
-                      <li>
-                        <strong>Movement:</strong> Use arrow keys or WASD to
-                        move
-                      </li>
-                      <li>
-                        <strong>Home:</strong> Press the space bar to activate
-                        your base tile
-                      </li>
-                      <li>
-                        <strong>Map:</strong> Shift+drag to pan, scroll to zoom
-                      </li>
-                    </ul>
-                  </div>
-                  <div
-                    id="mobileControls"
-                    class="controls-section"
-                    style="display: none"
-                  >
-                    <ul
-                      style="margin: 8px 0; padding-left: 20px; font-size: 13px"
-                    >
-                      <li>
-                        <strong>Tap:</strong> Tap a visible tile to move armies
-                        there from the active tile
-                      </li>
-                      <li>
-                        <strong>Press:</strong> Long press an owned tile to
-                        activate it without moving armies
-                      </li>
-                      <li><strong>Pan:</strong> Drag to move map view</li>
-                      <li><strong>Zoom:</strong> Pinch to zoom in/out</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Invite Bots section -->
-              <div class="accordion-section">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
-                  <span>Invite Bots</span>
-                  <span class="accordion-arrow">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M4.2433 17.6513L10.5859 5.67095C11.0445 4.80456 11.2739 4.37136 11.5798 4.22973C11.8463 4.10637 12.1535 4.10637 12.42 4.22973C12.726 4.37136 12.9553 4.80456 13.414 5.67094L19.7565 17.6513C20.1668 18.4263 20.372 18.8138 20.3305 19.13C20.2943 19.4059 20.1448 19.6543 19.9179 19.8154C19.6579 19.9999 19.2194 19.9999 18.3425 19.9999H5.65737C4.78044 19.9999 4.34198 19.9999 4.08198 19.8154C3.85505 19.6543 3.70551 19.4059 3.66932 19.13C3.62785 18.8138 3.833 18.4263 4.2433 17.6513Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </span>
-                </div>
-                <div class="accordion-content">
-                  <div class="bot-buttons">
-                    <button id="inviteBlobBtn" class="btn bot-btn">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        fill="currentColor"
-                      >
-                        <circle cx="8" cy="8" r="6" opacity="0.8" />
-                        <circle cx="8" cy="8" r="3" opacity="0.6" />
-                      </svg>
-                      Blob
-                    </button>
-                    <button id="inviteArrowBtn" class="btn bot-btn">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        fill="currentColor"
-                      >
-                        <path
-                          d="M2 8 L10 8 M6 4 L10 8 L6 12"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          fill="none"
-                        />
-                      </svg>
-                      Arrow
-                    </button>
-                    <button id="inviteSpiralBtn" class="btn bot-btn">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        fill="currentColor"
-                      >
-                        <path
-                          d="M8 2 Q12 2 12 6 Q12 10 8 10 Q4 10 4 6 Q4 4 6 4"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          fill="none"
-                        />
-                      </svg>
-                      Spiral
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Mobile Players & Stats accordion (mobile only) -->
-              <div class="accordion-section mobile-only">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
-                  <span>Players & Stats</span>
-                  <span class="accordion-arrow">
-                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M4.2433 17.6513L10.5859 5.67095C11.0445 4.80456 11.2739 4.37136 11.5798 4.22973C11.8463 4.10637 12.1535 4.10637 12.42 4.22973C12.726 4.37136 12.9553 4.80456 13.414 5.67094L19.7565 17.6513C20.1668 18.4263 20.372 18.8138 20.3305 19.13C20.2943 19.4059 20.1448 19.6543 19.9179 19.8154C19.6579 19.9999 19.2194 19.9999 18.3425 19.9999H5.65737C4.78044 19.9999 4.34198 19.9999 4.08198 19.8154C3.85505 19.6543 3.70551 19.4059 3.66932 19.13C3.62785 18.8138 3.833 18.4263 4.2433 17.6513Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </span>
-                </div>
-                <div class="accordion-content">
-                  <div id="mobilePlayersAccordion"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="info">
-            <div
-              id="gameEndNotification"
-              style="
-                display: none;
-                background: #f0f8ff;
-                border: 2px solid #4caf50;
-                padding: 15px;
-                margin: 10px 0;
-                border-radius: 5px;
-                text-align: center;
-              "
-            >
-              <div
-                id="gameEndText"
-                style="font-weight: bold; font-size: 18px; margin-bottom: 10px"
-              ></div>
-              <div style="font-size: 14px; color: #666">
-                Game has ended. Players can rejoin for the next game.
-              </div>
-            </div>
-            <div class="players-list empty">
-              <h4 style="margin-top: 0; color: #333">Players & Stats</h4>
-              <div id="players"></div>
-              <ul id="playersMobile" class="players-mobile-list"></ul>
-            </div>
-          </div>
-
-          <div class="info">
-            <div id="joinControls">
-              <input
-                type="text"
-                id="usernameInput"
-                placeholder="Enter your username"
-              />
-              <button id="joinBtn" class="btn">Join</button>
-              <button id="leaveBtn" class="btn" style="display: none">
-                Leave Game
+              <button
+                class="sidebar-tab active"
+                onclick="switchSidebarTab('gameInfo')"
+              >
+                Game Info
+              </button>
+              <button class="sidebar-tab" onclick="switchSidebarTab('chat')">
+                Chat
+              </button>
+              <button class="sidebar-tab" onclick="switchSidebarTab('options')">
+                Options
               </button>
             </div>
-            <button id="abandonBtn" class="btn" style="display: none; background: #dc3545; border-color: #dc3545">
-              Abandon Game
-            </button>
-            <button id="endBotGameBtn" class="btn" style="display: none; background: #ff9800; border-color: #ff9800">
-              End Bot Game
-            </button>
+
+            <div id="gameInfoTab" class="sidebar-tab-content active">
+              <div class="game-info">
+                <div
+                  id="hostIndicator"
+                  style="
+                    display: none;
+                    background: #e8f5e8;
+                    border: 1px solid #4caf50;
+                    padding: 8px;
+                    margin-bottom: 10px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    color: #2e7d32;
+                  "
+                >
+                  👑 You are the host - you can start the game and manage
+                  players
+                </div>
+                <!-- Game details section (collapsible) -->
+                <div class="accordion-section">
+                  <div class="accordion-header" onclick="toggleAccordion(this)">
+                    <span>Game Details</span>
+                    <span class="accordion-arrow">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M4.2433 17.6513L10.5859 5.67095C11.0445 4.80456 11.2739 4.37136 11.5798 4.22973C11.8463 4.10637 12.1535 4.10637 12.42 4.22973C12.726 4.37136 12.9553 4.80456 13.414 5.67094L19.7565 17.6513C20.1668 18.4263 20.372 18.8138 20.3305 19.13C20.2943 19.4059 20.1448 19.6543 19.9179 19.8154C19.6579 19.9999 19.2194 19.9999 18.3425 19.9999H5.65737C4.78044 19.9999 4.34198 19.9999 4.08198 19.8154C3.85505 19.6543 3.70551 19.4059 3.66932 19.13C3.62785 18.8138 3.833 18.4263 4.2433 17.6513Z"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  </div>
+                  <div class="accordion-content">
+                    <ul class="game-stats">
+                      <li><strong>Room:</strong> <span id="roomId"></span></li>
+                      <li>
+                        <strong>Status:</strong>
+                        <span id="gameStarted">Waiting</span>
+                      </li>
+                      <li>
+                        <strong>Host:</strong> <span id="hostName">-</span>
+                      </li>
+                      <li>
+                        <strong>Spectators:</strong>
+                        <span id="spectatorCount">0</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- How to play section (closed by default) -->
+                <div class="accordion-section">
+                  <div class="accordion-header" onclick="toggleAccordion(this)">
+                    <span>How to play</span>
+                    <span class="accordion-arrow">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M4.2433 17.6513L10.5859 5.67095C11.0445 4.80456 11.2739 4.37136 11.5798 4.22973C11.8463 4.10637 12.1535 4.10637 12.42 4.22973C12.726 4.37136 12.9553 4.80456 13.414 5.67094L19.7565 17.6513C20.1668 18.4263 20.372 18.8138 20.3305 19.13C20.2943 19.4059 20.1448 19.6543 19.9179 19.8154C19.6579 19.9999 19.2194 19.9999 18.3425 19.9999H5.65737C4.78044 19.9999 4.34198 19.9999 4.08198 19.8154C3.85505 19.6543 3.70551 19.4059 3.66932 19.13C3.62785 18.8138 3.833 18.4263 4.2433 17.6513Z"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  </div>
+                  <div class="accordion-content">
+                    <div id="desktopControls" class="controls-section">
+                      <ul
+                        style="
+                          margin: 8px 0;
+                          padding-left: 20px;
+                          font-size: 13px;
+                        "
+                      >
+                        <li>
+                          <strong>Click:</strong> Click a visible tile to move
+                          armies there from the active tile
+                        </li>
+                        <li>
+                          <strong>Shift+Click:</strong> Activate a tile without
+                          moving armies
+                        </li>
+                        <li>
+                          <strong>Movement:</strong> Use arrow keys or WASD to
+                          move
+                        </li>
+                        <li>
+                          <strong>Home:</strong> Press the space bar to activate
+                          your base tile
+                        </li>
+                        <li>
+                          <strong>Map:</strong> Shift+drag to pan, scroll to
+                          zoom
+                        </li>
+                      </ul>
+                    </div>
+                    <div
+                      id="mobileControls"
+                      class="controls-section"
+                      style="display: none"
+                    >
+                      <ul
+                        style="
+                          margin: 8px 0;
+                          padding-left: 20px;
+                          font-size: 13px;
+                        "
+                      >
+                        <li>
+                          <strong>Tap:</strong> Tap a visible tile to move
+                          armies there from the active tile
+                        </li>
+                        <li>
+                          <strong>Press:</strong> Long press an owned tile to
+                          activate it without moving armies
+                        </li>
+                        <li><strong>Pan:</strong> Drag to move map view</li>
+                        <li><strong>Zoom:</strong> Pinch to zoom in/out</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Invite Bots section -->
+                <div class="accordion-section">
+                  <div class="accordion-header" onclick="toggleAccordion(this)">
+                    <span>Invite Bots</span>
+                    <span class="accordion-arrow">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M4.2433 17.6513L10.5859 5.67095C11.0445 4.80456 11.2739 4.37136 11.5798 4.22973C11.8463 4.10637 12.1535 4.10637 12.42 4.22973C12.726 4.37136 12.9553 4.80456 13.414 5.67094L19.7565 17.6513C20.1668 18.4263 20.372 18.8138 20.3305 19.13C20.2943 19.4059 20.1448 19.6543 19.9179 19.8154C19.6579 19.9999 19.2194 19.9999 18.3425 19.9999H5.65737C4.78044 19.9999 4.34198 19.9999 4.08198 19.8154C3.85505 19.6543 3.70551 19.4059 3.66932 19.13C3.62785 18.8138 3.833 18.4263 4.2433 17.6513Z"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  </div>
+                  <div class="accordion-content">
+                    <div class="bot-buttons">
+                      <button id="inviteBlobBtn" class="btn bot-btn">
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 16 16"
+                          fill="currentColor"
+                        >
+                          <circle cx="8" cy="8" r="6" opacity="0.8" />
+                          <circle cx="8" cy="8" r="3" opacity="0.6" />
+                        </svg>
+                        Blob
+                      </button>
+                      <button id="inviteArrowBtn" class="btn bot-btn">
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 16 16"
+                          fill="currentColor"
+                        >
+                          <path
+                            d="M2 8 L10 8 M6 4 L10 8 L6 12"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            fill="none"
+                          />
+                        </svg>
+                        Arrow
+                      </button>
+                      <button id="inviteSpiralBtn" class="btn bot-btn">
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 16 16"
+                          fill="currentColor"
+                        >
+                          <path
+                            d="M8 2 Q12 2 12 6 Q12 10 8 10 Q4 10 4 6 Q4 4 6 4"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            fill="none"
+                          />
+                        </svg>
+                        Spiral
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Mobile Players & Stats accordion (mobile only) -->
+                <div class="accordion-section mobile-only">
+                  <div class="accordion-header" onclick="toggleAccordion(this)">
+                    <span>Players & Stats</span>
+                    <span class="accordion-arrow">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M4.2433 17.6513L10.5859 5.67095C11.0445 4.80456 11.2739 4.37136 11.5798 4.22973C11.8463 4.10637 12.1535 4.10637 12.42 4.22973C12.726 4.37136 12.9553 4.80456 13.414 5.67094L19.7565 17.6513C20.1668 18.4263 20.372 18.8138 20.3305 19.13C20.2943 19.4059 20.1448 19.6543 19.9179 19.8154C19.6579 19.9999 19.2194 19.9999 18.3425 19.9999H5.65737C4.78044 19.9999 4.34198 19.9999 4.08198 19.8154C3.85505 19.6543 3.70551 19.4059 3.66932 19.13C3.62785 18.8138 3.833 18.4263 4.2433 17.6513Z"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  </div>
+                  <div class="accordion-content">
+                    <div id="mobilePlayersAccordion"></div>
+                  </div>
+                </div>
+              </div>
             </div>
-            
+
+            <div class="info">
+              <div
+                id="gameEndNotification"
+                style="
+                  display: none;
+                  background: #f0f8ff;
+                  border: 2px solid #4caf50;
+                  padding: 15px;
+                  margin: 10px 0;
+                  border-radius: 5px;
+                  text-align: center;
+                "
+              >
+                <div
+                  id="gameEndText"
+                  style="
+                    font-weight: bold;
+                    font-size: 18px;
+                    margin-bottom: 10px;
+                  "
+                ></div>
+                <div style="font-size: 14px; color: #666">
+                  Game has ended. Players can rejoin for the next game.
+                </div>
+              </div>
+              <div class="players-list empty">
+                <h4 style="margin-top: 0; color: #333">Players & Stats</h4>
+                <div id="players"></div>
+                <ul id="playersMobile" class="players-mobile-list"></ul>
+              </div>
+            </div>
+
+            <div class="info">
+              <div id="joinControls">
+                <input
+                  type="text"
+                  id="usernameInput"
+                  placeholder="Enter your username"
+                />
+                <button id="joinBtn" class="btn">Join</button>
+                <button id="leaveBtn" class="btn" style="display: none">
+                  Leave Game
+                </button>
+              </div>
+              <button
+                id="abandonBtn"
+                class="btn"
+                style="
+                  display: none;
+                  background: #dc3545;
+                  border-color: #dc3545;
+                "
+              >
+                Abandon Game
+              </button>
+              <button
+                id="endBotGameBtn"
+                class="btn"
+                style="
+                  display: none;
+                  background: #ff9800;
+                  border-color: #ff9800;
+                "
+              >
+                End Bot Game
+              </button>
+            </div>
+
             <div id="chatTab" class="sidebar-tab-content">
               <div id="chatMessages"></div>
               <div class="chat-input-container">
-                <textarea id="chatInput" placeholder="Type message..."></textarea>
+                <textarea
+                  id="chatInput"
+                  placeholder="Type message..."
+                ></textarea>
                 <button id="sendChatBtn" class="btn">Send</button>
               </div>
             </div>
-            
+
             <div id="optionsTab" class="sidebar-tab-content">
               <div class="options-section">
                 <h3>Sound Options</h3>
                 <div class="option-item">
                   <label class="option-label">
-                    <input type="checkbox" id="soundToggle" onchange="toggleSoundOption()">
+                    <input
+                      type="checkbox"
+                      id="soundToggle"
+                      onchange="toggleSoundOption()"
+                    />
                     <span>Enable Sounds</span>
                   </label>
                 </div>
-                
+
                 <div id="granularSounds" class="granular-sounds">
                   <div class="sound-controls">
-                    <button class="btn-small" onclick="selectAllSounds()">Select All</button>
-                    <button class="btn-small" onclick="deselectAllSounds()">Deselect All</button>
+                    <button class="btn-small" onclick="selectAllSounds()">
+                      Select All
+                    </button>
+                    <button class="btn-small" onclick="deselectAllSounds()">
+                      Deselect All
+                    </button>
                   </div>
-                  
+
                   <div class="sound-options">
                     <label class="sound-option">
                       <input
@@ -447,9 +625,25 @@
                     </label>
                   </div>
                 </div>
-                
-                <div class="options-section" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
-                  <a href="/credits.html" target="_blank" style="color: #0066cc; text-decoration: none; font-size: 12px;">View Credits & Attributions</a>
+
+                <div
+                  class="options-section"
+                  style="
+                    margin-top: 20px;
+                    padding-top: 15px;
+                    border-top: 1px solid #ddd;
+                  "
+                >
+                  <a
+                    href="/credits.html"
+                    target="_blank"
+                    style="
+                      color: #0066cc;
+                      text-decoration: none;
+                      font-size: 12px;
+                    "
+                    >View Credits & Attributions</a
+                  >
                 </div>
               </div>
             </div>

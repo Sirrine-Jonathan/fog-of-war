@@ -1,153 +1,199 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f1419" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" />
     <title>Fog of War</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared.css">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/shared.css" />
     <style>
-        form {
-            display: inline-flex;
-            align-items: flex-end;
-            gap: 12px;
-        }
+      form {
+        display: inline-flex;
+        align-items: flex-end;
+        gap: 12px;
+      }
 
-        label {
-            display: inline-flex;
-            flex-direction: column;
-            font-size: 12px;
-        }
+      label {
+        display: inline-flex;
+        flex-direction: column;
+        font-size: 12px;
+      }
 
-        input, button {
-            --height: 30px;
-            height: var(--height);
-            max-height: var(--height);
-            margin: 0;
-            padding: 0 10px;
-            box-sizing: border-box;
-        }
+      input,
+      button {
+        --height: 30px;
+        height: var(--height);
+        max-height: var(--height);
+        margin: 0;
+        padding: 0 10px;
+        box-sizing: border-box;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="header">
-            <h1>Fog of War</h1>
-            <button id="installBtn" class="install-btn" style="display: none;">Install App</button>
-        </div>
-        <p style="text-align: center; font-size: 1.2em; color: #666;">
-            A real-time strategy game.
-        </p>
-        <p style="text-align: center; font-size: 1em; color: #666;">
-            Build a bot to play or<br />play yourself against other players<br />and other players' bots.
-        </p>
-        
-        <h2>🚀 Get started</h2>
-        <form id="lobbyForm">
-            <label>
-                Lobby Name
-                <input name="lobbyName" placeholder="no-spaces">
-            </label>
-            <button type="submit">Enter</button>
-        </form>
+      <div class="header">
+        <h1>Fog of War</h1>
+        <button id="installBtn" class="install-btn" style="display: none">
+          Install App
+        </button>
+      </div>
+      <p style="text-align: center; font-size: 1.2em; color: #666">
+        A real-time strategy game.
+      </p>
+      <p style="text-align: center; font-size: 1em; color: #666">
+        Build a bot to play or<br />play yourself against other players<br />and
+        other players' bots.
+      </p>
 
-        <h2>🎮 How to Play</h2>
-        <div class="steps">
+      <h2>🚀 Get started</h2>
+      <form id="lobbyForm">
+        <label>
+          Lobby Name
+          <input name="lobbyName" placeholder="no-spaces" />
+        </label>
+        <button type="submit">Enter</button>
+      </form>
+
+      <h2>🎮 How to Play</h2>
+      <div class="steps">
+        <ul>
+          <li>
+            <strong>Click Navigation:</strong>
             <ul>
-                <li><strong>Click Navigation:</strong> 
-                    <ul>
-                        <li>Click your territory to activate it</li>
-                        <li>Click any visible tile to launch an intent (pathfinding movement)</li>
-                        <li>Alt+click or Shift+click only activates tiles without launching intents</li>
-                        <li>If no active tile, clicking owned territory activates it, otherwise no action</li>
-                    </ul>
-                </li>
-                <li><strong>Keyboard:</strong> Use arrow keys or WASD keys to move from selected territory. Press spacebar to select your general. Failed attacks keep the active tile selected.</li>
-                <li><strong>Map Controls:</strong> Hold Shift and drag to pan the map (cursor shows 'grab' when Shift is held). Use scroll wheel to zoom in/out.</li>
-                <li><strong>Conquest:</strong> Attack enemy territories or expand to neutral lands</li>
-                <li><strong>Strategy:</strong> Manage your armies wisely - you need at least 1 army to hold territory</li>
-                <li><strong>Victory:</strong> Eliminate all opponents by capturing their generals</li>
+              <li>Click your territory to activate it</li>
+              <li>
+                Click any visible tile to launch an intent (pathfinding
+                movement)
+              </li>
+              <li>
+                Alt+click or Shift+click only activates tiles without launching
+                intents
+              </li>
+              <li>
+                If no active tile, clicking owned territory activates it,
+                otherwise no action
+              </li>
             </ul>
-        </div>
-        
-        <h2>🤖 Bot Documentation</h2>
-        <p>Want to create your own bot?<br />Check out our comprehensive bot development guide:</p>
-        <a href="/docs/bot" class="game-link bot-link">📚 Bot Development Guide</a>
-        
-        <h2>✨ Game Features</h2>
-        
-        <div class="feature">
-            <strong>Real-time Strategy:</strong> Command armies in real-time battles with fog of war mechanics
-        </div>
-        
-        <div class="feature">
-            <strong>Multiplayer Support:</strong> Play with friends or against AI bots
-        </div>
-        
-        <div class="feature">
-            <strong>Spectator Mode:</strong> Watch games in progress or continue viewing after elimination
-        </div>
-        
-        <div class="feature">
-            <strong>Bot API:</strong> Create custom AI opponents using our Socket.IO API
-        </div>
+          </li>
+          <li>
+            <strong>Keyboard:</strong> Use arrow keys or WASD keys to move from
+            selected territory. Press spacebar to select your general. Failed
+            attacks keep the active tile selected.
+          </li>
+          <li>
+            <strong>Map Controls:</strong> Hold Shift and drag to pan the map
+            (cursor shows 'grab' when Shift is held). Use scroll wheel to zoom
+            in/out.
+          </li>
+          <li>
+            <strong>Conquest:</strong> Attack enemy territories or expand to
+            neutral lands
+          </li>
+          <li>
+            <strong>Strategy:</strong> Manage your armies wisely - you need at
+            least 1 army to hold territory
+          </li>
+          <li>
+            <strong>Victory:</strong> Eliminate all opponents by capturing their
+            generals
+          </li>
+        </ul>
+      </div>
 
-        <div class="footer">
-            <a
-                target="_blank"
-                referrerpolicy="no-referrer"
-                href="https://github.com/Sirrine-Jonathan/fog-of-war"
-                >GitHub</a
-            > |
-            <a href="/credits.html">Sound Credits & Attributions</a>
-        </div>
+      <h2>🤖 Bot Documentation</h2>
+      <p>
+        Want to create your own bot?<br />Check out our comprehensive bot
+        development guide:
+      </p>
+      <a href="/docs/bot" class="game-link bot-link"
+        >📚 Bot Development Guide</a
+      >
+
+      <h2>✨ Game Features</h2>
+
+      <div class="feature">
+        <strong>Real-time Strategy:</strong> Command armies in real-time battles
+        with fog of war mechanics
+      </div>
+
+      <div class="feature">
+        <strong>Multiplayer Support:</strong> Play with friends or against AI
+        bots
+      </div>
+
+      <div class="feature">
+        <strong>Spectator Mode:</strong> Watch games in progress or continue
+        viewing after elimination
+      </div>
+
+      <div class="feature">
+        <strong>Bot API:</strong> Create custom AI opponents using our Socket.IO
+        API
+      </div>
+
+      <div class="footer">
+        <a
+          target="_blank"
+          referrerpolicy="no-referrer"
+          href="https://github.com/Sirrine-Jonathan/fog-of-war"
+          >GitHub</a
+        >
+        |
+        <a href="/credits.html">Sound Credits & Attributions</a>
+      </div>
     </div>
     <script>
-        document.getElementById('lobbyForm').addEventListener('submit', (e) => {
-            console.log(e);
-            e.preventDefault();
-            // get lobby name from form input and go to /game/<lobby-name>
-            const lobbyName = e.target.lobbyName.value.trim();
-            if (lobbyName) {
-                window.location.href = `/game/${lobbyName}`;
-            }
-        })
+      document.getElementById("lobbyForm").addEventListener("submit", (e) => {
+        console.log(e);
+        e.preventDefault();
+        // get lobby name from form input and go to /game/<lobby-name>
+        const lobbyName = e.target.lobbyName.value.trim();
+        if (lobbyName) {
+          window.location.href = `/game/${lobbyName}`;
+        }
+      });
     </script>
     <script>
-        let deferredPrompt;
-        
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js');
-        }
-        
-        // Handle install prompt on home page
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            
-            // Always show install button when available
-            document.getElementById('installBtn').style.display = 'inline-flex';
-        });
-        
-        document.getElementById('installBtn').addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const result = await deferredPrompt.userChoice;
-                if (result.outcome === 'accepted') {
-                    document.getElementById('installBtn').style.display = 'none';
-                }
-                deferredPrompt = null;
+      let deferredPrompt;
+
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js");
+      }
+
+      // Handle install prompt on home page
+      window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+
+        // Always show install button when available
+        document.getElementById("installBtn").style.display = "inline-flex";
+      });
+
+      document
+        .getElementById("installBtn")
+        .addEventListener("click", async () => {
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const result = await deferredPrompt.userChoice;
+            if (result.outcome === "accepted") {
+              document.getElementById("installBtn").style.display = "none";
             }
+            deferredPrompt = null;
+          }
         });
     </script>
-    
+
     <!-- P5.js for intricate tiling animation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
     <script src="/logMessage.js"></script>
     <script src="/soundManager.js"></script>
     <script src="/konami.js"></script>
-</body>
+  </body>
 </html>
