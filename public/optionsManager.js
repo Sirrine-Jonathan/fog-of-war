@@ -22,6 +22,7 @@ class OptionsManager {
         armyBonus: true,
         gameStart: true,
       },
+      defaultIntentAlgorithm: "conservative", // conservative, aggressive, gathering, efficient
     };
 
     if (saved) {

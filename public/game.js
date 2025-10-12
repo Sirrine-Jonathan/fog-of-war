@@ -1957,9 +1957,26 @@ function drawGame() {
       ctx.setLineDash([]);
     }
 
-    // Draw border - only current player's general gets persistent border
+    // Calculate if this is player's general (needed for overlay and border)
     const isPlayerGeneral =
       playerGenerals.has(playerIndex) && playerGenerals.get(playerIndex) === i;
+
+    // Draw overlay for selected tile
+    if (selectedTile === i) {
+      const armyCount = gameState.armies[i];
+      const canMoveArmies = armyCount > 1;
+
+      if (canMoveArmies || isPlayerGeneral) {
+        // Gold semi-transparent overlay for tiles that can move
+        ctx.fillStyle = "rgba(255, 215, 0, 0.3)"; // Gold with 30% opacity
+      } else {
+        // Gray semi-transparent overlay for tiles that cannot move
+        ctx.fillStyle = "rgba(136, 136, 136, 0.3)"; // Gray with 30% opacity
+      }
+      ctx.fillRect(x, y, tileSize, tileSize);
+    }
+
+    // Draw border - only current player's general gets persistent border
     const isSelected = selectedTile === i;
 
     if (isPlayerGeneral) {
@@ -2187,44 +2204,74 @@ canvas.addEventListener("click", (e) => {
 
   const tileIndex = row * gameState.width + col;
 
+  // Alt/Shift+click: activate tile without intent (check this FIRST)
+  if (e.altKey || e.shiftKey) {
+    if (gameState.terrain[tileIndex] === playerIndex) {
+      setSelectedTile(tileIndex);
+    } else {
+      setSelectedTile(null);
+    }
+    return;
+  }
+
+  // Clicking selected tile again deselects it (check BEFORE auto-selection)
+  if (selectedTile === tileIndex) {
+    setSelectedTile(null);
+    return;
+  }
+
   // Check if selected tile can launch intent (has armies to move and is owned by player)
-  const canLaunchIntent =
+  let canLaunchIntent =
     selectedTile !== null &&
     gameState.terrain[selectedTile] === playerIndex &&
     gameState.armies[selectedTile] > 1;
 
-  if (selectedTile === null) {
-    // No active tile: clicking owned tile makes it active, otherwise no action
+  if (selectedTile === null || !canLaunchIntent) {
+    // No active tile OR insufficient armies: try to auto-select if clicking non-owned target
     if (gameState.terrain[tileIndex] === playerIndex) {
       setSelectedTile(tileIndex);
+    } else {
+      // Clicking non-owned target with no valid source - auto-select best source
+      const autoSource = findBestIntentSource(tileIndex);
+      if (autoSource !== null) {
+        selectedTile = autoSource;
+        setSelectedTile(autoSource);
+        canLaunchIntent = true;
+        // Continue to launch intent below
+      } else {
+        return;
+      }
+    }
+  }
+
+  // There is an active tile with valid source
+  const isClickingOwnedTile = gameState.terrain[tileIndex] === playerIndex;
+  const isClickingAdjacent = isAdjacent(selectedTile, tileIndex);
+
+  // Now handle the click based on selection
+  if (isClickingAdjacent) {
+    // Adjacent click: launch intent (move/attack)
+    activeIntent = null;
+    attemptMove(selectedTile, tileIndex);
+  } else if (!canLaunchIntent) {
+    // Can't launch and no auto-source worked: just change selection
+    if (isClickingOwnedTile) {
+      setSelectedTile(tileIndex);
+    } else {
+      setSelectedTile(null);
     }
   } else {
-    // There is an active tile
-    if (e.altKey || e.shiftKey || !canLaunchIntent) {
-      // Alt+click OR Shift+click OR can't launch intent: only activate clicked tile (no launched intent)
-      if (gameState.terrain[tileIndex] === playerIndex) {
-        setSelectedTile(tileIndex);
-      } else {
-        setSelectedTile(null);
-      }
-    } else if (isAdjacent(selectedTile, tileIndex)) {
-      // Adjacent click: launch intent (move/attack)
-      activeIntent = null; // Clear any existing intent
-      attemptMove(selectedTile, tileIndex);
-    } else {
-      // Non-adjacent click: launch intent if possible
-      // Regular click: Start intent-based movement
-      activeIntent = null; // Clear any existing intent first
+    // Non-adjacent click with valid source: launch intent
+    activeIntent = null;
 
-      const path = findPath(selectedTile, tileIndex);
-      if (path && path.length > 0) {
-        activeIntent = {
-          fromTile: selectedTile,
-          targetTile: tileIndex,
-          path: path,
-          currentStep: 0,
-        };
-      }
+    const path = findPath(selectedTile, tileIndex);
+    if (path && path.length > 0) {
+      activeIntent = {
+        fromTile: selectedTile,
+        targetTile: tileIndex,
+        path: path,
+        currentStep: 0,
+      };
     }
   }
 });
@@ -2652,6 +2699,67 @@ function isAdjacent(from, to) {
   return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
 }
 
+// Manhattan distance helper for source selection
+function manhattanDistance(from, to) {
+  if (!gameState) return Infinity;
+  const fromRow = Math.floor(from / gameState.width);
+  const fromCol = from % gameState.width;
+  const toRow = Math.floor(to / gameState.width);
+  const toCol = to % gameState.width;
+  return Math.abs(fromRow - toRow) + Math.abs(fromCol - toCol);
+}
+
+// Find best source tile for intent when current selection is invalid
+function findBestIntentSource(targetTile) {
+  if (!gameState || playerIndex < 0) return null;
+
+  const playerCapital = gameState.generals?.[playerIndex];
+
+  // Scoring system: prefer farther sources with more armies
+  // Score = (distance * 1.0) + (armies * 0.5)
+  // This means distance is weighted more heavily, but army count still matters
+
+  let bestTile = null;
+  let bestScore = -1;
+  let bestIsCity = false;
+
+  // Check all owned tiles with armies (excluding capital for now)
+  for (let i = 0; i < gameState.terrain.length; i++) {
+    if (
+      gameState.terrain[i] === playerIndex &&
+      gameState.armies[i] > 1 &&
+      i !== playerCapital // Prefer non-capital sources
+    ) {
+      const dist = manhattanDistance(i, targetTile);
+      const armies = gameState.armies[i];
+      const isCity = gameState.cities?.includes(i);
+
+      // Calculate score with city bonus
+      // Cities get a 20% distance bonus to prefer them over regular tiles
+      let score = dist * (isCity ? 1.2 : 1.0) + armies * 0.5;
+
+      // If this tile has a better score, or same score but is a city, prefer it
+      if (score > bestScore || (score === bestScore && isCity && !bestIsCity)) {
+        bestScore = score;
+        bestTile = i;
+        bestIsCity = isCity;
+      }
+    }
+  }
+
+  // If no other source found, use capital as fallback (better for early game)
+  if (bestTile === null && playerCapital >= 0) {
+    if (
+      gameState.terrain[playerCapital] === playerIndex &&
+      gameState.armies[playerCapital] > 1
+    ) {
+      bestTile = playerCapital;
+    }
+  }
+
+  return bestTile;
+}
+
 // Weighted pathfinding for intent-based movement with preferences
 function findPath(from, to) {
   if (!gameState) return null;
@@ -2695,19 +2803,21 @@ function findPath(from, to) {
       // Calculate movement cost with preferences
       let moveCost = 1; // Base cost
 
-      if (visibleTiles.has(neighborTile)) {
-        // Check for avoidance first (before owned territory bonus)
+      // Special handling for target tile - always allow pathing to it
+      if (neighborTile === to) {
+        moveCost = 1; // Normal cost to reach target
+      } else if (visibleTiles.has(neighborTile)) {
+        // Check for avoidance (but never avoid target)
         if (
-          neighborTile !== to &&
-          ((gameState.lookoutTowers?.includes(neighborTile) &&
+          (gameState.lookoutTowers?.includes(neighborTile) &&
             gameState.terrain[neighborTile] !== playerIndex) ||
-            (gameState.cities?.includes(neighborTile) &&
-              gameState.terrain[neighborTile] !== playerIndex) ||
-            gameState.generals?.includes(neighborTile))
+          (gameState.cities?.includes(neighborTile) &&
+            gameState.terrain[neighborTile] !== playerIndex) ||
+          gameState.generals?.includes(neighborTile)
         ) {
           moveCost = 3; // Higher cost to avoid
         }
-        // Prefer owned territory (lower cost) - but only if not avoiding
+        // Prefer owned territory (lower cost)
         else if (gameState.terrain[neighborTile] === playerIndex) {
           moveCost = 0.5;
         }
