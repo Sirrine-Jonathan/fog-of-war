@@ -289,8 +289,14 @@ function centerCameraIfNeeded() {
 function initializeCamera() {
   if (!gameState) return;
 
-  // Set initial zoom to fit the entire map
-  camera.zoom = calculateMinZoom();
+  // Set initial zoom based on device type
+  if (isMobile) {
+    // Mobile: Start at 1.2x for comfortable tap size
+    camera.zoom = 1.2;
+  } else {
+    // Desktop: Start zoomed out to see full map
+    camera.zoom = calculateMinZoom();
+  }
 
   // Center the camera
   centerCameraIfNeeded();
