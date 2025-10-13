@@ -61,11 +61,11 @@ export class ArrowBot extends BaseBot {
       if (terrain[i] === this.gameState.playerIndex) {
         const adjacent = this.getAdjacentTiles(i);
         const hasUnknown = adjacent.some(
-          (adj) => terrain[adj] === -1 || terrain[adj] === -3,
+          (adj) => terrain[adj] === -1 || terrain[adj] === -3
         );
         const hasEnemy = adjacent.some(
           (adj) =>
-            terrain[adj] >= 0 && terrain[adj] !== this.gameState.playerIndex,
+            terrain[adj] >= 0 && terrain[adj] !== this.gameState.playerIndex
         );
 
         if (hasUnknown) unknownAdjacent++;
@@ -116,7 +116,7 @@ export class ArrowBot extends BaseBot {
                 from: i,
                 to: adj,
                 armyAdvantage: armies[i] - armies[adj],
-                isGeneral: this.gameState.generals.includes(adj),
+                isCapital: this.gameState.capitals.includes(adj),
                 totalArmies: armies[i],
               });
             }
@@ -127,7 +127,7 @@ export class ArrowBot extends BaseBot {
 
     if (attacks.length > 0) {
       attacks.sort((a, b) => {
-        if (a.isGeneral !== b.isGeneral) return a.isGeneral ? -1 : 1;
+        if (a.isCapital !== b.isCapital) return a.isCapital ? -1 : 1;
         return b.totalArmies - a.totalArmies;
       });
       return { from: attacks[0].from, to: attacks[0].to };
@@ -204,7 +204,7 @@ export class ArrowBot extends BaseBot {
     const ourTiles = this.getOurTiles();
     if (ourTiles.length > 0) {
       const minDistance = Math.min(
-        ...ourTiles.map((tile) => this.getDistance(tile, position)),
+        ...ourTiles.map((tile) => this.getDistance(tile, position))
       );
       priority += Math.max(0, 20 - minDistance);
     }
@@ -219,7 +219,7 @@ export class ArrowBot extends BaseBot {
   }
 
   private findPathToTarget(
-    target: number,
+    target: number
   ): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
     const candidates = [];

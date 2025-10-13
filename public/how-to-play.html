@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f1419" />
+    <meta
+      name="description"
+      content="Learn how to play Fog of War - game objectives, controls, strategies, and mechanics"
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <title>Fog of War - How to Play</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/page.css" />
+  </head>
+  <body>
+    <header>
+      <a href="/" class="back-link">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M19 12H5M5 12L12 19M5 12L12 5"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        Back to Home
+      </a>
+      <div class="header-inner">
+        <div class="header-title">
+          <h1>How to Play</h1>
+          <p>
+            Master the game of territory conquest, army building, and strategic
+            warfare
+          </p>
+        </div>
+        <nav>
+          <a href="/about">About</a>
+          <a href="/how-to-play">How to play</a>
+          <a href="/controls">Controls</a>
+          <a href="/specification">Specification</a>
+          <a href="/credits">Credits</a>
+        </nav>
+      </div>
+    </header>
+    <div class="container">
+      <section>
+        <div class="section-header">
+          <h2>Welcome to Fog of War!</h2>
+        </div>
+        <p style="margin-bottom: 20px; color: #666">
+          Fog of War is a multiplayer strategy game where you conquer territory,
+          build armies, and eliminate opponents by capturing their capitals.
+          Only the last player standing wins!
+        </p>
+      </section>
+
+      <section>
+        <div class="section-header">
+          <h2>Game Objective</h2>
+        </div>
+        <div class="card">
+          <h3>Primary Goal</h3>
+          <p>
+            <strong>Capture all enemy capitals</strong> while defending your
+            own. When a player's capital is captured, they are eliminated from
+            the game.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Secondary Goals</h3>
+          <ul>
+            <li>Expand your territory to increase army production</li>
+            <li>Capture cities for bonus army generation</li>
+            <li>Control lookout towers for extended vision</li>
+            <li>Eliminate other players to reduce competition</li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-header">
+          <h2>Understanding the Map</h2>
+        </div>
+
+        <div class="card">
+          <h3>Your Capital</h3>
+          <p>Your starting position. Generates 1 army per turn.</p>
+          <p style="color: #e53e3e; font-weight: 600">
+            If captured, you're eliminated!
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Cities</h3>
+          <p>
+            Neutral or player-owned. Generates 1 army per turn when captured.
+          </p>
+          <p style="color: #38a169; font-weight: 600">
+            Priority targets for expanding production!
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Lookout Towers</h3>
+          <p>Provides extended vision radius. Helps you see more of the map.</p>
+          <p style="color: #38a169; font-weight: 600">
+            Great for scouting enemy positions!
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Mountains</h3>
+          <p>Impassable terrain. Use them strategically for defense.</p>
+          <p style="color: #38a169; font-weight: 600">
+            They can protect your flanks!
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Fog of War</h3>
+          <p>
+            Unexplored areas. You can't see what's there until you expand
+            nearby.
+          </p>
+          <p style="color: #38a169; font-weight: 600">
+            Scout carefully - enemies may be hiding!
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-header">
+          <h2>Basic Controls</h2>
+        </div>
+
+        <div class="card">
+          <h3>Select Territory</h3>
+          <p><strong>Desktop:</strong> Click on your territory</p>
+          <p><strong>Mobile:</strong> Tap on your territory</p>
+        </div>
+
+        <div class="card">
+          <h3>Move Armies</h3>
+          <p>
+            <strong>Desktop:</strong> Click adjacent tile (or use WASD/Arrow
+            keys)
+          </p>
+          <p><strong>Mobile:</strong> Tap adjacent tile</p>
+        </div>
+
+        <div class="card">
+          <h3>Launch Intent</h3>
+          <p>
+            <strong>Both:</strong> Click/tap a distant tile for automatic
+            pathfinding
+          </p>
+          <p style="color: #38a169; font-weight: 600">
+            The game will find the best route for you!
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Quick Navigation</h3>
+          <p>
+            <strong>Desktop:</strong> Press Spacebar to cycle through your key
+            tiles
+          </p>
+          <p style="color: #38a169; font-weight: 600">
+            Quickly jump to capital → cities → captured capitals
+          </p>
+        </div>
+
+        <p style="margin-top: 20px; color: #666">
+          For complete controls reference, see
+          <a href="/controls">Controls Guide</a>
+        </p>
+      </section>
+
+      <section>
+        <div class="section-header">
+          <h2>Strategic Tips</h2>
+        </div>
+
+        <div class="card">
+          <h3>Early Game (Turns 1-50)</h3>
+          <ul>
+            <li>
+              <strong>Expand Quickly:</strong> Capture nearby neutral territory
+            </li>
+            <li>
+              <strong>Find Cities:</strong> Look for and capture neutral cities
+              early
+            </li>
+            <li>
+              <strong>Scout Safely:</strong> Explore fog of war to find enemy
+              positions
+            </li>
+            <li>
+              <strong>Build Armies:</strong> Let your capital and cities
+              generate armies
+            </li>
+            <li>
+              <strong>Avoid Fights:</strong> Don't engage enemies until you're
+              ready
+            </li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>Mid Game (Turns 50-150)</h3>
+          <ul>
+            <li>
+              <strong>Consolidate:</strong> Move armies from safe tiles to front
+              lines
+            </li>
+            <li>
+              <strong>Defend Cities:</strong> Keep reserves on captured cities
+            </li>
+            <li>
+              <strong>Probe Enemies:</strong> Test enemy defenses with small
+              attacks
+            </li>
+            <li>
+              <strong>Control Vision:</strong> Capture lookout towers for map
+              awareness
+            </li>
+            <li>
+              <strong>Use Terrain:</strong> Mountains can protect your borders
+            </li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>Late Game (Turns 150+)</h3>
+          <ul>
+            <li>
+              <strong>Locate Capitals:</strong> Find enemy capital positions
+            </li>
+            <li>
+              <strong>Mass Armies:</strong> Build large stacks for capital
+              assault
+            </li>
+            <li>
+              <strong>Defend Home:</strong> Keep strong reserves near your
+              capital
+            </li>
+            <li>
+              <strong>Strike Fast:</strong> When you attack a capital, commit
+              fully
+            </li>
+            <li>
+              <strong>Watch Borders:</strong> Don't leave yourself vulnerable
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-header">
+          <h2>Advanced Tactics</h2>
+        </div>
+
+        <div class="card">
+          <h3>The Intent System</h3>
+          <p>
+            Click a distant target and the game automatically finds the best
+            path. Your armies will move toward it each turn until they arrive or
+            are blocked.
+          </p>
+          <p style="color: #38a169; font-weight: 600; margin-top: 10px">
+            <strong>New!</strong> Don't have enough armies? The game will
+            automatically find and use your best source tile!
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Defensive Positioning</h3>
+          <p>
+            Keep at least 2-3 armies on border tiles. Use mountains as natural
+            barriers. Position reserves within 2-3 moves of your capital.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Army Consolidation</h3>
+          <p>
+            Move armies from deep territory toward your borders. Build up large
+            stacks for decisive attacks. Leave only 1 army on safe interior
+            tiles.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Vision Control</h3>
+          <p>
+            Capture lookout towers to see more of the map. Keep scouts near
+            enemy borders to track their movements. Knowledge is power!
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Feints and Diversions</h3>
+          <p>
+            Make your opponent think you're attacking from one direction, then
+            strike from another. Threaten their cities to draw defenders away
+            from their capital.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-header">
+          <h2>Game Mechanics</h2>
+        </div>
+
+        <div class="card">
+          <h3>Army Generation</h3>
+          <ul>
+            <li>Your capital generates 1 army per turn</li>
+            <li>Each captured city generates 1 army per turn</li>
+            <li>Every 25 turns: ALL your tiles get +1 army bonus</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>Combat Resolution</h3>
+          <p>When you attack an enemy tile:</p>
+          <ul>
+            <li>
+              <strong>Attacker Wins:</strong> Defender loses armies equal to
+              attacker count
+            </li>
+            <li>
+              <strong>Defender Wins:</strong> Attacker loses armies equal to
+              defender count
+            </li>
+            <li>
+              <strong>Tie:</strong> Both lose all armies, defender keeps tile
+            </li>
+          </ul>
+          <p style="color: #38a169; font-weight: 600; margin-top: 10px">
+            1 army always stays behind when moving!
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Vision Rules</h3>
+          <p>You can see:</p>
+          <ul>
+            <li>All tiles you own</li>
+            <li>All tiles adjacent to owned tiles</li>
+            <li>Extended area around lookout towers</li>
+            <li>Previously discovered tiles (army counts may be outdated)</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>Elimination</h3>
+          <p>A player is eliminated when:</p>
+          <ul>
+            <li>Their capital is captured by an opponent</li>
+            <li>They surrender or disconnect</li>
+          </ul>
+          <p>
+            Their armies and territory remain but won't move or generate new
+            armies.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-header">
+          <h2>Game Modes</h2>
+        </div>
+
+        <div class="card">
+          <h3>Multiplayer</h3>
+          <p>
+            Play against friends or strangers online. 2-8 players compete for
+            supremacy.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Bots</h3>
+          <p>
+            Invite AI opponents to fill your game. Each bot has unique
+            strategies:
+          </p>
+          <ul>
+            <li><strong>BlobBot:</strong> Expands evenly in all directions</li>
+            <li>
+              <strong>ArrowBot:</strong> Focuses expansion in one direction
+            </li>
+            <li><strong>SpiralBot:</strong> Expands in a spiral pattern</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>Custom Games</h3>
+          <p>Hosts can customize:</p>
+          <ul>
+            <li>Turn speed (how long each turn lasts)</li>
+            <li>Map size</li>
+            <li>Number of cities and towers</li>
+            <li>Number of players</li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-header">
+          <h2>Getting Started</h2>
+        </div>
+
+        <div class="card">
+          <h3>Step 1: Join a Game</h3>
+          <p>Click "Play Now" and join an existing game or create your own</p>
+        </div>
+
+        <div class="card">
+          <h3>Step 2: Wait for Start</h3>
+          <p>
+            Wait for more players to join (or invite bots). Host starts when
+            ready.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Step 3: Expand Territory</h3>
+          <p>
+            Click adjacent tiles to expand from your capital. Capture cities!
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Step 4: Build Armies</h3>
+          <p>
+            Wait for armies to generate. Consolidate forces on your borders.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Step 5: Conquer Enemies</h3>
+          <p>Find enemy capitals and attack! Last player standing wins!</p>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-header">
+          <h2>Ready to Play?</h2>
+        </div>
+        <p style="margin-bottom: 20px; color: #666">
+          Now that you know the basics, jump into a game and start conquering!
+        </p>
+        <p style="color: #666">
+          <strong>Pro Tip:</strong> Start with a bot game to practice before
+          facing human opponents!
+        </p>
+      </section>
+    </div>
+
+    <script src="/logMessage.js"></script>
+    <script src="/optionsManager.js"></script>
+    <script src="/soundManager.js"></script>
+    <script src="/konami.js"></script>
+  </body>
+</html>

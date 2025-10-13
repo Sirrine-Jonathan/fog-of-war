@@ -531,7 +531,7 @@ let gameStarted = false;
 let gameEnded = false;
 let players = [];
 let visibleTiles = new Set();
-let playerGenerals = new Map(); // Track each player's starting position
+let playerCapitals = new Map(); // Track each player's starting position
 let lastUsername = ""; // Remember last used username
 let currentUserId = ""; // Track current user ID
 let isHost = false;
@@ -549,13 +549,13 @@ document.getElementById("roomId").textContent = roomId;
 // Discovered tiles that remain visible permanently
 let discoveredTiles = new Set();
 
-// Discovered enemy generals that remain permanently visible
-let discoveredEnemyGenerals = new Set();
+// Discovered enemy capitals that remain permanently visible
+let discoveredEnemyCapitals = new Set();
 
 // Clear discovered state
 function clearState() {
   discoveredTiles.clear();
-  discoveredEnemyGenerals.clear();
+  discoveredEnemyCapitals.clear();
   processedTowers.clear();
 }
 
@@ -726,7 +726,7 @@ socket.on("game_start", (data) => {
   updateButtonVisibility(); // Update button visibility
 
   resizeCanvas();
-  selectGeneral();
+  selectCapital();
   drawGame();
 
   // Focus canvas for keyboard controls
@@ -896,8 +896,8 @@ socket.on("game_won", (data) => {
     document.getElementById("installBtn").style.display = "inline-block";
   }
 
-  // Clear stale general data to prevent data integrity issues
-  playerGenerals.clear();
+  // Clear stale capital data to prevent data integrity issues
+  playerCapitals.clear();
 
   // Start animation when game ends
   startAnimation();
@@ -943,11 +943,11 @@ socket.on("attack_result", (data) => {
       case "enemy":
         soundManager.play("attackEnemy");
         break;
-      case "general":
+      case "capital":
         if (data.success) {
-          soundManager.play("captureGeneral");
+          soundManager.play("captureCapital");
         } else {
-          soundManager.play("attackGeneral");
+          soundManager.play("attackCapital");
         }
         break;
     }
@@ -1028,10 +1028,10 @@ socket.on("game_update", (data) => {
       );
     }
 
-    // Update generals if provided (with validation)
-    if (data.generals) {
-      // Validate received general data
-      const validatedGenerals = data.generals.map((pos, index) => {
+    // Update capitals if provided (with validation)
+    if (data.capitals) {
+      // Validate received capital data
+      const validatedCapitals = data.capitals.map((pos, index) => {
         if (
           pos >= 0 &&
           pos < gameState.terrain.length &&
@@ -1041,24 +1041,24 @@ socket.on("game_update", (data) => {
         }
         return -1; // Invalid position
       });
-      gameState.generals = validatedGenerals;
+      gameState.capitals = validatedCapitals;
 
       // Debug log for data integrity issues
-      const invalidCount = data.generals.filter(
-        (pos, i) => pos !== validatedGenerals[i]
+      const invalidCount = data.capitals.filter(
+        (pos, i) => pos !== validatedCapitals[i]
       ).length;
       if (invalidCount > 0) {
         console.warn(
-          `🚨 Data integrity issue: ${invalidCount} invalid general positions received`
+          `🚨 Data integrity issue: ${invalidCount} invalid capital positions received`
         );
       }
     }
 
-    // Auto-select player's general on first update if no tile selected
-    if (selectedTile === null && playerIndex >= 0 && data.generals) {
-      const generalPos = data.generals[playerIndex];
-      if (generalPos !== undefined) {
-        setSelectedTile(generalPos);
+    // Auto-select player's capital on first update if no tile selected
+    if (selectedTile === null && playerIndex >= 0 && data.capitals) {
+      const capitalPos = data.capitals[playerIndex];
+      if (capitalPos !== undefined) {
+        setSelectedTile(capitalPos);
       }
     }
 
@@ -1072,14 +1072,14 @@ socket.on("game_update", (data) => {
       isEliminated = true;
     }
 
-    // Track generals (starting positions)
+    // Track capitals (starting positions)
     if (gameState && gameStarted) {
       for (let i = 0; i < gameState.terrain.length; i++) {
         const terrain = gameState.terrain[i];
         if (terrain >= 0 && gameState.armies[i] > 0) {
-          // Check if this might be a starting position (any army count for generals)
-          if (!playerGenerals.has(terrain)) {
-            playerGenerals.set(terrain, i);
+          // Check if this might be a starting position (any army count for capitals)
+          if (!playerCapitals.has(terrain)) {
+            playerCapitals.set(terrain, i);
           }
         }
       }
@@ -1141,8 +1141,8 @@ socket.on("game_update", (data) => {
   }
 });
 
-socket.on("generalCaptured", () => {
-  soundManager.play("generalLost");
+socket.on("capitalCaptured", () => {
+  soundManager.play("capitalLost");
 });
 
 socket.on("territoryCaptured", () => {
@@ -1294,11 +1294,11 @@ function updateVisibleTiles() {
           towerVision.forEach((tile) => {
             discoveredTiles.add(tile); // Permanently discover these tiles
 
-            // Check if this discovered tile contains an enemy general
-            if (gameState.generals && gameState.generals.includes(tile)) {
-              const generalOwner = gameState.generals.indexOf(tile);
-              if (generalOwner !== playerIndex && generalOwner >= 0) {
-                discoveredEnemyGenerals.add(tile);
+            // Check if this discovered tile contains an enemy capital
+            if (gameState.capitals && gameState.capitals.includes(tile)) {
+              const capitalOwner = gameState.capitals.indexOf(tile);
+              if (capitalOwner !== playerIndex && capitalOwner >= 0) {
+                discoveredEnemyCapitals.add(tile);
               }
             }
           });
@@ -1404,7 +1404,7 @@ function parseMapData(mapData) {
     terrain,
     towerDefense,
     ghostTerrain,
-    generals: [],
+    capitals: [],
   };
 }
 
@@ -1700,13 +1700,13 @@ function drawGame() {
         ctx.fillStyle = gradient;
       } else if (terrain >= 0) {
         // Player owned
-        // Check if this is a general tile
-        const isGeneral =
-          (gameState.generals &&
-            Object.values(gameState.generals).includes(i)) ||
-          discoveredEnemyGenerals.has(i);
-        if (isGeneral && terrain === playerIndex) {
-          // Player's general gets gold gradient
+        // Check if this is a capital tile
+        const isCapital =
+          (gameState.capitals &&
+            Object.values(gameState.capitals).includes(i)) ||
+          discoveredEnemyCapitals.has(i);
+        if (isCapital && terrain === playerIndex) {
+          // Player's capital gets gold gradient
           const gradient = ctx.createLinearGradient(
             x,
             y,
@@ -1718,8 +1718,8 @@ function drawGame() {
           gradient.addColorStop(0.7, "#DAA520"); // Goldenrod
           gradient.addColorStop(1, "#B8860B"); // Dark goldenrod
           ctx.fillStyle = gradient;
-        } else if (isGeneral) {
-          // Enemy generals get silver gradient
+        } else if (isCapital) {
+          // Enemy capitals get silver gradient
           const gradient = ctx.createLinearGradient(
             x,
             y,
@@ -1742,10 +1742,10 @@ function drawGame() {
           }
         }
       } else if (
-        gameState.generals &&
-        Object.values(gameState.generals).includes(i)
+        gameState.capitals &&
+        Object.values(gameState.capitals).includes(i)
       ) {
-        // Enemy general on neutral/empty tile (discovered but not currently owned)
+        // Enemy capital on neutral/empty tile (discovered but not currently owned)
         const gradient = ctx.createLinearGradient(
           x,
           y,
@@ -1757,8 +1757,8 @@ function drawGame() {
         gradient.addColorStop(0.7, "#A9A9A9"); // Dark gray
         gradient.addColorStop(1, "#808080"); // Gray
         ctx.fillStyle = gradient;
-      } else if (discoveredEnemyGenerals.has(i)) {
-        // Previously discovered enemy general (permanently visible)
+      } else if (discoveredEnemyCapitals.has(i)) {
+        // Previously discovered enemy capital (permanently visible)
         const gradient = ctx.createLinearGradient(
           x,
           y,
@@ -1787,16 +1787,16 @@ function drawGame() {
 
       ctx.fillRect(x, y, tileSize, tileSize);
 
-      // Add shine effect for generals only (validate terrain and general data)
-      const isAnyGeneral =
-        gameState.generals && Object.values(gameState.generals).includes(i);
-      const isDiscoveredEnemyGeneral = discoveredEnemyGenerals.has(i);
-      if ((isAnyGeneral || isDiscoveredEnemyGeneral) && terrain !== -2) {
+      // Add shine effect for capitals only (validate terrain and capital data)
+      const isAnyCapital =
+        gameState.capitals && Object.values(gameState.capitals).includes(i);
+      const isDiscoveredEnemyCapital = discoveredEnemyCapitals.has(i);
+      if ((isAnyCapital || isDiscoveredEnemyCapital) && terrain !== -2) {
         // Never shine mountains
-        const isClientGeneral = terrain === playerIndex;
+        const isClientCapital = terrain === playerIndex;
 
-        if (isClientGeneral) {
-          // Client general: moderate white shine (has gold background)
+        if (isClientCapital) {
+          // Client capital: moderate white shine (has gold background)
           const shineGradient = ctx.createLinearGradient(
             x,
             y,
@@ -1808,7 +1808,7 @@ function drawGame() {
           ctx.fillStyle = shineGradient;
           ctx.fillRect(x, y, tileSize, tileSize);
         } else {
-          // Enemy general or discovered enemy general: very strong shine with pulsing effect
+          // Enemy capital or discovered enemy capital: very strong shine with pulsing effect
           const time = Date.now() * 0.003; // Slow pulse
           const pulseIntensity = 0.8 + Math.sin(time) * 0.2; // Pulse between 0.6 and 1.0
 
@@ -1957,16 +1957,16 @@ function drawGame() {
       ctx.setLineDash([]);
     }
 
-    // Calculate if this is player's general (needed for overlay and border)
-    const isPlayerGeneral =
-      playerGenerals.has(playerIndex) && playerGenerals.get(playerIndex) === i;
+    // Calculate if this is player's capital (needed for overlay and border)
+    const isPlayerCapital =
+      playerCapitals.has(playerIndex) && playerCapitals.get(playerIndex) === i;
 
     // Draw overlay for selected tile
     if (selectedTile === i) {
       const armyCount = gameState.armies[i];
       const canMoveArmies = armyCount > 1;
 
-      if (canMoveArmies || isPlayerGeneral) {
+      if (canMoveArmies || isPlayerCapital) {
         // Gold semi-transparent overlay for tiles that can move
         ctx.fillStyle = "rgba(255, 215, 0, 0.3)"; // Gold with 30% opacity
       } else {
@@ -1976,22 +1976,22 @@ function drawGame() {
       ctx.fillRect(x, y, tileSize, tileSize);
     }
 
-    // Draw border - only current player's general gets persistent border
+    // Draw border - only current player's capital gets persistent border
     const isSelected = selectedTile === i;
 
-    if (isPlayerGeneral) {
-      // Only current player's general gets special border
+    if (isPlayerCapital) {
+      // Only current player's capital gets special border
       if (isSelected) {
         const armyCount = gameState.armies[i];
         const canMoveArmies = armyCount > 1;
         ctx.strokeStyle =
-          canMoveArmies || isPlayerGeneral ? "#ffd700" : "#888888";
+          canMoveArmies || isPlayerCapital ? "#ffd700" : "#888888";
       } else {
         ctx.strokeStyle = "#FFF";
       }
       ctx.lineWidth = isSelected ? 3 * camera.zoom : 2 * camera.zoom;
     } else {
-      // Regular tiles (including enemy generals) only get border when selected
+      // Regular tiles (including enemy capitals) only get border when selected
       if (isSelected) {
         const armyCount = gameState.armies[i];
         const canMoveArmies = armyCount > 1;
@@ -2007,7 +2007,7 @@ function drawGame() {
     if (selectedTile === i) {
       const armyCount = gameState.armies[i];
       const canMoveArmies = armyCount > 1;
-      if (isPlayerGeneral) {
+      if (isPlayerCapital) {
         // Bright gold for tiles that can move armies
         ctx.shadowColor = "#ffed4e"; // Brighter gold
       } else if (!canMoveArmies) {
@@ -2713,7 +2713,7 @@ function manhattanDistance(from, to) {
 function findBestIntentSource(targetTile) {
   if (!gameState || playerIndex < 0) return null;
 
-  const playerCapital = gameState.generals?.[playerIndex];
+  const playerCapital = gameState.capitals?.[playerIndex];
 
   // Scoring system: prefer farther sources with more armies
   // Score = (distance * 1.0) + (armies * 0.5)
@@ -2813,7 +2813,7 @@ function findPath(from, to) {
             gameState.terrain[neighborTile] !== playerIndex) ||
           (gameState.cities?.includes(neighborTile) &&
             gameState.terrain[neighborTile] !== playerIndex) ||
-          gameState.generals?.includes(neighborTile)
+          gameState.capitals?.includes(neighborTile)
         ) {
           moveCost = 3; // Higher cost to avoid
         }
@@ -3294,11 +3294,11 @@ socket.on("end_game_error", (error) => {
   showToast(`Cannot end game: ${error}`, "error");
 });
 
-function selectGeneral() {
-  if (!gameState || !Array.isArray(gameState.generals)) return;
-  const generalPos = gameState.generals[playerIndex];
-  if (generalPos >= 0) {
-    setSelectedTile(generalPos);
+function selectCapital() {
+  if (!gameState || !Array.isArray(gameState.capitals)) return;
+  const capitalPos = gameState.capitals[playerIndex];
+  if (capitalPos >= 0) {
+    setSelectedTile(capitalPos);
   }
 }
 
@@ -3308,13 +3308,13 @@ let cycleIndex = 0;
 function cycleOwnedTiles() {
   if (!gameState || playerIndex < 0) return;
 
-  // Get all owned tiles (general, cities, captured enemy generals)
+  // Get all owned tiles (capital, cities, captured enemy capitals)
   const ownedTiles = [];
 
-  // Add player's own general
-  const playerGeneral = gameState.generals[playerIndex];
-  if (playerGeneral >= 0) {
-    ownedTiles.push(playerGeneral);
+  // Add player's own capital
+  const playerCapital = gameState.capitals[playerIndex];
+  if (playerCapital >= 0) {
+    ownedTiles.push(playerCapital);
   }
 
   // Add owned cities
@@ -3326,15 +3326,15 @@ function cycleOwnedTiles() {
     });
   }
 
-  // Add captured enemy generals
-  if (gameState.generals) {
-    gameState.generals.forEach((generalPos, index) => {
+  // Add captured enemy capitals
+  if (gameState.capitals) {
+    gameState.capitals.forEach((capitalPos, index) => {
       if (
         index !== playerIndex &&
-        generalPos >= 0 &&
-        gameState.terrain[generalPos] === playerIndex
+        capitalPos >= 0 &&
+        gameState.terrain[capitalPos] === playerIndex
       ) {
-        ownedTiles.push(generalPos);
+        ownedTiles.push(capitalPos);
       }
     });
   }
@@ -3366,7 +3366,7 @@ document.addEventListener("keydown", (e) => {
     canvas.style.cursor = "grab";
   }
 
-  // Spacebar: Cycle through owned tiles (general, cities, captured generals)
+  // Spacebar: Cycle through owned tiles (capital, cities, captured capitals)
   if (e.key === " " || e.key === "Spacebar") {
     if (gameState && playerIndex >= 0) {
       cycleOwnedTiles();

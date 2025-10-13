@@ -1,4 +1,5 @@
 - Game sounds
+
   - ambient game sound between games
   - war game sound during game
   - on player tile move (plays only for the client's player tile moves)
@@ -69,7 +70,7 @@
       <a href="https://freesound.org/people/jppi_Stu/sounds/70940/">sw_fsorg_voicereq_we_know.aiff</a> by <a href="https://freesound.org/people/jppi_Stu/">jppi_Stu</a> | License: <a href="https://creativecommons.org/licenses/by/4.0/">Attribution 4.0</a>
       JSON:
       [{"sound_url": "https://freesound.org/people/wouter.hisschemoller/sounds/101271/", "sound_name": "noisy_sound_1.wav", "author_url": "https://freesound.org/people/wouter.hisschemoller/", "author_name": "wouter.hisschemoller", "license_url": "http://creativecommons.org/publicdomain/zero/1.0/", "license_name": "Creative Commons 0"}, {"sound_url": "https://freesound.org/people/jppi_Stu/sounds/70940/", "sound_name": "sw_fsorg_voicereq_we_know.aiff", "author_url": "https://freesound.org/people/jppi_Stu/", "author_name": "jppi_Stu", "license_url": "https://creativecommons.org/licenses/by/4.0/", "license_name": "Attribution 4.0"}]
-    - When player attacks enemy general
+    - When player attacks enemy capital
       610280**brickdeveloper171**retro-hit-sound.wav
       Attribution:
       Plain text:
@@ -77,7 +78,7 @@
       HTML:
       <a href="https://freesound.org/people/BrickDeveloper171/sounds/610280/">Retro Hit Sound</a> by <a href="https://freesound.org/people/BrickDeveloper171/">BrickDeveloper171</a> | License: <a href="http://creativecommons.org/publicdomain/zero/1.0/">Creative Commons 0</a>
       {"sound_url": "https://freesound.org/people/BrickDeveloper171/sounds/610280/", "sound_name": "Retro Hit Sound", "author_url": "https://freesound.org/people/BrickDeveloper171/", "author_name": "BrickDeveloper171", "license_url": "http://creativecommons.org/publicdomain/zero/1.0/", "license_name": "Creative Commons 0"}
-    - when player captures an enemy general tile
+    - when player captures an enemy capital tile
       253177**suntemple**retro-accomplished-sfx.wav
       Attribution:
       Plain text:
@@ -86,9 +87,9 @@
       <a href="https://freesound.org/people/suntemple/sounds/253177/">Retro "Accomplished" SFX</a> by <a href="https://freesound.org/people/suntemple/">suntemple</a> | License: <a href="http://creativecommons.org/publicdomain/zero/1.0/">Creative Commons 0</a>
       JSON:
       {"sound_url": "https://freesound.org/people/suntemple/sounds/253177/", "sound_name": "Retro \"Accomplished\" SFX", "author_url": "https://freesound.org/people/suntemple/", "author_name": "suntemple", "license_url": "http://creativecommons.org/publicdomain/zero/1.0/", "license_name": "Creative Commons 0"}
-    - when player activates their general square
-  - on general captured (plays for all game players when anyone's general is captured)
-  - on player's general captured
+    - when player activates their capital square
+  - on capital captured (plays for all game players when anyone's capital is captured)
+  - on player's capital captured
     333785**aceofspadesproduc100**8-bit-failure-sound.wav
     Attribution:
     Plain text:

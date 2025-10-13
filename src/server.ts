@@ -9,35 +9,35 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server);
 
-function getPersonalizedGenerals(
-  allGenerals: number[],
+function getPersonalizedCapitals(
+  allCapitals: number[],
   playerIndex: number,
   gameState: any
 ): number[] {
-  const personalizedGenerals = new Array(allGenerals.length).fill(-1);
+  const personalizedCapitals = new Array(allCapitals.length).fill(-1);
 
-  // Player always knows their own general position
-  personalizedGenerals[playerIndex] = allGenerals[playerIndex];
+  // Player always knows their own capital position
+  personalizedCapitals[playerIndex] = allCapitals[playerIndex];
 
-  // Check if player can see enemy generals through vision or discovery
-  for (let i = 0; i < allGenerals.length; i++) {
-    if (i === playerIndex) continue; // Skip own general
+  // Check if player can see enemy capitals through vision or discovery
+  for (let i = 0; i < allCapitals.length; i++) {
+    if (i === playerIndex) continue; // Skip own capital
 
-    const enemyGeneralPos = allGenerals[i];
-    if (enemyGeneralPos === -1) continue; // General doesn't exist or is eliminated
+    const enemyCapitalPos = allCapitals[i];
+    if (enemyCapitalPos === -1) continue; // Capital doesn't exist or is eliminated
 
-    // Validate general position is not a mountain and is within bounds
-    if (enemyGeneralPos < 0 || enemyGeneralPos >= gameState.terrain.length)
+    // Validate capital position is not a mountain and is within bounds
+    if (enemyCapitalPos < 0 || enemyCapitalPos >= gameState.terrain.length)
       continue;
-    if (gameState.terrain[enemyGeneralPos] === -2) continue; // Skip mountains
+    if (gameState.terrain[enemyCapitalPos] === -2) continue; // Skip mountains
 
-    // Check if enemy general is visible (on player's territory or adjacent to it)
-    if (isPositionVisibleToPlayer(enemyGeneralPos, playerIndex, gameState)) {
-      personalizedGenerals[i] = enemyGeneralPos;
+    // Check if enemy capital is visible (on player's territory or adjacent to it)
+    if (isPositionVisibleToPlayer(enemyCapitalPos, playerIndex, gameState)) {
+      personalizedCapitals[i] = enemyCapitalPos;
     }
   }
 
-  return personalizedGenerals;
+  return personalizedCapitals;
 }
 
 function isPositionVisibleToPlayer(
@@ -45,7 +45,7 @@ function isPositionVisibleToPlayer(
   playerIndex: number,
   gameState: any
 ): boolean {
-  // Enemy general is visible if:
+  // Enemy capital is visible if:
   // 1. It's on player's territory (captured)
   // 2. It's adjacent to player's territory (normal vision)
   // 3. It's within lookout tower vision range
@@ -66,7 +66,7 @@ function isPositionVisibleToPlayer(
       const tileX = i % width;
       const tileY = Math.floor(i / width);
 
-      // Check if this player tile provides vision to the general position
+      // Check if this player tile provides vision to the capital position
       // Normal tiles provide adjacent vision (8-directional)
       const dx = Math.abs(tileX - x);
       const dy = Math.abs(tileY - y);
@@ -125,7 +125,7 @@ function isBot(socket: any, userId: string, username: string): boolean {
   // Only flag as bot if we have strong evidence
   const result = hasNodeUserAgent || hasSocketIOClient || explicitBotName;
 
-  console.log(`🤖 Bot detection for ${username}:`, {
+  console.log(` Bot detection for ${username}:`, {
     userAgent:
       userAgent.substring(0, 50) + (userAgent.length > 50 ? "..." : ""),
     referer: referer.substring(0, 30) + (referer.length > 30 ? "..." : ""),
@@ -270,6 +270,31 @@ app.use(
 // Root route - serve welcome page
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../public/index.html"));
+});
+
+// About page route
+app.get("/about", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public/about.html"));
+});
+
+// How to play page route
+app.get("/how-to-play", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public/how-to-play.html"));
+});
+
+// Controls page route
+app.get("/controls", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public/controls.html"));
+});
+
+// Specification page route
+app.get("/specification", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public/specification.html"));
+});
+
+// Credits page route
+app.get("/credits", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public/credits.html"));
 });
 
 // Game history API
@@ -627,7 +652,7 @@ io.on("connection", (socket) => {
     }
 
     console.log(
-      `🤖 Host ${socket.data.username} kicking bot ${botPlayer.username} from game ${gameId}`
+      ` Host ${socket.data.username} kicking bot ${botPlayer.username} from game ${gameId}`
     );
 
     // Remove bot from game
@@ -767,15 +792,15 @@ io.on("connection", (socket) => {
           (s) => s.data.userId === player.id
         );
         if (playerSocket) {
-          const personalizedGenerals = getPersonalizedGenerals(
-            gameState.generals,
+          const personalizedCapitals = getPersonalizedCapitals(
+            gameState.capitals,
             playerIndex,
             gameState
           );
           playerSocket.emit("game_update", {
             cities_diff: [0, gameState.cities.length, ...gameState.cities],
             map_diff: [0, mapData.length, ...mapData],
-            generals: personalizedGenerals,
+            capitals: personalizedCapitals,
             players: gameState.players,
             turn: gameState.turn,
           });
@@ -792,7 +817,7 @@ io.on("connection", (socket) => {
         socket.emit("game_update", {
           cities_diff: [0, gameState.cities.length, ...gameState.cities],
           map_diff: [0, mapData.length, ...mapData],
-          generals: gameState.generals, // Viewers see all generals
+          capitals: gameState.capitals, // Viewers see all capitals
           players: gameState.players,
           turn: gameState.turn,
         });
@@ -868,7 +893,7 @@ io.on("connection", (socket) => {
 
           // Remove all bots from this room
           botManager.removeAllBotsFromRoom(gameId);
-          console.log(`   🤖 All bots removed from room ${gameId}`);
+          console.log(`    All bots removed from room ${gameId}`);
 
           // Clear host when game resets
           gameHosts.delete(gameId);
@@ -893,18 +918,18 @@ io.on("connection", (socket) => {
             (s) => s.data.userId === player.id
           );
           if (playerSocket) {
-            const personalizedGenerals = getPersonalizedGenerals(
-              gameState.generals,
+            const personalizedCapitals = getPersonalizedCapitals(
+              gameState.capitals,
               playerIndex,
               gameState
             );
 
-            // Debug logging for general data integrity - Spiral only
+            // Debug logging for capital data integrity - Spiral only
             if (gameState.turn % 50 === 0 && player.username === "Spiral") {
-              console.log(`🔍 General data for ${player.username}:`, {
-                allGenerals: gameState.generals,
-                personalizedGenerals,
-                visibleCount: personalizedGenerals.filter((g) => g >= 0).length,
+              console.log(`🔍 Capital data for ${player.username}:`, {
+                allCapitals: gameState.capitals,
+                personalizedCapitals,
+                visibleCount: personalizedCapitals.filter((g) => g >= 0).length,
               });
             }
 
@@ -916,7 +941,7 @@ io.on("connection", (socket) => {
                 ...gameState.lookoutTowers,
               ],
               map_diff: [0, mapData.length, ...mapData],
-              generals: personalizedGenerals,
+              capitals: personalizedCapitals,
               players: gameState.players,
               turn: gameState.turn,
             });
@@ -938,7 +963,7 @@ io.on("connection", (socket) => {
               ...gameState.lookoutTowers,
             ],
             map_diff: [0, mapData.length, ...mapData],
-            generals: gameState.generals, // Viewers see all generals
+            capitals: gameState.capitals, // Viewers see all capitals
             players: gameState.players,
             turn: gameState.turn,
           });
@@ -1004,7 +1029,7 @@ io.on("connection", (socket) => {
       // Only log Spiral moves
       if (playerName === "Spiral") {
         console.log(
-          `⚔️ ${moveType}: ${playerName}(P${playerIndex}) ${from}(${fromArmies}) -> ${to}(${toArmies})`
+          ` ${moveType}: ${playerName}(P${playerIndex}) ${from}(${fromArmies}) -> ${to}(${toArmies})`
         );
       }
     } else {
@@ -1038,7 +1063,7 @@ io.on("connection", (socket) => {
           gameFirstBlood.set(roomId || "", true);
           sendSystemMessage(
             roomId || "",
-            "⚔️ First blood! The battle has begun!"
+            " First blood! The battle has begun!"
           );
         }
       }
@@ -1056,9 +1081,9 @@ io.on("connection", (socket) => {
         attackInfo: result.attackInfo,
       });
 
-      // Handle general capture notification
-      if (result.attackInfo?.generalCaptured !== undefined) {
-        const capturedPlayerIndex = result.attackInfo.generalCaptured;
+      // Handle capital capture notification
+      if (result.attackInfo?.capitalCaptured !== undefined) {
+        const capturedPlayerIndex = result.attackInfo.capitalCaptured;
         const gameState = game.getState();
         const capturedPlayer = gameState.players[capturedPlayerIndex];
 
@@ -1068,7 +1093,7 @@ io.on("connection", (socket) => {
           (s) => s.data.playerIndex === capturedPlayerIndex
         );
         if (capturedSocket) {
-          capturedSocket.emit("generalCaptured");
+          capturedSocket.emit("capitalCaptured");
         }
       }
 
@@ -1099,9 +1124,7 @@ io.on("connection", (socket) => {
   socket.on(
     "invite_bot",
     (gameId: string, botType: "blob" | "arrow" | "spiral") => {
-      console.log(
-        `🤖 Bot invite request: gameId=${gameId}, botType=${botType}`
-      );
+      console.log(` Bot invite request: gameId=${gameId}, botType=${botType}`);
 
       if (!games.has(gameId)) {
         socket.emit("bot_invite_error", "Game not found");
@@ -1125,7 +1148,7 @@ io.on("connection", (socket) => {
   );
 
   socket.on("end_bot_game", (gameId: string) => {
-    console.log(`🤖 Viewer requesting to end bot-only game ${gameId}`);
+    console.log(` Viewer requesting to end bot-only game ${gameId}`);
 
     const game = games.get(gameId);
     if (!game || !game.isStarted() || game.isEnded()) {
@@ -1295,13 +1318,13 @@ io.on("connection", (socket) => {
 
               if (hasBot) {
                 console.log(
-                  `🤖 Removing bot ${botType} from bot manager for room ${roomId}`
+                  ` Removing bot ${botType} from bot manager for room ${roomId}`
                 );
                 botManager.removeBot(botType, roomId);
                 console.log(`🎯 DISCONNECT botManager.removeBot completed`);
               } else {
                 console.log(
-                  `🤖 Bot ${botType} already removed from bot manager for room ${roomId}`
+                  ` Bot ${botType} already removed from bot manager for room ${roomId}`
                 );
               }
             }
@@ -1466,6 +1489,6 @@ const serverUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
 const botManager = new BotManager(serverUrl);
 
 server.listen(PORT, () => {
-  console.log(`Generals game server running on port ${PORT}`);
+  console.log(`Capitals game server running on port ${PORT}`);
   console.log(`Visit http://localhost:${PORT}`);
 });

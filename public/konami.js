@@ -79,7 +79,7 @@ function updateKonamiAttributions() {
 
   // Remove all existing konami-credit <li>
   Array.from(ul.querySelectorAll("li.konami-credit")).forEach((li) =>
-    li.remove(),
+    li.remove()
   );
 
   // Find the last regular sound-credit <li>
@@ -100,7 +100,7 @@ function updateKonamiAttributions() {
     if (!sound) return;
     const li = document.createElement("li");
     li.id = "konami-attribution-" + soundKey;
-    li.className = "sound-credit konami-credit";
+    li.className = "sound-credit card konami-credit";
     li.innerHTML = sound.html;
     li.style.display = "list-item";
     if (insertAfter && insertAfter.nextSibling) {
@@ -141,7 +141,7 @@ function playKonamiSound() {
     updateKonamiAttributions();
   } else {
     console.error(
-      "SoundManager is not available or play method is not defined.",
+      "SoundManager is not available or play method is not defined."
     );
   }
 }
@@ -211,7 +211,7 @@ function triggerConfetti() {
         {
           duration: duration,
           easing: "ease-in",
-        },
+        }
       );
       setTimeout(() => {
         confetti.style.opacity = "0";
@@ -220,13 +220,10 @@ function triggerConfetti() {
   }
 
   // Remove confetti after all have fallen
-  setTimeout(
-    () => {
-      if (confettiContainer.parentNode)
-        confettiContainer.parentNode.removeChild(confettiContainer);
-    },
-    spawnDuration + fallDurationMax + 500,
-  );
+  setTimeout(() => {
+    if (confettiContainer.parentNode)
+      confettiContainer.parentNode.removeChild(confettiContainer);
+  }, spawnDuration + fallDurationMax + 500);
 }
 
 window.addEventListener("keydown", function (e) {

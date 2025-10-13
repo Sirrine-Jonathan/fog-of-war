@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f1419" />
+    <meta
+      name="description"
+      content="Complete controls reference for Fog of War - keyboard, mouse, and mobile touch controls"
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <title>Fog of War - Controls</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/page.css" />
+  </head>
+  <body>
+    <header>
+      <a href="/" class="back-link">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M19 12H5M5 12L12 19M5 12L12 5"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        Back to Home
+      </a>
+      <div class="header-inner">
+        <div class="header-title">
+          <h1>Game Controls</h1>
+          <p>Master desktop and mobile controls for efficient gameplay</p>
+        </div>
+        <nav>
+          <a href="/about">About</a>
+          <a href="/how-to-play">How to play</a>
+          <a href="/controls">Controls</a>
+          <a href="/specification">Specification</a>
+          <a href="/credits">Credits</a>
+        </nav>
+      </div>
+    </header>
+    <div class="container">
+      <section>
+        <div class="section-header">
+          <h2>Desktop Controls</h2>
+        </div>
+
+        <h3
+          style="
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            color: #1a202c;
+            font-size: 1.3em;
+            margin: 30px 0 20px 0;
+          "
+        >
+          Mouse Controls
+        </h3>
+
+        <div class="card">
+          <h4 style="font-weight: 700; color: #1a202c; margin-bottom: 10px">
+            Left Click
+          </h4>
+          <ul>
+            <li>
+              <strong>No tile selected:</strong> Click owned tile to select it,
+              or click enemy/neutral tile to auto-select best source and launch
+              attack
+            </li>
+            <li>
+              <strong>Tile selected:</strong> Click same tile to deselect,
+              adjacent tiles for immediate move, distant tiles to launch
+              pathfinding intent
+            </li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h4 style="font-weight: 700; color: #1a202c; margin-bottom: 10px">
+            Right Click
+          </h4>
+          <ul>
+            <li>Select tile without launching intent</li>
+            <li>
+              Useful for switching between territories without moving armies
+            </li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h4 style="font-weight: 700; color: #1a202c; margin-bottom: 10px">
+            Modifiers
+          </h4>
+          <ul>
+            <li>
+              <strong>Alt + Click</strong> or
+              <strong>Shift + Click:</strong> Select tile without launching
+              intent
+            </li>
+            <li><strong>Shift + Drag:</strong> Pan the camera</li>
+            <li><strong>Middle Mouse + Drag:</strong> Pan the camera</li>
+            <li><strong>Scroll Wheel:</strong> Zoom in/out</li>
+          </ul>
+        </div>
+
+        <h3
+          style="
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            color: #1a202c;
+            font-size: 1.3em;
+            margin: 30px 0 20px 0;
+          "
+        >
+          Keyboard Controls
+        </h3>
+
+        <div class="card">
+          <h4 style="font-weight: 700; color: #1a202c; margin-bottom: 10px">
+            Movement Keys
+          </h4>
+          <ul>
+            <li><strong>W / ↑:</strong> Move armies up</li>
+            <li><strong>S / ↓:</strong> Move armies down</li>
+            <li><strong>A / ←:</strong> Move armies left</li>
+            <li><strong>D / →:</strong> Move armies right</li>
+            <li>
+              <strong>Spacebar:</strong> Cycle through owned tiles (capital →
+              cities → captured capitals)
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-header">
+          <h2>Mobile Controls</h2>
+        </div>
+
+        <div class="card">
+          <h4 style="font-weight: 700; color: #1a202c; margin-bottom: 10px">
+            Touch Gestures
+          </h4>
+          <ul>
+            <li><strong>Tap:</strong> Select tile or move armies</li>
+            <li>
+              <strong>Long Press (500ms):</strong> Select tile without launching
+              intent (with haptic feedback)
+            </li>
+            <li><strong>Single Finger Drag:</strong> Pan the camera</li>
+            <li><strong>Two Finger Pinch:</strong> Zoom in/out</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h4 style="font-weight: 700; color: #1a202c; margin-bottom: 10px">
+            Mobile-Specific Features
+          </h4>
+          <ul>
+            <li>Initial zoom at 1.2x for comfortable tap size</li>
+            <li>Tab bar for switching between Game, Controls, and Chat</li>
+            <li>Optimized touch targets (44px minimum)</li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-header">
+          <h2>Intent-Based Movement</h2>
+        </div>
+
+        <div class="card">
+          <p>
+            <strong>What is an Intent?</strong> An automatic pathfinding system
+            that moves armies toward distant targets over multiple turns.
+          </p>
+        </div>
+
+        <div class="card">
+          <h4 style="font-weight: 700; color: #1a202c; margin-bottom: 10px">
+            How It Works
+          </h4>
+          <ol>
+            <li>Click/tap a non-adjacent visible tile</li>
+            <li>
+              If no source selected or insufficient armies, game auto-selects
+              best source
+            </li>
+            <li>System calculates optimal path avoiding mountains</li>
+            <li>Each turn, armies move one step along the path</li>
+            <li>Intent clears when target reached or path blocked</li>
+          </ol>
+        </div>
+
+        <div class="card">
+          <h4 style="font-weight: 700; color: #1a202c; margin-bottom: 10px">
+            Auto-Source Selection (NEW!)
+          </h4>
+          <p>
+            The game intelligently finds the best source tile using a scoring
+            system:
+          </p>
+          <ul>
+            <li>Score = (Distance × 1.0) + (Armies × 0.5)</li>
+            <li>Cities get 20% distance bonus</li>
+            <li>Prefers farther tiles with more armies</li>
+            <li>Falls back to capital if needed</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h4 style="font-weight: 700; color: #1a202c; margin-bottom: 10px">
+            Visual Feedback
+          </h4>
+          <ul>
+            <li><strong>Red dashed border:</strong> Shows intent path</li>
+            <li>
+              <strong>Gold overlay:</strong> Selected tile with movable armies
+            </li>
+            <li>
+              <strong>Gray overlay:</strong> Selected tile with only 1 army
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-header">
+          <h2>Camera Controls</h2>
+        </div>
+
+        <div class="card">
+          <h4 style="font-weight: 700; color: #1a202c; margin-bottom: 10px">
+            Zoom
+          </h4>
+          <ul>
+            <li>
+              <strong>Desktop:</strong> Scroll wheel (zooms toward cursor)
+            </li>
+            <li><strong>Mobile:</strong> Pinch gesture</li>
+            <li>
+              <strong>Range:</strong> 0.7x (full map) to 2x (close inspection)
+            </li>
+            <li>
+              <strong>Initial:</strong> Full map on desktop, 1.2x on mobile
+            </li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h4 style="font-weight: 700; color: #1a202c; margin-bottom: 10px">
+            Panning
+          </h4>
+          <ul>
+            <li>
+              <strong>Desktop:</strong> Shift + Drag, Middle Mouse + Drag, or
+              Right Mouse + Drag
+            </li>
+            <li>
+              <strong>Mobile:</strong> Single finger drag (after 10px threshold)
+            </li>
+            <li>Auto-follows selected tile near viewport edges (25% margin)</li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-header">
+          <h2>Quick Reference</h2>
+        </div>
+
+        <div class="card">
+          <h4 style="font-weight: 700; color: #1a202c; margin-bottom: 10px">
+            Select Tile
+          </h4>
+          <p><strong>Desktop:</strong> Left Click</p>
+          <p><strong>Mobile:</strong> Tap</p>
+        </div>
+
+        <div class="card">
+          <h4 style="font-weight: 700; color: #1a202c; margin-bottom: 10px">
+            Move/Attack
+          </h4>
+          <p><strong>Desktop:</strong> Click adjacent/distant tile</p>
+          <p><strong>Mobile:</strong> Tap adjacent/distant tile</p>
+        </div>
+
+        <div class="card">
+          <h4 style="font-weight: 700; color: #1a202c; margin-bottom: 10px">
+            Select Without Intent
+          </h4>
+          <p><strong>Desktop:</strong> Alt/Shift/Right Click</p>
+          <p><strong>Mobile:</strong> Long Press (500ms)</p>
+        </div>
+
+        <div class="card">
+          <h4 style="font-weight: 700; color: #1a202c; margin-bottom: 10px">
+            Pan Camera
+          </h4>
+          <p><strong>Desktop:</strong> Shift + Drag</p>
+          <p><strong>Mobile:</strong> Single Finger Drag</p>
+        </div>
+
+        <div class="card">
+          <h4 style="font-weight: 700; color: #1a202c; margin-bottom: 10px">
+            Zoom
+          </h4>
+          <p><strong>Desktop:</strong> Scroll Wheel</p>
+          <p><strong>Mobile:</strong> Pinch Gesture</p>
+        </div>
+
+        <div class="card">
+          <h4 style="font-weight: 700; color: #1a202c; margin-bottom: 10px">
+            Cycle Tiles
+          </h4>
+          <p><strong>Desktop:</strong> Spacebar</p>
+          <p><strong>Mobile:</strong> Not available</p>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-header">
+          <h2>Additional Resources</h2>
+        </div>
+        <p style="margin-bottom: 20px; color: #666">
+          For complete technical details, see the full
+          <a href="/CONTROLS.md" target="_blank">CONTROLS.md documentation</a>.
+        </p>
+      </section>
+    </div>
+
+    <script src="/logMessage.js"></script>
+    <script src="/optionsManager.js"></script>
+    <script src="/soundManager.js"></script>
+    <script src="/konami.js"></script>
+  </body>
+</html>

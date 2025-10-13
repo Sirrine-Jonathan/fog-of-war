@@ -16,11 +16,13 @@ This document provides a comprehensive analysis of all game controls for both de
 
 - **When no tile is selected:**
   - Clicking owned territory → Activates that tile
-  - Clicking non-owned territory → No action
+  - Clicking non-owned territory → **Auto-selects best source tile and launches intent (NEW!)**
 - **When a tile is selected:**
+  - Clicking **same tile again** → **Deselects the tile (NEW!)**
   - Clicking **adjacent** visible tile → Launches immediate move/attack
   - Clicking **non-adjacent** visible tile → Launches pathfinding intent
   - Clicking owned territory → Changes selection to that tile
+  - If insufficient armies (<2), clicking non-owned → **Auto-selects best source (NEW!)**
 
 **Modifiers:**
 
@@ -193,6 +195,24 @@ The pathfinding algorithm uses weighted costs:
   - Neutral towers
   - Enemy capitals
 
+### Auto-Source Selection (NEW!)
+
+When you click a target without a valid source selected (or with insufficient armies), the game automatically finds the best source tile using an intelligent scoring system:
+
+**Scoring Formula:**
+
+- Score = (Distance × 1.0) + (Armies × 0.5)
+- Cities receive a 20% distance bonus to prefer them as sources
+- Prefers farther tiles with more armies
+- Falls back to capital if no other suitable sources available
+
+**This means:**
+
+- Click any target and let the game find the best source
+- Reduces micromanagement for distant attacks
+- Automatically prioritizes cities for launching attacks
+- Better strategic positioning without manual selection
+
 ### Visual Feedback
 
 - **Red dashed border**: Shows intent path
@@ -256,11 +276,24 @@ The pathfinding algorithm uses weighted costs:
 - Fixed at 2x (200%)
 - Allows close inspection of tiles
 
+**Initial Zoom (NEW!):**
+
+- **Desktop**: Starts at minimum zoom to see full map
+- **Mobile**: Starts at 1.2x for comfortable tap size
+  - Larger tiles make it easier to tap accurately
+  - Better for touch-based interaction
+
 ---
 
 ## Selection System
 
 ### Visual Feedback
+
+**Overlay Colors (NEW!):**
+
+- **Gold semi-transparent**: Tile with movable armies (>1 army) or player's capital
+- **Gray semi-transparent**: Tile without movable armies (1 army only)
+- Applied to selected tile to make selection more obvious
 
 **Border Colors:**
 
@@ -335,9 +368,9 @@ The pathfinding algorithm uses weighted costs:
 - **attackSpecial**: Attacking city/tower
 - **captureSpecial**: Successfully capturing city/tower
 - **attackEnemy**: Attacking enemy territory
-- **attackGeneral**: Attacking enemy capital
-- **captureGeneral**: Capturing enemy capital
-- **generalLost**: Your capital was captured
+- **attackCapital**: Attacking enemy capital
+- **captureCapital**: Capturing enemy capital
+- **capitalLost**: Your capital was captured
 - **territoryLost**: Your territory was captured
 - **mountainAdjacent**: Attempted invalid mountain move
 - **insufficientArmies**: Attempted move with insufficient armies

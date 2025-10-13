@@ -33,9 +33,9 @@ export class BlobBot extends BaseBot {
     const { terrain, armies } = this.gameState;
     this.generationSources.clear();
 
-    const ourGeneral = this.gameState.generals[this.gameState.playerIndex];
-    if (ourGeneral !== -1) {
-      this.generationSources.add(ourGeneral);
+    const ourCapital = this.gameState.capitals[this.gameState.playerIndex];
+    if (ourCapital !== -1) {
+      this.generationSources.add(ourCapital);
     }
 
     for (let i = 0; i < this.gameState.cities.length; i++) {
@@ -63,7 +63,7 @@ export class BlobBot extends BaseBot {
           (adj) =>
             terrain[adj] === -1 ||
             terrain[adj] === -3 ||
-            (terrain[adj] >= 0 && terrain[adj] !== this.gameState.playerIndex),
+            (terrain[adj] >= 0 && terrain[adj] !== this.gameState.playerIndex)
         );
 
         if (hasExpansionTarget) {
@@ -91,7 +91,7 @@ export class BlobBot extends BaseBot {
                 from: i,
                 to: adj,
                 armyAdvantage: armies[i] - armies[adj],
-                isGeneral: this.gameState.generals.includes(adj),
+                isCapital: this.gameState.capitals.includes(adj),
                 isCity: this.gameState.cities.includes(adj),
               });
             }
@@ -102,7 +102,7 @@ export class BlobBot extends BaseBot {
 
     if (attacks.length > 0) {
       attacks.sort((a, b) => {
-        if (a.isGeneral !== b.isGeneral) return a.isGeneral ? -1 : 1;
+        if (a.isCapital !== b.isCapital) return a.isCapital ? -1 : 1;
         if (a.isCity !== b.isCity) return a.isCity ? -1 : 1;
         return b.armyAdvantage - a.armyAdvantage;
       });
@@ -169,7 +169,7 @@ export class BlobBot extends BaseBot {
   }
 
   private findPathToFrontlineRobust(
-    from: number,
+    from: number
   ): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
 
@@ -224,12 +224,12 @@ export class BlobBot extends BaseBot {
     let priority = 10;
 
     const unknownNeighbors = adjacent.filter(
-      (adj) => terrain[adj] === -3,
+      (adj) => terrain[adj] === -3
     ).length;
     priority += unknownNeighbors * 5;
 
     const neutralNeighbors = adjacent.filter(
-      (adj) => terrain[adj] === -1,
+      (adj) => terrain[adj] === -1
     ).length;
     priority += neutralNeighbors * 3;
 
