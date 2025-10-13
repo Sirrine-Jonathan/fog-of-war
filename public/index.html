@@ -17,19 +17,21 @@
     />
     <link rel="stylesheet" href="/shared.css" />
     <style>
+      :root {
+        --icon-size: 48px;
+      }
       /* Hero section with canvas */
       .hero-section {
         position: relative;
         border-radius: 15px;
         overflow: hidden;
-        margin-bottom: 30px;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
       }
 
       #heroCanvas {
         display: block;
         width: 100%;
-        height: 500px;
+        height: 100svh;
       }
 
       .hero-overlay {
@@ -44,11 +46,12 @@
         align-items: center;
         padding: 40px 20px;
         background: rgba(15, 20, 25, 0.3);
+        gap: 40px;
       }
 
       .hero-title {
         font-family: "Orbitron", monospace;
-        font-size: 4em;
+        font-size: 6em;
         font-weight: 900;
         color: #ffd700;
         text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.9);
@@ -123,14 +126,18 @@
         transform: translateY(-2px);
       }
 
-      /* Install button - centered below hero */
-      .install-button-container {
-        text-align: center;
-        margin: 30px 0 40px;
+      .floating-install-btn {
+        display: none;
+        width: auto;
+        aspect-ratio: 1 / 1;
+        border-radius: 50%;
+        background: none;
+        border: none;
       }
 
-      .install-button-container .install-btn {
-        display: none;
+      img {
+        width: var(--icon-size);
+        height: var(--icon-size);
       }
 
       .section-header {
@@ -238,10 +245,51 @@
         color: #cbd5e0;
       }
 
+      footer {
+        position: absolute;
+        bottom: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      footer a,
+      footer button {
+        cursor: pointer;
+        display: block;
+        margin: 0;
+        width: var(--icon-size);
+        height: var(--icon-size);
+      }
+
+      footer .links-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+      }
+
+      #lobbyForm a {
+        width: 100%;
+        text-align: center;
+        color: white;
+      }
+
+      #lobbyForm a:hover {
+        color: #eeeeee;
+      }
+
       /* Mobile responsive */
       @media (max-width: 768px) {
-        #heroCanvas {
-          height: 450px;
+        :root {
+          --icon-size: 28px;
+        }
+
+        body {
+          padding: 0;
         }
 
         .hero-overlay {
@@ -279,10 +327,6 @@
       }
 
       @media (max-width: 480px) {
-        #heroCanvas {
-          height: 400px;
-        }
-
         .hero-title {
           font-size: 2.2em;
         }
@@ -294,144 +338,41 @@
     </style>
   </head>
   <body>
-    <div class="container">
-      <!-- Hero Section with Canvas Animation -->
-      <div class="hero-section">
-        <div id="heroCanvas"></div>
-        <div class="hero-overlay">
-          <h1 class="hero-title">Fog of War</h1>
-          <p class="hero-subtitle">Real-Time Strategy Game</p>
-          <p class="hero-description">
-            Command armies in real-time battles with fog of war mechanics. Play
-            with friends, build custom AI bots, or compete against other players
-            in strategic warfare.
-          </p>
-
-          <form id="lobbyForm" class="lobby-form">
-            <input
-              name="lobbyName"
-              placeholder="Enter lobby name..."
-              required
-              autocomplete="off"
-            />
-            <button type="submit">Enter Game</button>
-          </form>
-        </div>
+    <div class="hero-section">
+      <div id="heroCanvas"></div>
+      <div class="hero-overlay">
+        <h1 class="hero-title">Fog of War</h1>
+        <form id="lobbyForm" class="lobby-form">
+          <input
+            name="lobbyName"
+            placeholder="Enter lobby name..."
+            required
+            autocomplete="off"
+          />
+          <button type="submit">Enter Game</button>
+          <a href="/about">About the game</a>
+        </form>
       </div>
+    </div>
 
-      <!-- Install Button Below Hero -->
-      <div class="install-button-container">
-        <button id="installBtn" class="install-btn">Install App</button>
-      </div>
-
-      <section>
-        <div class="section-header">
-          <span class="section-icon">🎮</span>
-          <h2>How to Play</h2>
-        </div>
-
-        <div class="controls-grid">
-          <div class="control-card">
-            <div class="control-title">Click Navigation</div>
-            <div class="control-description">
-              Click your territory to activate it. Click any visible tile to
-              launch pathfinding movement. Hold Alt or Shift to activate without
-              moving armies.
-            </div>
-          </div>
-
-          <div class="control-card">
-            <div class="control-title">Keyboard Controls</div>
-            <div class="control-description">
-              Use arrow keys or WASD to move armies. Press spacebar to select
-              your general. Navigate efficiently across the battlefield.
-            </div>
-          </div>
-
-          <div class="control-card">
-            <div class="control-title">Map Navigation</div>
-            <div class="control-description">
-              Hold Shift and drag to pan the map. Use scroll wheel to zoom in
-              and out. Explore the battlefield strategically.
-            </div>
-          </div>
-
-          <div class="control-card">
-            <div class="control-title">Victory Conditions</div>
-            <div class="control-description">
-              Capture enemy generals to eliminate opponents. Manage your armies
-              wisely - you need at least 1 army to hold territory.
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div class="cta-section">
-        <h3 class="cta-title">Build Your Own Bot</h3>
-        <p class="cta-description">
-          Want to create custom AI opponents? Check out our comprehensive bot
-          development guide and API documentation.
-        </p>
-        <a href="/docs/bot" class="game-link bot-link">Bot Development Guide</a>
-      </div>
-
-      <section>
-        <div class="section-header">
-          <span class="section-icon">✨</span>
-          <h2>Game Features</h2>
-        </div>
-
-        <div class="feature-grid">
-          <div class="feature-card">
-            <div class="feature-icon">⚔️</div>
-            <div class="feature-title">Real-Time Strategy</div>
-            <div class="feature-description">
-              Command armies in real-time battles with fog of war mechanics.
-              Make strategic decisions that directly impact the outcome of each
-              match.
-            </div>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-icon">👥</div>
-            <div class="feature-title">Multiplayer Support</div>
-            <div class="feature-description">
-              Play with friends in private lobbies or compete against other
-              players. Support for multiple players and spectator mode included.
-            </div>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-icon">👁️</div>
-            <div class="feature-title">Spectator Mode</div>
-            <div class="feature-description">
-              Watch games in progress or continue viewing after elimination. See
-              the full battlefield unfold in real-time.
-            </div>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-icon">🤖</div>
-            <div class="feature-title">Bot API</div>
-            <div class="feature-description">
-              Create custom AI opponents using our Socket.IO API. Build
-              sophisticated strategies and test them against other players.
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div class="footer">
+    <footer>
+      <div class="links-container">
         <a
           href="https://github.com/Sirrine-Jonathan/fog-of-war"
           target="_blank"
           rel="noopener"
-          >GitHub</a
-        >
-        |
-        <a href="/credits.html">Sound Credits & Attributions</a>
+          ><img src="/icons/github-svgrepo-com.svg" alt="GitHub"
+        /></a>
+        <a href="/credits.html" target="_blank" rel="noopener"
+          ><img
+            src="/icons/creative-commons-attribution-svgrepo-com.svg"
+            alt="Credits & Attribution"
+        /></a>
       </div>
-    </div>
+      <button id="installBtn" class="floating-install-btn" title="Install">
+        <img src="/icons/download-svgrepo-com-light.svg" alt="Install" />
+      </button>
+    </footer>
 
     <!-- P5.js for canvas animation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
