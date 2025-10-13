@@ -15,152 +15,10 @@
       href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/shared.css" />
-    <style>
-      .credits-header {
-        text-align: center;
-        margin-bottom: 40px;
-      }
-
-      .credits-header h1 {
-        margin-bottom: 10px;
-      }
-
-      .credits-header p {
-        color: #666;
-        font-size: 1.1em;
-      }
-
-      .back-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 30px;
-        text-decoration: none;
-      }
-
-      .back-link:hover {
-        text-decoration: none;
-      }
-
-      .section-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin: 40px 0 25px;
-      }
-
-      .section-icon {
-        font-size: 1.8em;
-      }
-
-      .sound-credit-list {
-        list-style: none;
-        padding: 0;
-        margin: 0 0 30px 0;
-      }
-
-      .sound-credit {
-        background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-        padding: 20px;
-        margin-bottom: 15px;
-        border-radius: 12px;
-        border-left: 4px solid #ffd700;
-        transition: all 0.3s ease;
-      }
-
-      .sound-credit:hover {
-        transform: translateX(5px);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-      }
-
-      .konami-credit {
-        background: linear-gradient(90deg, #ffe066 0%, #ffb347 100%);
-        border-left: 4px solid #ff9800;
-        box-shadow: 0 4px 15px rgba(255, 152, 0, 0.2);
-        position: relative;
-      }
-
-      .konami-credit::before {
-        content: "🎮 Easter Egg";
-        display: block;
-        font-size: 0.9em;
-        font-weight: bold;
-        color: #ff9800;
-        margin-bottom: 8px;
-        letter-spacing: 0.5px;
-      }
-
-      .sound-name {
-        font-weight: 700;
-        font-size: 1.1em;
-        color: #1a202c;
-        margin-bottom: 8px;
-        font-family: "Orbitron", monospace;
-      }
-
-      .sound-link {
-        display: block;
-        color: #4299e1;
-        text-decoration: none;
-        margin: 5px 0;
-        transition: color 0.2s ease;
-      }
-
-      .sound-link:hover {
-        color: #2b6cb0;
-        text-decoration: underline;
-      }
-
-      .license {
-        color: #718096;
-        font-size: 0.9em;
-        margin-top: 8px;
-        padding-top: 8px;
-        border-top: 1px solid rgba(0, 0, 0, 0.1);
-      }
-
-      .license-section {
-        background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-        padding: 25px;
-        border-radius: 12px;
-        margin: 30px 0;
-        border-left: 4px solid #ffd700;
-      }
-
-      .license-section h3 {
-        margin-top: 0;
-        color: #1a202c;
-        font-family: "Orbitron", monospace;
-      }
-
-      .license-section p {
-        margin: 15px 0;
-        line-height: 1.6;
-      }
-
-      .license-type {
-        font-weight: 700;
-        color: #2d3748;
-      }
-
-      @media (max-width: 768px) {
-        .sound-credit {
-          padding: 15px;
-        }
-
-        .section-header {
-          margin: 30px 0 20px;
-        }
-
-        .section-icon {
-          font-size: 1.5em;
-        }
-      }
-    </style>
+    <link rel="stylesheet" href="/page.css" />
   </head>
   <body>
-    <div class="container">
+    <header>
       <a href="/" class="back-link">
         <svg
           width="20"
@@ -179,32 +37,37 @@
         </svg>
         Back to Home
       </a>
-
-      <div class="credits-header">
-        <h1>Credits & Attributions</h1>
-        <p>
-          Sound effects and resources used in Fog of War with proper attribution
-        </p>
+      <div class="header-inner">
+        <div class="header-title">
+          <h1>Credits & Attributions</h1>
+          <p>
+            Sound effects and resources used in Fog of War with proper
+            attribution
+          </p>
+        </div>
+        <nav>
+          <a href="/about">About</a>
+          <a href="/how-to-play">How to play</a>
+          <a href="/controls">Controls</a>
+          <a href="/specification">Specification</a>
+          <a href="/credits">Credits</a>
+        </nav>
       </div>
-
+    </header>
+    <div class="container">
       <section>
         <div class="section-header">
-          <span class="section-icon">🔊</span>
           <h2>Sound Effects</h2>
         </div>
         <p style="margin-bottom: 20px; color: #666">
           This game uses sound effects from
-          <a
-            href="https://freesound.org"
-            target="_blank"
-            rel="noopener"
-            style="color: #4299e1"
+          <a href="https://freesound.org" target="_blank" rel="noopener"
             >Freesound.org</a
           >:
         </p>
 
         <ul id="sound-credit-list" class="sound-credit-list">
-          <li class="sound-credit">
+          <li class="sound-credit card">
             <div class="sound-name">Capture Territory</div>
             <a
               href="https://freesound.org/people/willy_ineedthatapp_com/sounds/167338/"
@@ -233,7 +96,7 @@
             </div>
           </li>
 
-          <li class="sound-credit">
+          <li class="sound-credit card">
             <div class="sound-name">Move to Own Territory</div>
             <a
               href="https://freesound.org/people/datasoundsample/sounds/41633/"
@@ -262,7 +125,7 @@
             </div>
           </li>
 
-          <li class="sound-credit">
+          <li class="sound-credit card">
             <div class="sound-name">Attack Mountain (Error)</div>
             <a
               href="https://freesound.org/people/Krokulator/sounds/652499/"
@@ -291,7 +154,7 @@
             </div>
           </li>
 
-          <li class="sound-credit">
+          <li class="sound-credit card">
             <div class="sound-name">Insufficient Armies (Error)</div>
             <a
               href="https://freesound.org/people/copyc4t/sounds/235652/"
@@ -320,7 +183,7 @@
             </div>
           </li>
 
-          <li class="sound-credit">
+          <li class="sound-credit card">
             <div class="sound-name">Attack City/Tower</div>
             <a
               href="https://freesound.org/people/KorgMS2000B/sounds/54408/"
@@ -349,7 +212,7 @@
             </div>
           </li>
 
-          <li class="sound-credit">
+          <li class="sound-credit card">
             <div class="sound-name">Capture City/Tower</div>
             <a
               href="https://freesound.org/people/djm62/sounds/318968/"
@@ -378,7 +241,7 @@
             </div>
           </li>
 
-          <li class="sound-credit">
+          <li class="sound-credit card">
             <div class="sound-name">Attack Enemy</div>
             <a
               href="https://freesound.org/people/wouter.hisschemoller/sounds/101271/"
@@ -407,7 +270,7 @@
             </div>
           </li>
 
-          <li class="sound-credit">
+          <li class="card">
             <div class="sound-name">Attack General</div>
             <a
               href="https://freesound.org/people/BrickDeveloper171/sounds/610280/"
@@ -436,7 +299,7 @@
             </div>
           </li>
 
-          <li class="sound-credit">
+          <li class="sound-credit card">
             <div class="sound-name">Capture General</div>
             <a
               href="https://freesound.org/people/suntemple/sounds/253177/"
@@ -465,7 +328,7 @@
             </div>
           </li>
 
-          <li class="sound-credit">
+          <li class="sound-credit card">
             <div class="sound-name">Your General Captured</div>
             <a
               href="https://freesound.org/people/AceOfSpadesProduc100/sounds/333785/"
@@ -494,7 +357,7 @@
             </div>
           </li>
 
-          <li class="sound-credit">
+          <li class="sound-credit card">
             <div class="sound-name">Your Territory Captured</div>
             <a
               href="https://freesound.org/people/FairCashew/sounds/686365/"
@@ -523,7 +386,7 @@
             </div>
           </li>
 
-          <li class="sound-credit">
+          <li class="sound-credit card">
             <div class="sound-name">Army Bonus (Turn 25)</div>
             <a
               href="https://freesound.org/people/zimbot/sounds/89380/"
@@ -552,7 +415,7 @@
             </div>
           </li>
 
-          <li class="sound-credit">
+          <li class="sound-credit card">
             <div class="sound-name">Game Start</div>
             <a
               href="https://freesound.org/people/janalvent/sounds/791034/"
@@ -587,7 +450,6 @@
 
       <section>
         <div class="section-header">
-          <span class="section-icon">📜</span>
           <h2>License Information</h2>
         </div>
 
@@ -612,17 +474,6 @@
           </p>
         </div>
       </section>
-
-      <div class="footer">
-        <a
-          href="https://github.com/Sirrine-Jonathan/fog-of-war"
-          target="_blank"
-          rel="noopener"
-          >GitHub</a
-        >
-        |
-        <a href="/">Back to Game</a>
-      </div>
     </div>
 
     <script src="/logMessage.js"></script>
