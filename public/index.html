@@ -1,178 +1,407 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f1419" />
+    <meta
+      name="description"
+      content="Fog of War - A real-time strategy game with multiplayer support and bot API"
+    />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" />
-    <title>Fog of War</title>
+    <title>Fog of War - Real-Time Strategy Game</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/shared.css" />
     <style>
-      form {
-        display: inline-flex;
-        align-items: flex-end;
-        gap: 12px;
+      :root {
+        --icon-size: 48px;
+      }
+      /* Hero section with canvas */
+      .hero-section {
+        position: relative;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
       }
 
-      label {
-        display: inline-flex;
+      #heroCanvas {
+        display: block;
+        width: 100%;
+        height: 100svh;
+      }
+
+      .hero-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
         flex-direction: column;
-        font-size: 12px;
+        justify-content: center;
+        align-items: center;
+        padding: 40px 20px;
+        background: rgba(15, 20, 25, 0.3);
+        gap: 40px;
       }
 
-      input,
-      button {
-        --height: 30px;
-        height: var(--height);
-        max-height: var(--height);
-        margin: 0;
-        padding: 0 10px;
+      .hero-title {
+        font-family: "Orbitron", monospace;
+        font-size: 6em;
+        font-weight: 900;
+        color: #ffd700;
+        text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.9);
+        margin: 0 0 15px 0;
+        text-align: center;
+        letter-spacing: 3px;
+      }
+
+      .hero-subtitle {
+        font-size: 1.5em;
+        color: #ffffff;
+        margin: 0 0 10px 0;
+        font-weight: 600;
+        text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.9);
+        text-align: center;
+      }
+
+      .hero-description {
+        font-size: 1.1em;
+        color: #e2e8f0;
+        max-width: 600px;
+        margin: 0 auto 40px;
+        line-height: 1.6;
+        text-align: center;
+        text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.9);
+      }
+
+      .lobby-form {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        max-width: 400px;
+        width: 100%;
+        padding: 0 20px;
+      }
+
+      .lobby-form input {
+        width: 100%;
+        padding: 16px 20px;
+        font-size: 16px;
+        border: 2px solid rgba(255, 215, 0, 0.3);
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 12px;
+        transition: all 0.3s ease;
         box-sizing: border-box;
+      }
+
+      .lobby-form input:focus {
+        border-color: #ffd700;
+        box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
+        outline: none;
+      }
+
+      .lobby-form button {
+        padding: 16px 32px;
+        font-size: 16px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        border: 3px solid #ffd700;
+        color: white;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+      }
+
+      .lobby-form button:hover {
+        background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+        box-shadow: 0 8px 25px rgba(231, 76, 60, 0.6);
+        transform: translateY(-2px);
+      }
+
+      .floating-install-btn {
+        display: none;
+        width: auto;
+        aspect-ratio: 1 / 1;
+        border-radius: 50%;
+        background: none;
+        border: none;
+      }
+
+      img {
+        width: var(--icon-size);
+        height: var(--icon-size);
+      }
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 25px;
+      }
+
+      .section-icon {
+        font-size: 1.8em;
+      }
+
+      .controls-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin: 20px 0;
+      }
+
+      .control-card {
+        background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+        padding: 20px;
+        border-radius: 12px;
+        border-left: 4px solid #ffd700;
+        transition: all 0.3s ease;
+      }
+
+      .control-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      }
+
+      .control-title {
+        font-weight: 700;
+        color: #1a202c;
+        margin-bottom: 8px;
+        font-size: 1.1em;
+      }
+
+      .control-description {
+        color: #4a5568;
+        font-size: 0.95em;
+        line-height: 1.5;
+      }
+
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 25px;
+        margin: 30px 0;
+      }
+
+      .feature-card {
+        background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+        padding: 30px;
+        border-radius: 12px;
+        border-left: 4px solid #ffd700;
+        transition: all 0.3s ease;
+      }
+
+      .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        border-left-color: #ffed4e;
+      }
+
+      .feature-icon {
+        font-size: 2.5em;
+        margin-bottom: 15px;
+      }
+
+      .feature-title {
+        font-family: "Orbitron", monospace;
+        font-weight: 700;
+        color: #1a202c;
+        margin-bottom: 12px;
+        font-size: 1.2em;
+      }
+
+      .feature-description {
+        color: #4a5568;
+        line-height: 1.6;
+      }
+
+      .cta-section {
+        background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+        color: white;
+        padding: 50px 30px;
+        border-radius: 15px;
+        text-align: center;
+        margin: 50px 0 30px;
+      }
+
+      .cta-title {
+        font-family: "Orbitron", monospace;
+        font-size: 2em;
+        margin: 0 0 15px 0;
+        color: #ffd700;
+      }
+
+      .cta-description {
+        font-size: 1.1em;
+        margin-bottom: 30px;
+        color: #cbd5e0;
+      }
+
+      footer {
+        position: absolute;
+        bottom: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      footer a,
+      footer button {
+        cursor: pointer;
+        display: block;
+        margin: 0;
+        width: var(--icon-size);
+        height: var(--icon-size);
+      }
+
+      footer .links-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+      }
+
+      #lobbyForm a {
+        width: 100%;
+        text-align: center;
+        color: white;
+      }
+
+      #lobbyForm a:hover {
+        color: #eeeeee;
+      }
+
+      /* Mobile responsive */
+      @media (max-width: 768px) {
+        :root {
+          --icon-size: 28px;
+        }
+
+        body {
+          padding: 0;
+        }
+
+        .hero-overlay {
+          padding: 30px 15px;
+        }
+
+        .hero-title {
+          font-size: 2.8em;
+        }
+
+        .hero-subtitle {
+          font-size: 1.2em;
+        }
+
+        .hero-description {
+          font-size: 1em;
+        }
+
+        .lobby-form {
+          max-width: 100%;
+        }
+
+        .controls-grid,
+        .feature-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .cta-section {
+          padding: 35px 20px;
+        }
+
+        .cta-title {
+          font-size: 1.6em;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .hero-title {
+          font-size: 2.2em;
+        }
+
+        .section-icon {
+          font-size: 1.5em;
+        }
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <div class="header">
-        <h1>Fog of War</h1>
-        <button id="installBtn" class="install-btn" style="display: none">
-          Install App
-        </button>
-      </div>
-      <p style="text-align: center; font-size: 1.2em; color: #666">
-        A real-time strategy game.
-      </p>
-      <p style="text-align: center; font-size: 1em; color: #666">
-        Build a bot to play or<br />play yourself against other players<br />and
-        other players' bots.
-      </p>
-
-      <h2>🚀 Get started</h2>
-      <form id="lobbyForm">
-        <label>
-          Lobby Name
-          <input name="lobbyName" placeholder="no-spaces" />
-        </label>
-        <button type="submit">Enter</button>
-      </form>
-
-      <h2>🎮 How to Play</h2>
-      <div class="steps">
-        <ul>
-          <li>
-            <strong>Click Navigation:</strong>
-            <ul>
-              <li>Click your territory to activate it</li>
-              <li>
-                Click any visible tile to launch an intent (pathfinding
-                movement)
-              </li>
-              <li>
-                Alt+click or Shift+click only activates tiles without launching
-                intents
-              </li>
-              <li>
-                If no active tile, clicking owned territory activates it,
-                otherwise no action
-              </li>
-            </ul>
-          </li>
-          <li>
-            <strong>Keyboard:</strong> Use arrow keys or WASD keys to move from
-            selected territory. Press spacebar to select your general. Failed
-            attacks keep the active tile selected.
-          </li>
-          <li>
-            <strong>Map Controls:</strong> Hold Shift and drag to pan the map
-            (cursor shows 'grab' when Shift is held). Use scroll wheel to zoom
-            in/out.
-          </li>
-          <li>
-            <strong>Conquest:</strong> Attack enemy territories or expand to
-            neutral lands
-          </li>
-          <li>
-            <strong>Strategy:</strong> Manage your armies wisely - you need at
-            least 1 army to hold territory
-          </li>
-          <li>
-            <strong>Victory:</strong> Eliminate all opponents by capturing their
-            generals
-          </li>
-        </ul>
-      </div>
-
-      <h2>🤖 Bot Documentation</h2>
-      <p>
-        Want to create your own bot?<br />Check out our comprehensive bot
-        development guide:
-      </p>
-      <a href="/docs/bot" class="game-link bot-link"
-        >📚 Bot Development Guide</a
-      >
-
-      <h2>✨ Game Features</h2>
-
-      <div class="feature">
-        <strong>Real-time Strategy:</strong> Command armies in real-time battles
-        with fog of war mechanics
-      </div>
-
-      <div class="feature">
-        <strong>Multiplayer Support:</strong> Play with friends or against AI
-        bots
-      </div>
-
-      <div class="feature">
-        <strong>Spectator Mode:</strong> Watch games in progress or continue
-        viewing after elimination
-      </div>
-
-      <div class="feature">
-        <strong>Bot API:</strong> Create custom AI opponents using our Socket.IO
-        API
-      </div>
-
-      <div class="footer">
-        <a
-          target="_blank"
-          referrerpolicy="no-referrer"
-          href="https://github.com/Sirrine-Jonathan/fog-of-war"
-          >GitHub</a
-        >
-        |
-        <a href="/credits.html">Sound Credits & Attributions</a>
+    <div class="hero-section">
+      <div id="heroCanvas"></div>
+      <div class="hero-overlay">
+        <h1 class="hero-title">Fog of War</h1>
+        <form id="lobbyForm" class="lobby-form">
+          <input
+            name="lobbyName"
+            placeholder="Enter lobby name..."
+            required
+            autocomplete="off"
+          />
+          <button type="submit">Enter Game</button>
+          <a href="/about">About the game</a>
+        </form>
       </div>
     </div>
+
+    <footer>
+      <div class="links-container">
+        <a
+          href="https://github.com/Sirrine-Jonathan/fog-of-war"
+          target="_blank"
+          rel="noopener"
+          ><img src="/icons/github-svgrepo-com.svg" alt="GitHub"
+        /></a>
+        <a href="/credits" target="_blank" rel="noopener"
+          ><img
+            src="/icons/creative-commons-attribution-svgrepo-com.svg"
+            alt="Credits & Attribution"
+        /></a>
+      </div>
+      <button id="installBtn" class="floating-install-btn" title="Install">
+        <img src="/icons/download-svgrepo-com-light.svg" alt="Install" />
+      </button>
+    </footer>
+
+    <!-- P5.js for canvas animation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <script src="/animation.js"></script>
+
     <script>
+      // Create animation using shared function
+      const heroCanvas = document.getElementById("heroCanvas");
+      createTilingAnimation(heroCanvas);
+
+      // Form submission
       document.getElementById("lobbyForm").addEventListener("submit", (e) => {
-        console.log(e);
         e.preventDefault();
-        // get lobby name from form input and go to /game/<lobby-name>
         const lobbyName = e.target.lobbyName.value.trim();
         if (lobbyName) {
           window.location.href = `/game/${lobbyName}`;
         }
       });
-    </script>
-    <script>
+
+      // PWA Install
       let deferredPrompt;
 
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register("/sw.js");
       }
 
-      // Handle install prompt on home page
       window.addEventListener("beforeinstallprompt", (e) => {
         e.preventDefault();
         deferredPrompt = e;
-
-        // Always show install button when available
         document.getElementById("installBtn").style.display = "inline-flex";
       });
 
@@ -190,8 +419,6 @@
         });
     </script>
 
-    <!-- P5.js for intricate tiling animation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
     <script src="/logMessage.js"></script>
     <script src="/soundManager.js"></script>
     <script src="/konami.js"></script>

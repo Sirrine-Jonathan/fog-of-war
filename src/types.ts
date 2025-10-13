@@ -16,7 +16,7 @@ export interface GameState {
   armies: number[];
   terrain: number[];
   ghostTerrain: number[]; // Tracks eliminated player territories
-  generals: number[];
+  capitals: number[];
   cities: number[];
   lookoutTowers: number[];
   towerDefense: number[];

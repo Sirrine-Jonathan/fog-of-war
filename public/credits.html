@@ -1,222 +1,481 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
   <head>
-    <title>Fog of War - Credits</title>
+    <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f1419" />
+    <meta
+      name="description"
+      content="Credits and attributions for Fog of War game sound effects and resources"
+    />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="/credits.css" />
+    <title>Fog of War - Credits & Attributions</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/page.css" />
   </head>
   <body>
-    <a href="/" class="back-link">← Back to Game</a>
+    <header>
+      <a href="/" class="back-link">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M19 12H5M5 12L12 19M5 12L12 5"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        Back to Home
+      </a>
+      <div class="header-inner">
+        <div class="header-title">
+          <h1>Credits & Attributions</h1>
+          <p>
+            Sound effects and resources used in Fog of War with proper
+            attribution
+          </p>
+        </div>
+        <nav>
+          <a href="/about">About</a>
+          <a href="/how-to-play">How to play</a>
+          <a href="/controls">Controls</a>
+          <a href="/specification">Specification</a>
+          <a href="/credits">Credits</a>
+        </nav>
+      </div>
+    </header>
+    <div class="container">
+      <section>
+        <div class="section-header">
+          <h2>Sound Effects</h2>
+        </div>
+        <p style="margin-bottom: 20px; color: #666">
+          This game uses sound effects from
+          <a href="https://freesound.org" target="_blank" rel="noopener"
+            >Freesound.org</a
+          >:
+        </p>
 
-    <h1>Fog of War - Credits</h1>
+        <ul id="sound-credit-list" class="sound-credit-list">
+          <li class="sound-credit card">
+            <div class="sound-name">Capture Territory</div>
+            <a
+              href="https://freesound.org/people/willy_ineedthatapp_com/sounds/167338/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >pup_fat.mp3</a
+            >
+            by
+            <a
+              href="https://freesound.org/people/willy_ineedthatapp_com/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >willy_ineedthatapp_com</a
+            >
+            <div class="license">
+              License:
+              <a
+                href="http://creativecommons.org/publicdomain/zero/1.0/"
+                class="sound-link"
+                target="_blank"
+                rel="noopener"
+                >Creative Commons 0</a
+              >
+            </div>
+          </li>
 
-    <h2>Sound Effects</h2>
-    <p>
-      This game uses sound effects from
-      <a href="https://freesound.org">Freesound.org</a>:
-    </p>
-    <ul id="sound-credit-list">
-      <li class="sound-credit">
-        <div class="sound-name">Capture Territory</div>
-        <a
-          href="https://freesound.org/people/willy_ineedthatapp_com/sounds/167338/"
-          >pup_fat.mp3</a
-        >
-        by
-        <a href="https://freesound.org/people/willy_ineedthatapp_com/"
-          >willy_ineedthatapp_com</a
-        >
-        <div class="license">
-          License:
-          <a href="http://creativecommons.org/publicdomain/zero/1.0/"
-            >Creative Commons 0</a
-          >
+          <li class="sound-credit card">
+            <div class="sound-name">Move to Own Territory</div>
+            <a
+              href="https://freesound.org/people/datasoundsample/sounds/41633/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >littleclick.wav</a
+            >
+            by
+            <a
+              href="https://freesound.org/people/datasoundsample/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >datasoundsample</a
+            >
+            <div class="license">
+              License:
+              <a
+                href="http://creativecommons.org/publicdomain/zero/1.0/"
+                class="sound-link"
+                target="_blank"
+                rel="noopener"
+                >Creative Commons 0</a
+              >
+            </div>
+          </li>
+
+          <li class="sound-credit card">
+            <div class="sound-name">Attack Mountain (Error)</div>
+            <a
+              href="https://freesound.org/people/Krokulator/sounds/652499/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >error2.wav</a
+            >
+            by
+            <a
+              href="https://freesound.org/people/Krokulator/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >Krokulator</a
+            >
+            <div class="license">
+              License:
+              <a
+                href="http://creativecommons.org/publicdomain/zero/1.0/"
+                class="sound-link"
+                target="_blank"
+                rel="noopener"
+                >Creative Commons 0</a
+              >
+            </div>
+          </li>
+
+          <li class="sound-credit card">
+            <div class="sound-name">Insufficient Armies (Error)</div>
+            <a
+              href="https://freesound.org/people/copyc4t/sounds/235652/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >TF_Buzz.flac</a
+            >
+            by
+            <a
+              href="https://freesound.org/people/copyc4t/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >copyc4t</a
+            >
+            <div class="license">
+              License:
+              <a
+                href="https://creativecommons.org/licenses/by/4.0/"
+                class="sound-link"
+                target="_blank"
+                rel="noopener"
+                >Attribution 4.0</a
+              >
+            </div>
+          </li>
+
+          <li class="sound-credit card">
+            <div class="sound-name">Attack City/Tower</div>
+            <a
+              href="https://freesound.org/people/KorgMS2000B/sounds/54408/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >Phone Beep 1.wav</a
+            >
+            by
+            <a
+              href="https://freesound.org/people/KorgMS2000B/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >KorgMS2000B</a
+            >
+            <div class="license">
+              License:
+              <a
+                href="http://creativecommons.org/publicdomain/zero/1.0/"
+                class="sound-link"
+                target="_blank"
+                rel="noopener"
+                >Creative Commons 0</a
+              >
+            </div>
+          </li>
+
+          <li class="sound-credit card">
+            <div class="sound-name">Capture City/Tower</div>
+            <a
+              href="https://freesound.org/people/djm62/sounds/318968/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >successarpeggio.flac</a
+            >
+            by
+            <a
+              href="https://freesound.org/people/djm62/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >djm62</a
+            >
+            <div class="license">
+              License:
+              <a
+                href="http://creativecommons.org/publicdomain/zero/1.0/"
+                class="sound-link"
+                target="_blank"
+                rel="noopener"
+                >Creative Commons 0</a
+              >
+            </div>
+          </li>
+
+          <li class="sound-credit card">
+            <div class="sound-name">Attack Enemy</div>
+            <a
+              href="https://freesound.org/people/wouter.hisschemoller/sounds/101271/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >noisy_sound_1.wav</a
+            >
+            by
+            <a
+              href="https://freesound.org/people/wouter.hisschemoller/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >wouter.hisschemoller</a
+            >
+            <div class="license">
+              License:
+              <a
+                href="https://creativecommons.org/licenses/by/4.0/"
+                class="sound-link"
+                target="_blank"
+                rel="noopener"
+                >Attribution 4.0</a
+              >
+            </div>
+          </li>
+
+          <li class="card">
+            <div class="sound-name">Attack Capital</div>
+            <a
+              href="https://freesound.org/people/BrickDeveloper171/sounds/610280/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >Retro Hit Sound</a
+            >
+            by
+            <a
+              href="https://freesound.org/people/BrickDeveloper171/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >BrickDeveloper171</a
+            >
+            <div class="license">
+              License:
+              <a
+                href="https://creativecommons.org/licenses/by/4.0/"
+                class="sound-link"
+                target="_blank"
+                rel="noopener"
+                >Attribution 4.0</a
+              >
+            </div>
+          </li>
+
+          <li class="sound-credit card">
+            <div class="sound-name">Capture Capital</div>
+            <a
+              href="https://freesound.org/people/suntemple/sounds/253177/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >Retro "Accomplished" SFX</a
+            >
+            by
+            <a
+              href="https://freesound.org/people/suntemple/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >suntemple</a
+            >
+            <div class="license">
+              License:
+              <a
+                href="http://creativecommons.org/publicdomain/zero/1.0/"
+                class="sound-link"
+                target="_blank"
+                rel="noopener"
+                >Creative Commons 0</a
+              >
+            </div>
+          </li>
+
+          <li class="sound-credit card">
+            <div class="sound-name">Your Capital Captured</div>
+            <a
+              href="https://freesound.org/people/AceOfSpadesProduc100/sounds/333785/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >8-bit "failure" sound</a
+            >
+            by
+            <a
+              href="https://freesound.org/people/AceOfSpadesProduc100/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >AceOfSpadesProduc100</a
+            >
+            <div class="license">
+              License:
+              <a
+                href="https://creativecommons.org/licenses/by/4.0/"
+                class="sound-link"
+                target="_blank"
+                rel="noopener"
+                >Attribution 4.0</a
+              >
+            </div>
+          </li>
+
+          <li class="sound-credit card">
+            <div class="sound-name">Your Territory Captured</div>
+            <a
+              href="https://freesound.org/people/FairCashew/sounds/686365/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >au.mp3</a
+            >
+            by
+            <a
+              href="https://freesound.org/people/FairCashew/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >FairCashew</a
+            >
+            <div class="license">
+              License:
+              <a
+                href="http://creativecommons.org/publicdomain/zero/1.0/"
+                class="sound-link"
+                target="_blank"
+                rel="noopener"
+                >Creative Commons 0</a
+              >
+            </div>
+          </li>
+
+          <li class="sound-credit card">
+            <div class="sound-name">Army Bonus (Turn 25)</div>
+            <a
+              href="https://freesound.org/people/zimbot/sounds/89380/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >Lettuce_Frozen2_Multibreak.wav</a
+            >
+            by
+            <a
+              href="https://freesound.org/people/zimbot/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >zimbot</a
+            >
+            <div class="license">
+              License:
+              <a
+                href="https://creativecommons.org/licenses/by/4.0/"
+                class="sound-link"
+                target="_blank"
+                rel="noopener"
+                >Attribution 4.0</a
+              >
+            </div>
+          </li>
+
+          <li class="sound-credit card">
+            <div class="sound-name">Game Start</div>
+            <a
+              href="https://freesound.org/people/janalvent/sounds/791034/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >1 i 5 808</a
+            >
+            by
+            <a
+              href="https://freesound.org/people/janalvent/"
+              class="sound-link"
+              target="_blank"
+              rel="noopener"
+              >janalvent</a
+            >
+            <div class="license">
+              License:
+              <a
+                href="http://creativecommons.org/publicdomain/zero/1.0/"
+                class="sound-link"
+                target="_blank"
+                rel="noopener"
+                >Creative Commons 0</a
+              >
+            </div>
+          </li>
+
+          <!-- Konami attributions will be inserted here by konami.js -->
+        </ul>
+      </section>
+
+      <section>
+        <div class="section-header">
+          <h2>License Information</h2>
         </div>
-      </li>
-      <li class="sound-credit">
-        <div class="sound-name">Move to Own Territory</div>
-        <a href="https://freesound.org/people/datasoundsample/sounds/41633/"
-          >littleclick.wav</a
-        >
-        by
-        <a href="https://freesound.org/people/datasoundsample/"
-          >datasoundsample</a
-        >
-        <div class="license">
-          License:
-          <a href="http://creativecommons.org/publicdomain/zero/1.0/"
-            >Creative Commons 0</a
-          >
+
+        <div class="license-section">
+          <h3>Creative Commons 0 (CC0)</h3>
+          <p>
+            <span class="license-type">No rights reserved.</span> These works
+            are in the public domain. You may use them freely without
+            attribution, though attribution is appreciated.
+          </p>
         </div>
-      </li>
-      <li class="sound-credit">
-        <div class="sound-name">Attack Mountain (Error)</div>
-        <a href="https://freesound.org/people/Krokulator/sounds/652499/"
-          >error2.wav</a
-        >
-        by <a href="https://freesound.org/people/Krokulator/">Krokulator</a>
-        <div class="license">
-          License:
-          <a href="http://creativecommons.org/publicdomain/zero/1.0/"
-            >Creative Commons 0</a
-          >
+
+        <div class="license-section">
+          <h3>Attribution 4.0 (CC BY 4.0)</h3>
+          <p>
+            <span class="license-type"
+              >You are free to use, share, and adapt these works</span
+            >
+            with appropriate credit to the original creator. You must give
+            appropriate credit, provide a link to the license, and indicate if
+            changes were made.
+          </p>
         </div>
-      </li>
-      <li class="sound-credit">
-        <div class="sound-name">Insufficient Armies (Error)</div>
-        <a href="https://freesound.org/people/copyc4t/sounds/235652/"
-          >TF_Buzz.flac</a
-        >
-        by <a href="https://freesound.org/people/copyc4t/">copyc4t</a>
-        <div class="license">
-          License:
-          <a href="https://creativecommons.org/licenses/by/4.0/"
-            >Attribution 4.0</a
-          >
-        </div>
-      </li>
-      <li class="sound-credit">
-        <div class="sound-name">Attack City/Tower</div>
-        <a href="https://freesound.org/people/KorgMS2000B/sounds/54408/"
-          >Phone Beep 1.wav</a
-        >
-        by <a href="https://freesound.org/people/KorgMS2000B/">KorgMS2000B</a>
-        <div class="license">
-          License:
-          <a href="http://creativecommons.org/publicdomain/zero/1.0/"
-            >Creative Commons 0</a
-          >
-        </div>
-      </li>
-      <li class="sound-credit">
-        <div class="sound-name">Capture City/Tower</div>
-        <a href="https://freesound.org/people/djm62/sounds/318968/"
-          >successarpeggio.flac</a
-        >
-        by <a href="https://freesound.org/people/djm62/">djm62</a>
-        <div class="license">
-          License:
-          <a href="http://creativecommons.org/publicdomain/zero/1.0/"
-            >Creative Commons 0</a
-          >
-        </div>
-      </li>
-      <li class="sound-credit">
-        <div class="sound-name">Attack Enemy</div>
-        <a
-          href="https://freesound.org/people/wouter.hisschemoller/sounds/101271/"
-          >noisy_sound_1.wav</a
-        >
-        by
-        <a href="https://freesound.org/people/wouter.hisschemoller/"
-          >wouter.hisschemoller</a
-        >
-        <div class="license">
-          License:
-          <a href="https://creativecommons.org/licenses/by/4.0/"
-            >Attribution 4.0</a
-          >
-        </div>
-      </li>
-      <li class="sound-credit">
-        <div class="sound-name">Attack General</div>
-        <a href="https://freesound.org/people/BrickDeveloper171/sounds/610280/"
-          >Retro Hit Sound</a
-        >
-        by
-        <a href="https://freesound.org/people/BrickDeveloper171/"
-          >BrickDeveloper171</a
-        >
-        <div class="license">
-          License:
-          <a href="https://creativecommons.org/licenses/by/4.0/"
-            >Attribution 4.0</a
-          >
-        </div>
-      </li>
-      <li class="sound-credit">
-        <div class="sound-name">Capture General</div>
-        <a href="https://freesound.org/people/suntemple/sounds/253177/"
-          >Retro "Accomplished" SFX</a
-        >
-        by <a href="https://freesound.org/people/suntemple/">suntemple</a>
-        <div class="license">
-          License:
-          <a href="http://creativecommons.org/publicdomain/zero/1.0/"
-            >Creative Commons 0</a
-          >
-        </div>
-      </li>
-      <li class="sound-credit">
-        <div class="sound-name">Your General Captured</div>
-        <a
-          href="https://freesound.org/people/AceOfSpadesProduc100/sounds/333785/"
-          >8-bit "failure" sound</a
-        >
-        by
-        <a href="https://freesound.org/people/AceOfSpadesProduc100/"
-          >AceOfSpadesProduc100</a
-        >
-        <div class="license">
-          License:
-          <a href="https://creativecommons.org/licenses/by/4.0/"
-            >Attribution 4.0</a
-          >
-        </div>
-      </li>
-      <li class="sound-credit">
-        <div class="sound-name">Your Territory Captured</div>
-        <a href="https://freesound.org/people/FairCashew/sounds/686365/"
-          >au.mp3</a
-        >
-        by <a href="https://freesound.org/people/FairCashew/">FairCashew</a>
-        <div class="license">
-          License:
-          <a href="http://creativecommons.org/publicdomain/zero/1.0/"
-            >Creative Commons 0</a
-          >
-        </div>
-      </li>
-      <li class="sound-credit">
-        <div class="sound-name">Army Bonus (Turn 25)</div>
-        <a href="https://freesound.org/people/zimbot/sounds/89380/"
-          >Lettuce_Frozen2_Multibreak.wav</a
-        >
-        by <a href="https://freesound.org/people/zimbot/">zimbot</a>
-        <div class="license">
-          License:
-          <a href="https://creativecommons.org/licenses/by/4.0/"
-            >Attribution 4.0</a
-          >
-        </div>
-      </li>
-      <li class="sound-credit">
-        <div class="sound-name">Game Start</div>
-        <a href="https://freesound.org/people/janalvent/sounds/791034/"
-          >1 i 5 808</a
-        >
-        by <a href="https://freesound.org/people/janalvent/">janalvent</a>
-        <div class="license">
-          License:
-          <a href="http://creativecommons.org/publicdomain/zero/1.0/"
-            >Creative Commons 0</a
-          >
-        </div>
-      </li>
-      <!-- Konami attributions will be inserted here as <li> by konami.js -->
-    </ul>
-    <h2>License Information</h2>
-    <p>
-      <strong>Creative Commons 0 (CC0):</strong> No rights reserved. These works
-      are in the public domain.
-    </p>
-    <p>
-      <strong>Attribution 4.0 (CC BY 4.0):</strong> You are free to use, share,
-      and adapt these works with appropriate credit to the original creator.
-    </p>
+      </section>
+    </div>
+
     <script src="/logMessage.js"></script>
     <script src="/optionsManager.js"></script>
     <script src="/soundManager.js"></script>

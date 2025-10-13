@@ -17,9 +17,9 @@ export class SpiralBot extends BaseBot {
 
   makeMove() {
     const { armies, terrain } = this.gameState;
-    const ourGeneral = this.gameState.generals[this.gameState.playerIndex];
+    const ourCapital = this.gameState.capitals[this.gameState.playerIndex];
 
-    if (ourGeneral === -1) return;
+    if (ourCapital === -1) return;
 
     if (this.currentTurn <= 25) {
       this.phase = "expand";
@@ -50,11 +50,11 @@ export class SpiralBot extends BaseBot {
 
   private spiralExpansion(): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
-    const ourGeneral = this.gameState.generals[this.gameState.playerIndex];
+    const ourCapital = this.gameState.capitals[this.gameState.playerIndex];
 
     // Step 1: Conquer adjacent tiles in strict N->E->S->W order
     if (this.conqueredDirections.size < 4) {
-      const adjacentMove = this.conquerAdjacentSequential(ourGeneral);
+      const adjacentMove = this.conquerAdjacentSequential(ourCapital);
       if (adjacentMove) return adjacentMove;
     }
 
@@ -64,17 +64,17 @@ export class SpiralBot extends BaseBot {
       if (spiralMove) return spiralMove;
     }
 
-    // Step 3: Stop expanding (all territory around general conquered)
+    // Step 3: Stop expanding (all territory around capital conquered)
     return null;
   }
 
   private conquerAdjacentSequential(
-    general: number,
+    capital: number
   ): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
-    if (armies[general] <= 1) return null;
+    if (armies[capital] <= 1) return null;
 
-    const directions = this.getDirectionalTargets(general);
+    const directions = this.getDirectionalTargets(capital);
 
     // Try directions in strict order: north, east, south, west
     for (const direction of ["north", "east", "south", "west"]) {
@@ -83,10 +83,10 @@ export class SpiralBot extends BaseBot {
         if (
           target !== -1 &&
           this.isEmptyTile(target) &&
-          !this.wouldCreateLoop(general, target)
+          !this.wouldCreateLoop(capital, target)
         ) {
           this.conqueredDirections.add(direction);
-          return { from: general, to: target };
+          return { from: capital, to: target };
         } else if (target !== -1) {
           // Mark as conquered even if we can't move there (mountain/obstacle)
           this.conqueredDirections.add(direction);
@@ -126,7 +126,7 @@ export class SpiralBot extends BaseBot {
     return directions[direction] || -1;
   }
 
-  private findNearestDiagonal(from: number, general: number): number {
+  private findNearestDiagonal(from: number, capital: number): number {
     const { terrain } = this.gameState;
     const row = Math.floor(from / this.gameState.width);
     const col = from % this.gameState.width;
@@ -171,7 +171,7 @@ export class SpiralBot extends BaseBot {
   }
 
   private findPathToTarget(
-    target: number,
+    target: number
   ): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
 
@@ -253,7 +253,7 @@ export class SpiralBot extends BaseBot {
           (adj) =>
             terrain[adj] === -1 ||
             terrain[adj] === -3 ||
-            (terrain[adj] >= 0 && terrain[adj] !== this.gameState.playerIndex),
+            (terrain[adj] >= 0 && terrain[adj] !== this.gameState.playerIndex)
         );
 
         if (hasExpansionTarget) {

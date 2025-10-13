@@ -3,7 +3,7 @@ import { io, Socket } from "socket.io-client";
 interface GameState {
   playerIndex: number;
   gameMap: number[];
-  generals: number[];
+  capitals: number[];
   cities: number[];
   width: number;
   height: number;
@@ -29,7 +29,7 @@ export abstract class BaseBot {
     this.gameState = {
       playerIndex: -1,
       gameMap: [],
-      generals: [],
+      capitals: [],
       cities: [],
       width: 0,
       height: 0,
@@ -56,13 +56,13 @@ export abstract class BaseBot {
     this.socket.on("game_update", (data) => {
       this.gameState.cities = this.patch(
         this.gameState.cities,
-        data.cities_diff,
+        data.cities_diff
       );
       this.gameState.gameMap = this.patch(
         this.gameState.gameMap,
-        data.map_diff,
+        data.map_diff
       );
-      this.gameState.generals = data.generals;
+      this.gameState.capitals = data.capitals;
 
       const { width, height, armies, terrain } = this.parseMap();
       this.gameState.width = width;
@@ -135,9 +135,7 @@ export abstract class BaseBot {
     const recentMoves = this.moveHistory.slice(-3);
     return recentMoves.some(
       (move) =>
-        move.from === from &&
-        move.to === to &&
-        this.currentTurn - move.turn < 3,
+        move.from === from && move.to === to && this.currentTurn - move.turn < 3
     );
   }
 

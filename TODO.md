@@ -4,10 +4,10 @@
 
 ✅ **COMPLETED**
 
-- Enemy generals spawn to close to each other. Update general spawn logic to
-  balance space between all other generals and edges of the map.
+- Enemy capitals spawn to close to each other. Update capital spawn logic to
+  balance space between all other capitals and edges of the map.
 - Update cities to spawn spread out from other cities. They can be up against
-  walls, mountains, towers, and general tiles.
+  walls, mountains, towers, and capital tiles.
 - Use public/icons/triangle-svgrepo-com-dark.svg for the triangle toggle in .accordion-header
 - Cities and Lookout towers should keep their shiny appearance when taken over and
   remain the same color they were, rather than taking on the players color.
@@ -18,14 +18,14 @@
 - The active square's border is currently gold. It should be gray if the active square has only 1 army.
 - The text in #mobileStatsTable is white, but the highlight color used on the player's row is too light for
   white text. Let's highlight the players row with a darker color that can use white text.
-- Remove the icon from the general tile
+- Remove the icon from the capital tile
 - When a tower or city is attacked, it will display the defense it was lowered to at the time of the attack.
   The number shows for 1.5 seconds before fading out. Currently the number displayed is always zero.
   If a user attacks with 5 armies (6 on the tile minus one to leave behind) and the tower starts with a
   defense of 25, then the tower should show 20 for a short time before fading out, attacks that happen
   while the number is being shown do not affect the display.
-- Enemy generals should be styled the same as the player's general (gold and shiny). The only difference is that they should
-  have a border. Gold when active as already implemented, but colored the same color as the player color of the player that owns the general.
+- Enemy capitals should be styled the same as the player's capital (gold and shiny). The only difference is that they should
+  have a border. Gold when active as already implemented, but colored the same color as the player color of the player that owns the capital.
   ✅ **COMPLETED**
 - The chat system is taking up too much vertical space on desktop. It's fine on mobile since it is in a separate tab.
   On desktop, move the chat down to the bottom right hand corner and make it collapsible. This should allow us to take
@@ -72,9 +72,9 @@
       - enemy territory
       - city
       - tower
-      - enemy general
-    - when player activates their general square
-  - on general captured (plays for all game players when anyone's general is captured)
+      - enemy capital
+    - when player activates their capital square
+  - on capital captured (plays for all game players when anyone's capital is captured)
   - on game end
   - on game start
   - on turn 25 and multiples of turn 25 when armies are awarded to all owned territories.

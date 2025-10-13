@@ -1,34 +1,34 @@
 import { Game } from "./game";
 
-describe("General Spawn Logic", () => {
+describe("Capital Spawn Logic", () => {
   let game: Game;
 
   beforeEach(() => {
     game = new Game("test-room");
   });
 
-  describe("findOptimalGeneralPosition", () => {
-    it("should place generals with minimum distance from each other", () => {
+  describe("findOptimalCapitalPosition", () => {
+    it("should place capitals with minimum distance from each other", () => {
       // Add first player
       const player1 = game.addPlayer("socket1", "player1");
 
       // Add second player
       const player2 = game.addPlayer("socket2", "player2");
 
-      const generals = game.getState().generals;
-      const distance = calculateDistance(generals[0], generals[1], 30);
+      const capitals = game.getState().capitals;
+      const distance = calculateDistance(capitals[0], capitals[1], 30);
 
-      // Generals should be at least 8 tiles apart on a 30x30 map
+      // Capitals should be at least 8 tiles apart on a 30x30 map
       expect(distance).toBeGreaterThanOrEqual(8);
     });
 
-    it("should place generals away from map edges", () => {
+    it("should place capitals away from map edges", () => {
       const player1 = game.addPlayer("socket1", "player1");
-      const generalPos = game.getState().generals[0];
+      const capitalPos = game.getState().capitals[0];
 
-      const { x, y } = positionToCoords(generalPos, 30);
+      const { x, y } = positionToCoords(capitalPos, 30);
 
-      // General should be at least 3 tiles from any edge
+      // Capital should be at least 3 tiles from any edge
       expect(x).toBeGreaterThanOrEqual(3);
       expect(x).toBeLessThan(27); // 30 - 3
       expect(y).toBeGreaterThanOrEqual(3);
@@ -41,21 +41,21 @@ describe("General Spawn Logic", () => {
         game.addPlayer(`socket${i}`, `player${i}`);
       }
 
-      const generals = game.getState().generals;
+      const capitals = game.getState().capitals;
 
       // Log positions for verification
-      console.log("General positions:");
-      generals.forEach((pos, index) => {
+      console.log("Capital positions:");
+      capitals.forEach((pos, index) => {
         const coords = positionToCoords(pos, 30);
         console.log(
-          `  Player ${index}: position ${pos} -> (${coords.x}, ${coords.y})`,
+          `  Player ${index}: position ${pos} -> (${coords.x}, ${coords.y})`
         );
       });
 
       // Check all pairs have minimum distance
-      for (let i = 0; i < generals.length; i++) {
-        for (let j = i + 1; j < generals.length; j++) {
-          const distance = calculateDistance(generals[i], generals[j], 30);
+      for (let i = 0; i < capitals.length; i++) {
+        for (let j = i + 1; j < capitals.length; j++) {
+          const distance = calculateDistance(capitals[i], capitals[j], 30);
           expect(distance).toBeGreaterThanOrEqual(6); // Reduced for 4 players
         }
       }
@@ -72,14 +72,14 @@ describe("General Spawn Logic", () => {
         game2.addPlayer(`socket${i}`, `player${i}`);
       }
 
-      const generals1 = game1.getState().generals;
-      const generals2 = game2.getState().generals;
+      const capitals1 = game1.getState().capitals;
+      const capitals2 = game2.getState().capitals;
 
       // Both should meet our minimum requirements
-      for (let i = 0; i < generals1.length; i++) {
-        for (let j = i + 1; j < generals1.length; j++) {
-          const distance1 = calculateDistance(generals1[i], generals1[j], 30);
-          const distance2 = calculateDistance(generals2[i], generals2[j], 30);
+      for (let i = 0; i < capitals1.length; i++) {
+        for (let j = i + 1; j < capitals1.length; j++) {
+          const distance1 = calculateDistance(capitals1[i], capitals1[j], 30);
+          const distance2 = calculateDistance(capitals2[i], capitals2[j], 30);
 
           expect(distance1).toBeGreaterThanOrEqual(6);
           expect(distance2).toBeGreaterThanOrEqual(6);
@@ -101,7 +101,7 @@ function calculateDistance(pos1: number, pos2: number, width: number): number {
 
 function positionToCoords(
   pos: number,
-  width: number,
+  width: number
 ): { x: number; y: number } {
   return {
     x: pos % width,

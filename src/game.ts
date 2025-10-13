@@ -36,7 +36,7 @@ export class Game {
         attempts++;
       } while (
         attempts < 50 &&
-        // Don't place mountains in corners or edges where generals might spawn
+        // Don't place mountains in corners or edges where capitals might spawn
         (pos < width ||
           pos >= size - width ||
           pos % width === 0 ||
@@ -54,7 +54,7 @@ export class Game {
       armies,
       terrain,
       ghostTerrain: new Array(size).fill(TILE_EMPTY),
-      generals: [],
+      capitals: [],
       cities: [],
       lookoutTowers: [],
       towerDefense: new Array(size).fill(0),
@@ -67,10 +67,10 @@ export class Game {
 
   addPlayer(id: string, username: string, isBot: boolean = false): number {
     console.log(
-      `🎮 addPlayer called: id=${id}, username=${username}, isBot=${isBot}`,
+      `🎮 addPlayer called: id=${id}, username=${username}, isBot=${isBot}`
     );
     console.log(
-      `   Current game state: started=${this.state.gameStarted}, players=${this.state.players.length}`,
+      `   Current game state: started=${this.state.gameStarted}, players=${this.state.players.length}`
     );
 
     if (this.state.gameStarted) {
@@ -83,23 +83,23 @@ export class Game {
 
     this.state.players.push({ id, username, index: playerIndex, isBot });
     console.log(
-      `   Player added to array, new length: ${this.state.players.length}`,
+      `   Player added to array, new length: ${this.state.players.length}`
     );
 
-    // Place general - this should always succeed with proper map size
-    console.log(`   Finding position for general...`);
-    const generalPos = this.findOptimalGeneralPosition();
-    console.log(`   General position found: ${generalPos}`);
+    // Place capital - this should always succeed with proper map size
+    console.log(`   Finding position for capital...`);
+    const capitalPos = this.findOptimalCapitalPosition();
+    console.log(`   Capital position found: ${capitalPos}`);
 
-    this.state.generals[playerIndex] = generalPos;
-    this.state.terrain[generalPos] = playerIndex;
-    this.state.armies[generalPos] = 1;
+    this.state.capitals[playerIndex] = capitalPos;
+    this.state.terrain[capitalPos] = playerIndex;
+    this.state.armies[capitalPos] = 1;
 
     console.log(
-      `   General placed: generals[${playerIndex}]=${generalPos}, terrain[${generalPos}]=${playerIndex}, armies[${generalPos}]=1`,
+      `   Capital placed: capitals[${playerIndex}]=${capitalPos}, terrain[${capitalPos}]=${playerIndex}, armies[${capitalPos}]=1`
     );
     console.log(
-      `   Final state: ${this.state.players.length} players, ${this.state.generals.length} generals`,
+      `   Final state: ${this.state.players.length} players, ${this.state.capitals.length} capitals`
     );
 
     return playerIndex;
@@ -111,16 +111,16 @@ export class Game {
     const playerIndex = this.state.players.findIndex((p) => p.id === playerId);
     if (playerIndex === -1) return false;
 
-    // Remove player's general from map
-    const generalPos = this.state.generals[playerIndex];
-    if (generalPos !== undefined) {
-      this.state.terrain[generalPos] = TILE_EMPTY;
-      this.state.armies[generalPos] = 0;
+    // Remove player's capital from map
+    const capitalPos = this.state.capitals[playerIndex];
+    if (capitalPos !== undefined) {
+      this.state.terrain[capitalPos] = TILE_EMPTY;
+      this.state.armies[capitalPos] = 0;
     }
 
     // Remove player and reindex
     this.state.players.splice(playerIndex, 1);
-    this.state.generals.splice(playerIndex, 1);
+    this.state.capitals.splice(playerIndex, 1);
 
     // Reindex remaining players and their territories
     this.state.players.forEach((player, newIndex) => {
@@ -141,27 +141,27 @@ export class Game {
     return this.state.players;
   }
 
-  private findOptimalGeneralPosition(): number {
-    // Special testing layout: place generals exactly 5 tiles apart
+  private findOptimalCapitalPosition(): number {
+    // Special testing layout: place capitals exactly 5 tiles apart
     if (this.roomId === "testing") {
-      const existingGenerals = this.state.generals.filter((pos) => pos >= 0);
+      const existingCapitals = this.state.capitals.filter((pos) => pos >= 0);
 
-      if (existingGenerals.length === 0) {
-        // First general: place in center-left area
+      if (existingCapitals.length === 0) {
+        // First capital: place in center-left area
         const centerRow = Math.floor(this.state.height / 2);
         const centerCol = Math.floor(this.state.width / 2) - 3;
         return centerRow * this.state.width + centerCol;
-      } else if (existingGenerals.length === 1) {
-        // Second general: place exactly 5 tiles to the right
-        const firstGeneral = existingGenerals[0];
-        const secondGeneral = firstGeneral + 5;
+      } else if (existingCapitals.length === 1) {
+        // Second capital: place exactly 5 tiles to the right
+        const firstCapital = existingCapitals[0];
+        const secondCapital = firstCapital + 5;
 
         // Validate position is within bounds and empty
         if (
-          secondGeneral < this.state.terrain.length &&
-          this.state.terrain[secondGeneral] === TILE_EMPTY
+          secondCapital < this.state.terrain.length &&
+          this.state.terrain[secondCapital] === TILE_EMPTY
         ) {
-          return secondGeneral;
+          return secondCapital;
         }
       }
 
@@ -169,11 +169,11 @@ export class Game {
       return this.findEmptyPosition();
     }
 
-    // Normal general placement logic
+    // Normal capital placement logic
     const width = 30;
     const height = 30;
     const minEdgeDistance = 3;
-    const existingGenerals = this.state.generals.filter((pos) => pos >= 0);
+    const existingCapitals = this.state.capitals.filter((pos) => pos >= 0);
 
     // Calculate minimum distance based on number of players
     const getMinDistance = (playerCount: number): number => {
@@ -182,7 +182,7 @@ export class Game {
       return 4;
     };
 
-    const minGeneralDistance = getMinDistance(existingGenerals.length + 1);
+    const minCapitalDistance = getMinDistance(existingCapitals.length + 1);
 
     let bestPosition = -1;
     let bestScore = -1;
@@ -202,15 +202,15 @@ export class Game {
       const edgeDistance = Math.min(x, y, width - 1 - x, height - 1 - y);
       if (edgeDistance < minEdgeDistance) continue;
 
-      // Check distance from existing generals
-      let minDistanceFromGenerals = Infinity;
+      // Check distance from existing capitals
+      let minDistanceFromCapitals = Infinity;
       let validPosition = true;
 
-      for (const generalPos of existingGenerals) {
-        const distance = this.calculateDistance(pos, generalPos);
-        minDistanceFromGenerals = Math.min(minDistanceFromGenerals, distance);
+      for (const capitalPos of existingCapitals) {
+        const distance = this.calculateDistance(pos, capitalPos);
+        minDistanceFromCapitals = Math.min(minDistanceFromCapitals, distance);
 
-        if (distance < minGeneralDistance) {
+        if (distance < minCapitalDistance) {
           validPosition = false;
           break;
         }
@@ -219,10 +219,10 @@ export class Game {
       if (!validPosition) continue;
 
       // Calculate score (higher is better)
-      // Favor positions with good edge distance and far from other generals
+      // Favor positions with good edge distance and far from other capitals
       const score =
         edgeDistance +
-        (minDistanceFromGenerals === Infinity ? 20 : minDistanceFromGenerals);
+        (minDistanceFromCapitals === Infinity ? 20 : minDistanceFromCapitals);
 
       if (score > bestScore) {
         bestScore = score;
@@ -232,7 +232,7 @@ export class Game {
       // If we found a really good position, use it
       if (
         edgeDistance >= minEdgeDistance + 2 &&
-        minDistanceFromGenerals >= minGeneralDistance + 2
+        minDistanceFromCapitals >= minCapitalDistance + 2
       ) {
         break;
       }
@@ -241,7 +241,7 @@ export class Game {
     // Fallback to original method if no optimal position found
     if (bestPosition === -1) {
       console.warn(
-        "Could not find optimal general position, falling back to random placement",
+        "Could not find optimal capital position, falling back to random placement"
       );
       return this.findEmptyPosition();
     }
@@ -251,7 +251,7 @@ export class Game {
 
   private positionToCoords(
     pos: number,
-    width: number,
+    width: number
   ): { x: number; y: number } {
     return {
       x: pos % width,
@@ -280,7 +280,7 @@ export class Game {
         for (let i = 0; i < this.state.terrain.length; i++) {
           if (this.state.terrain[i] === TILE_EMPTY) {
             console.log(
-              `   Found empty position at ${i} after exhaustive search`,
+              `   Found empty position at ${i} after exhaustive search`
             );
             return i;
           }
@@ -294,12 +294,12 @@ export class Game {
   startGame(): void {
     console.log(`🚀 startGame called`);
     console.log(`   Players before start: ${this.state.players.length}`);
-    console.log(`   Generals before start: ${this.state.generals.length}`);
+    console.log(`   Capitals before start: ${this.state.capitals.length}`);
 
-    // Log all current generals
-    this.state.generals.forEach((pos, index) => {
+    // Log all current capitals
+    this.state.capitals.forEach((pos, index) => {
       console.log(
-        `   General ${index}: position=${pos}, terrain[${pos}]=${this.state.terrain[pos]}, armies[${pos}]=${this.state.armies[pos]}`,
+        `   Capital ${index}: position=${pos}, terrain[${pos}]=${this.state.terrain[pos]}, armies[${pos}]=${this.state.armies[pos]}`
       );
     });
 
@@ -322,11 +322,11 @@ export class Game {
   private createTestingLayout(): void {
     console.log(`🧪 Creating testing layout for room: ${this.roomId}`);
 
-    // Clear existing terrain (keep generals)
+    // Clear existing terrain (keep capitals)
     for (let i = 0; i < this.state.terrain.length; i++) {
       if (
         this.state.terrain[i] !== TILE_EMPTY &&
-        !this.state.generals.includes(i)
+        !this.state.capitals.includes(i)
       ) {
         this.state.terrain[i] = TILE_EMPTY;
         this.state.armies[i] = 0;
@@ -337,11 +337,11 @@ export class Game {
     this.state.cities = [];
     this.state.lookoutTowers = [];
 
-    if (this.state.generals.length >= 2) {
-      const gen1 = this.state.generals[0];
-      const gen2 = this.state.generals[1];
+    if (this.state.capitals.length >= 2) {
+      const gen1 = this.state.capitals[0];
+      const gen2 = this.state.capitals[1];
 
-      // Calculate center point between generals
+      // Calculate center point between capitals
       const gen1Row = Math.floor(gen1 / this.state.width);
       const gen1Col = gen1 % this.state.width;
       const gen2Row = Math.floor(gen2 / this.state.width);
@@ -351,15 +351,15 @@ export class Game {
       const centerCol = Math.floor((gen1Col + gen2Col) / 2);
       const centerPos = centerRow * this.state.width + centerCol;
 
-      // Place towers 1 tile away from each general
+      // Place towers 1 tile away from each capital
       const tower1 = gen1 + 2; // Right of gen1
       const tower2 = gen2 - 2; // Left of gen2
 
-      // Place cities 1 tile away from each general (different direction)
+      // Place cities 1 tile away from each capital (different direction)
       const city1 = gen1 + this.state.width * 2; // Below gen1
       const city2 = gen2 - this.state.width * 2; // Above gen2
 
-      // Place mountains 1 tile away from each general (third direction)
+      // Place mountains 1 tile away from each capital (third direction)
       const mountain1 = gen1 - 2; // Left of gen1
       const mountain2 = gen2 + 2; // Right of gen2
 
@@ -395,7 +395,7 @@ export class Game {
     }
 
     console.log(
-      `🧪 Testing layout complete: ${this.state.cities.length} cities, ${this.state.lookoutTowers.length} towers`,
+      `🧪 Testing layout complete: ${this.state.cities.length} cities, ${this.state.lookoutTowers.length} towers`
     );
   }
 
@@ -403,7 +403,7 @@ export class Game {
     const cityCount = Math.max(1, Math.floor(this.state.players.length * 6.0));
     const MIN_CITY_DISTANCE = 3; // Cities must be at least n tiles apart
     console.log(
-      `🏙️  Spawning ${cityCount} cities with ${MIN_CITY_DISTANCE} tile separation...`,
+      `🏙️  Spawning ${cityCount} cities with ${MIN_CITY_DISTANCE} tile separation...`
     );
 
     const placedCities: number[] = [];
@@ -429,12 +429,12 @@ export class Game {
           this.state.terrain[pos] = TILE_CITY;
           this.state.armies[pos] = 40;
           console.log(
-            `   City ${placedCities.length} placed at position ${pos}`,
+            `   City ${placedCities.length} placed at position ${pos}`
           );
         }
       } catch (error) {
         console.warn(
-          `   Could not find more valid city positions after ${attempt} attempts`,
+          `   Could not find more valid city positions after ${attempt} attempts`
         );
         break;
       }
@@ -447,7 +447,7 @@ export class Game {
     const MIN_TOWER_DISTANCE = TOWER_SIGHT_RADIUS * 2 + 1; // 11 tiles apart
 
     console.log(
-      `🗼 Spawning maximum lookout towers with ${MIN_TOWER_DISTANCE} tile separation...`,
+      `🗼 Spawning maximum lookout towers with ${MIN_TOWER_DISTANCE} tile separation...`
     );
 
     const placedTowers: number[] = [];
@@ -470,12 +470,12 @@ export class Game {
           this.state.towerDefense[pos] = 25;
           this.state.armies[pos] = 0;
           console.log(
-            `   Tower ${placedTowers.length} placed at position ${pos}`,
+            `   Tower ${placedTowers.length} placed at position ${pos}`
           );
         }
       } catch (error) {
         console.warn(
-          `   Could not find more valid tower positions after ${attempt} attempts`,
+          `   Could not find more valid tower positions after ${attempt} attempts`
         );
         break;
       }
@@ -483,16 +483,16 @@ export class Game {
 
     console.log(`   Towers spawned: ${this.state.lookoutTowers.length}`);
 
-    // Final verification - check all generals are still intact
+    // Final verification - check all capitals are still intact
     console.log(`🔍 Post-spawn verification:`);
-    this.state.generals.forEach((pos, index) => {
+    this.state.capitals.forEach((pos, index) => {
       if (pos >= 0) {
         console.log(
-          `   General ${index}: position=${pos}, terrain[${pos}]=${this.state.terrain[pos]}, armies[${pos}]=${this.state.armies[pos]}`,
+          `   Capital ${index}: position=${pos}, terrain[${pos}]=${this.state.terrain[pos]}, armies[${pos}]=${this.state.armies[pos]}`
         );
         if (this.state.terrain[pos] !== index) {
           console.error(
-            `❌ GENERAL ${index} OVERWRITTEN! Expected terrain=${index}, got=${this.state.terrain[pos]}`,
+            `❌ Capital ${index} OVERWRITTEN! Expected terrain=${index}, got=${this.state.terrain[pos]}`
           );
         }
       }
@@ -515,8 +515,8 @@ export class Game {
     for (let i = 0; i < this.state.terrain.length; i++) {
       const owner = this.state.terrain[i];
       if (owner >= 0) {
-        // Generals and cities generate every turn
-        if (this.state.generals.includes(i) || this.state.cities.includes(i)) {
+        // Capitals and cities generate every turn
+        if (this.state.capitals.includes(i) || this.state.cities.includes(i)) {
           this.state.armies[i]++;
         }
         // Regular tiles generate every 25 turns
@@ -530,7 +530,7 @@ export class Game {
   attack(
     playerIndex: number,
     from: number,
-    to: number,
+    to: number
   ): {
     success: boolean;
     events: string[];
@@ -539,7 +539,7 @@ export class Game {
       defenderLoss: number;
       isPlayerVsPlayer: boolean;
       territoryType: string;
-      generalCaptured?: number;
+      capitalCaptured?: number;
       territoryCaptured?: number;
     };
   } {
@@ -564,7 +564,7 @@ export class Game {
           defenderLoss: number;
           isPlayerVsPlayer: boolean;
           territoryType: string;
-          generalCaptured?: number;
+          capitalCaptured?: number;
           territoryCaptured?: number;
         }
       | undefined;
@@ -605,7 +605,9 @@ export class Game {
         this.state.terrain[to] = playerIndex;
         this.state.armies[to] = attackForce - defenderArmies;
         events.push(
-          `${this.state.players[playerIndex]?.username || `Player ${playerIndex}`} captured a city!`,
+          `${
+            this.state.players[playerIndex]?.username || `Player ${playerIndex}`
+          } captured a city!`
         );
 
         // Set attack info for city capture
@@ -640,7 +642,9 @@ export class Game {
         this.state.armies[to] = Math.abs(remaining);
         this.state.towerDefense[to] = 0;
         events.push(
-          `${this.state.players[playerIndex]?.username || `Player ${playerIndex}`} captured a lookout tower!`,
+          `${
+            this.state.players[playerIndex]?.username || `Player ${playerIndex}`
+          } captured a lookout tower!`
         );
 
         // Set attack info for tower capture
@@ -667,19 +671,19 @@ export class Game {
       }
     } else if (defenderOwner >= 0 && defenderOwner !== playerIndex) {
       // Attack enemy territory
-      console.log("⚔️ Attacking enemy territory");
+      console.log(" Attacking enemy territory");
       const remaining = defenderArmies - attackForce;
       const defenderLoss = Math.min(defenderArmies, attackForce);
 
       // Set attack info for player vs player attacks
-      const isGeneralCapture = this.state.generals[defenderOwner] === to;
+      const isCapitalCapture = this.state.capitals[defenderOwner] === to;
       attackInfo = {
         attackForce: attackForce,
         defenderLoss: defenderLoss,
         isPlayerVsPlayer: true,
-        territoryType: isGeneralCapture ? "general" : "enemy",
+        territoryType: isCapitalCapture ? "capital" : "enemy",
       };
-      console.log("⚔️ Enemy attack info set:", attackInfo);
+      console.log(" Enemy attack info set:", attackInfo);
 
       if (remaining <= 0) {
         this.state.terrain[to] = playerIndex;
@@ -688,19 +692,25 @@ export class Game {
         // Mark territory capture for the defender
         attackInfo.territoryCaptured = defenderOwner;
 
-        // Check if general was captured
-        if (this.state.generals[defenderOwner] === to) {
+        // Check if capital was captured
+        if (this.state.capitals[defenderOwner] === to) {
           this.eliminatePlayer(defenderOwner);
           events.push(
-            `${this.state.players[playerIndex]?.username || `Player ${playerIndex}`} eliminated ${this.state.players[defenderOwner]?.username || `Player ${defenderOwner}`}!`,
+            `${
+              this.state.players[playerIndex]?.username ||
+              `Player ${playerIndex}`
+            } eliminated ${
+              this.state.players[defenderOwner]?.username ||
+              `Player ${defenderOwner}`
+            }!`
           );
 
-          // Mark that a general was captured for the server to handle
-          attackInfo.generalCaptured = defenderOwner;
+          // Mark that a capital was captured for the server to handle
+          attackInfo.capitalCaptured = defenderOwner;
 
           // Check for victory
           const remainingPlayers = this.state.players.filter(
-            (p) => !p.eliminated,
+            (p) => !p.eliminated
           );
           if (remainingPlayers.length === 1) {
             this.endGame(playerIndex);
@@ -719,7 +729,7 @@ export class Game {
     // Check ownership
     if (this.state.terrain[from] !== playerIndex) {
       console.log(
-        `   Invalid: not owned by player ${playerIndex}, terrain[${from}] = ${this.state.terrain[from]}`,
+        `   Invalid: not owned by player ${playerIndex}, terrain[${from}] = ${this.state.terrain[from]}`
       );
       return false;
     }
@@ -727,7 +737,7 @@ export class Game {
     // Check army count
     if (this.state.armies[from] <= 1) {
       console.log(
-        `   Invalid: insufficient armies, armies[${from}] = ${this.state.armies[from]}`,
+        `   Invalid: insufficient armies, armies[${from}] = ${this.state.armies[from]}`
       );
       return false;
     }
@@ -741,13 +751,13 @@ export class Game {
     // Can't attack mountains or neutral villages
     if (this.state.terrain[to] === TILE_MOUNTAIN) {
       console.log(
-        `   Invalid: target is mountain, terrain[${to}] = ${this.state.terrain[to]}`,
+        `   Invalid: target is mountain, terrain[${to}] = ${this.state.terrain[to]}`
       );
       return false;
     }
 
     console.log(
-      `   Valid move: ${from}(${this.state.armies[from]}) -> ${to}(${this.state.armies[to]})`,
+      `   Valid move: ${from}(${this.state.armies[from]}) -> ${to}(${this.state.armies[to]})`
     );
     return true;
   }
@@ -779,8 +789,8 @@ export class Game {
     this.state.players[playerIndex].eliminated = true;
     this.state.players[playerIndex].eliminationStats = { territories, armies };
 
-    // Remove their general
-    this.state.generals[playerIndex] = -1;
+    // Remove their capital
+    this.state.capitals[playerIndex] = -1;
 
     // Convert their territory to ghost territory (keep player color but make it neutral)
     for (let i = 0; i < this.state.terrain.length; i++) {
