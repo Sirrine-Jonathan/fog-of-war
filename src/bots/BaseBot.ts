@@ -124,6 +124,7 @@ export abstract class BaseBot {
   }
 
   protected wouldCreateLoop(from: number, to: number): boolean {
+    // Immediate reversal
     if (
       this.lastMove &&
       this.lastMove.from === to &&
@@ -132,11 +133,31 @@ export abstract class BaseBot {
       return true;
     }
 
-    const recentMoves = this.moveHistory.slice(-3);
-    return recentMoves.some(
+    // Check recent moves (last 5 turns)
+    const recentMoves = this.moveHistory.slice(-5);
+    const sameMove = recentMoves.filter(
       (move) =>
-        move.from === from && move.to === to && this.currentTurn - move.turn < 3
+        move.from === from && move.to === to && this.currentTurn - move.turn < 5
     );
+
+    // If we've made this exact move recently, it's likely a loop
+    if (sameMove.length > 0) {
+      return true;
+    }
+
+    // Check for ping-pong pattern (A->B, B->A repeatedly)
+    const pingPongMoves = recentMoves.filter(
+      (move) =>
+        (move.from === from && move.to === to) ||
+        (move.from === to && move.to === from)
+    );
+
+    // If we've been moving back and forth between these tiles, it's a loop
+    if (pingPongMoves.length >= 2) {
+      return true;
+    }
+
+    return false;
   }
 
   protected recordMove(from: number, to: number) {
@@ -166,15 +187,34 @@ export abstract class BaseBot {
       const targetTerrain = terrain[adj];
       const canCapture = armies[from] > armies[adj] + 1;
 
+      // Neutral city - highest priority
       if (targetTerrain === -6 && canCapture) {
-        targets.push({ tile: adj, priority: 3, armies: armies[adj] });
-      } else if (
+        targets.push({ tile: adj, priority: 5, armies: armies[adj] });
+      }
+      // Lookout tower - high priority for vision
+      else if (targetTerrain === -5 && canCapture) {
+        targets.push({ tile: adj, priority: 4, armies: armies[adj] });
+      }
+      // Enemy territory - good priority
+      else if (
         targetTerrain >= 0 &&
         targetTerrain !== this.gameState.playerIndex &&
         canCapture
       ) {
+        const isCapital = this.gameState.capitals.includes(adj);
+        const isCity = this.gameState.cities.includes(adj);
+        const priority = isCapital ? 6 : isCity ? 5 : 3;
+        targets.push({ tile: adj, priority, armies: armies[adj] });
+      }
+      // Neutral/fog territory - expansion
+      else if (targetTerrain === -1 || targetTerrain === -3) {
         targets.push({ tile: adj, priority: 2, armies: armies[adj] });
-      } else if (targetTerrain === -1) {
+      }
+      // Own territory - only if significantly weaker (consolidation)
+      else if (
+        targetTerrain === this.gameState.playerIndex &&
+        armies[adj] < armies[from] - 5
+      ) {
         targets.push({ tile: adj, priority: 1, armies: armies[adj] });
       }
     }

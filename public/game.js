@@ -3152,7 +3152,14 @@ document.addEventListener("DOMContentLoaded", () => {
   if (spiralBtn) {
     spiralBtn.addEventListener("click", () => inviteBot("spiral"));
   } else {
-    console.error("Spiral button not found");
+    console.warn("Spiral bot button not found");
+  }
+
+  const titanBtn = document.getElementById("inviteTitanBtn");
+  if (titanBtn) {
+    titanBtn.addEventListener("click", () => inviteBot("titan"));
+  } else {
+    console.warn("Titan bot button not found");
   }
 
   // Chat functionality

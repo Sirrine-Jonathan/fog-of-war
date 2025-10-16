@@ -1,106 +1,110 @@
 import { BaseBot } from "./BaseBot";
 
 export class ArrowBot extends BaseBot {
-  private explorationTargets: number[] = [];
-  private currentTarget: number = -1;
-  private failedTargets: Set<number> = new Set();
+  private targetPosition: number | null = null;
 
   makeMove() {
-    const counterAttack = this.findCounterAttack();
+    const { armies, terrain } = this.gameState;
+
+    // Priority 1: Counter-attack threats near our capital
+    const counterAttack = this.defendCapital();
     if (counterAttack) {
       this.attack(counterAttack.from, counterAttack.to);
       return;
     }
 
-    const shouldExplore = this.shouldContinueExploring();
-
-    if (!shouldExplore) {
-      const enemyAttack = this.findStrategicEnemyAttack();
-      if (enemyAttack) {
-        this.attack(enemyAttack.from, enemyAttack.to);
-        return;
-      }
-    }
-
-    const exploration = this.findSystematicExploration();
-    if (exploration) {
-      this.attack(exploration.from, exploration.to);
+    // Priority 2: Capture high-value targets
+    const priorityCapture = this.capturePriorityTargets();
+    if (priorityCapture) {
+      this.attack(priorityCapture.from, priorityCapture.to);
       return;
     }
 
-    const fallback = this.findAnyValidMove();
-    if (fallback) {
-      this.attack(fallback.from, fallback.to);
+    // Priority 3: Attack enemy territories aggressively
+    const enemyAttack = this.attackEnemiesAggressive();
+    if (enemyAttack) {
+      this.attack(enemyAttack.from, enemyAttack.to);
+      return;
+    }
+
+    // Priority 4: Expand toward enemy positions
+    const seekMove = this.seekAndDestroy();
+    if (seekMove) {
+      this.attack(seekMove.from, seekMove.to);
+      return;
+    }
+
+    // Priority 5: Explore fog of war
+    const explore = this.exploreFog();
+    if (explore) {
+      this.attack(explore.from, explore.to);
     }
   }
 
-  private findLookoutTowerCapture(): { from: number; to: number } | null {
+  private defendCapital(): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
+    const ourCapital = this.gameState.capitals[this.gameState.playerIndex];
 
-    for (let i = 0; i < terrain.length; i++) {
-      if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
-        const adjacent = this.getAdjacentTiles(i);
+    if (ourCapital === -1) return null;
 
-        for (const adj of adjacent) {
-          if (terrain[adj] === -3 && !this.wouldCreateLoop(i, adj)) {
-            return { from: i, to: adj };
-          }
-        }
-      }
-    }
-
-    return null;
-  }
-
-  private shouldContinueExploring(): boolean {
-    const { terrain } = this.gameState;
-    let unknownAdjacent = 0;
-    let enemyAdjacent = 0;
-
-    for (let i = 0; i < terrain.length; i++) {
-      if (terrain[i] === this.gameState.playerIndex) {
-        const adjacent = this.getAdjacentTiles(i);
-        const hasUnknown = adjacent.some(
-          (adj) => terrain[adj] === -1 || terrain[adj] === -3
-        );
-        const hasEnemy = adjacent.some(
-          (adj) =>
-            terrain[adj] >= 0 && terrain[adj] !== this.gameState.playerIndex
-        );
-
-        if (hasUnknown) unknownAdjacent++;
-        if (hasEnemy) enemyAdjacent++;
-      }
-    }
-
-    return unknownAdjacent > enemyAdjacent;
-  }
-
-  private findCounterAttack(): { from: number; to: number } | null {
-    const { armies, terrain } = this.gameState;
+    // Check for enemies within 5 tiles of capital
+    const threatsNearCapital: Array<{ tile: number; distance: number }> = [];
 
     for (let i = 0; i < terrain.length; i++) {
       if (terrain[i] >= 0 && terrain[i] !== this.gameState.playerIndex) {
-        const adjacent = this.getAdjacentTiles(i);
-
-        for (const adj of adjacent) {
-          if (
-            terrain[adj] === this.gameState.playerIndex &&
-            armies[adj] > armies[i] + 1
-          ) {
-            if (!this.wouldCreateLoop(adj, i)) {
-              return { from: adj, to: i };
-            }
-          }
+        const distance = this.getDistance(i, ourCapital);
+        if (distance <= 5) {
+          threatsNearCapital.push({ tile: i, distance });
         }
       }
     }
+
+    if (threatsNearCapital.length === 0) return null;
+
+    // Find closest threat
+    threatsNearCapital.sort((a, b) => a.distance - b.distance);
+    const closestThreat = threatsNearCapital[0].tile;
+
+    // Attack if we can
+    for (let i = 0; i < terrain.length; i++) {
+      if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
+        const adjacent = this.getAdjacentTiles(i);
+        if (
+          adjacent.includes(closestThreat) &&
+          armies[i] > armies[closestThreat] + 1 &&
+          !this.wouldCreateLoop(i, closestThreat)
+        ) {
+          return { from: i, to: closestThreat };
+        }
+      }
+    }
+
     return null;
   }
 
-  private findStrategicEnemyAttack(): { from: number; to: number } | null {
+  private capturePriorityTargets(): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
-    const attacks = [];
+
+    for (let i = 0; i < terrain.length; i++) {
+      if (terrain[i] === this.gameState.playerIndex && armies[i] > 2) {
+        const targets = this.getPriorityTargets(i);
+        if (targets.length > 0) {
+          return { from: i, to: targets[0] };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private attackEnemiesAggressive(): { from: number; to: number } | null {
+    const { armies, terrain } = this.gameState;
+    const attacks: Array<{
+      from: number;
+      to: number;
+      priority: number;
+      advantage: number;
+    }> = [];
 
     for (let i = 0; i < terrain.length; i++) {
       if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
@@ -111,14 +115,18 @@ export class ArrowBot extends BaseBot {
             terrain[adj] >= 0 &&
             terrain[adj] !== this.gameState.playerIndex
           ) {
-            if (armies[i] > armies[adj] + 1 && !this.wouldCreateLoop(i, adj)) {
-              attacks.push({
-                from: i,
-                to: adj,
-                armyAdvantage: armies[i] - armies[adj],
-                isCapital: this.gameState.capitals.includes(adj),
-                totalArmies: armies[i],
-              });
+            const canWin = armies[i] > armies[adj] + 1;
+            if (canWin && !this.wouldCreateLoop(i, adj)) {
+              const isCapital = this.gameState.capitals.includes(adj);
+              const isCity = this.gameState.cities.includes(adj);
+              const advantage = armies[i] - armies[adj];
+
+              let priority = 50;
+              if (isCapital) priority = 100;
+              else if (isCity) priority = 80;
+              priority += advantage;
+
+              attacks.push({ from: i, to: adj, priority, advantage });
             }
           }
         }
@@ -126,135 +134,104 @@ export class ArrowBot extends BaseBot {
     }
 
     if (attacks.length > 0) {
-      attacks.sort((a, b) => {
-        if (a.isCapital !== b.isCapital) return a.isCapital ? -1 : 1;
-        return b.totalArmies - a.totalArmies;
-      });
+      attacks.sort((a, b) => b.priority - a.priority);
       return { from: attacks[0].from, to: attacks[0].to };
     }
 
     return null;
   }
 
-  private findSystematicExploration(): { from: number; to: number } | null {
-    this.updateExplorationTargets();
-
-    const towerMove = this.findLookoutTowerCapture();
-    if (towerMove) {
-      return towerMove;
-    }
-
-    if (
-      this.currentTarget !== -1 &&
-      !this.failedTargets.has(this.currentTarget)
-    ) {
-      const pathMove = this.findPathToTarget(this.currentTarget);
-      if (pathMove) {
-        return pathMove;
-      } else {
-        this.failedTargets.add(this.currentTarget);
-        this.currentTarget = -1;
-      }
-    }
-
-    for (const target of this.explorationTargets) {
-      if (!this.failedTargets.has(target)) {
-        this.currentTarget = target;
-        const pathMove = this.findPathToTarget(target);
-        if (pathMove) {
-          return pathMove;
-        } else {
-          this.failedTargets.add(target);
-        }
-      }
-    }
-
-    return this.expandToFog();
-  }
-
-  private updateExplorationTargets() {
-    const { terrain, width, height } = this.gameState;
-    this.explorationTargets = [];
-
-    const fogTiles = [];
-    for (let i = 0; i < terrain.length; i++) {
-      if (terrain[i] === -3) {
-        fogTiles.push({
-          position: i,
-          priority: this.calculateExplorationPriority(i),
-        });
-      }
-    }
-
-    fogTiles.sort((a, b) => b.priority - a.priority);
-    this.explorationTargets = fogTiles.slice(0, 10).map((t) => t.position);
-
-    if (this.explorationTargets.length === 0) {
-      this.addEdgeTargets();
-    }
-  }
-
-  private calculateExplorationPriority(position: number): number {
-    const { terrain, width } = this.gameState;
-    const row = Math.floor(position / width);
-    const col = position % width;
-
-    let priority = 10;
-
-    const ourTiles = this.getOurTiles();
-    if (ourTiles.length > 0) {
-      const minDistance = Math.min(
-        ...ourTiles.map((tile) => this.getDistance(tile, position))
-      );
-      priority += Math.max(0, 20 - minDistance);
-    }
-
-    const centerRow = Math.floor(this.gameState.height / 2);
-    const centerCol = Math.floor(width / 2);
-    const distanceFromCenter =
-      Math.abs(row - centerRow) + Math.abs(col - centerCol);
-    priority += Math.max(0, 10 - distanceFromCenter);
-
-    return priority;
-  }
-
-  private findPathToTarget(
-    target: number
-  ): { from: number; to: number } | null {
+  private seekAndDestroy(): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
-    const candidates = [];
 
+    // Find enemy positions
+    const enemies: number[] = [];
     for (let i = 0; i < terrain.length; i++) {
-      if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
-        const adjacent = this.getAdjacentTiles(i);
-
-        for (const adj of adjacent) {
-          if (
-            (terrain[adj] === -1 || terrain[adj] === -3) &&
-            !this.wouldCreateLoop(i, adj)
-          ) {
-            const distanceToTarget = this.getDistance(adj, target);
-            candidates.push({
-              from: i,
-              to: adj,
-              distance: distanceToTarget,
-              armies: armies[i],
-            });
-          }
-        }
+      if (terrain[i] >= 0 && terrain[i] !== this.gameState.playerIndex) {
+        enemies.push(i);
       }
     }
 
-    if (candidates.length > 0) {
-      candidates.sort((a, b) => a.distance - b.distance || b.armies - a.armies);
-      return { from: candidates[0].from, to: candidates[0].to };
+    if (enemies.length === 0) return null;
+
+    // Find our strongest tiles
+    const ourStrongTiles: Array<{ tile: number; armies: number }> = [];
+    for (let i = 0; i < terrain.length; i++) {
+      if (terrain[i] === this.gameState.playerIndex && armies[i] > 3) {
+        ourStrongTiles.push({ tile: i, armies: armies[i] });
+      }
+    }
+
+    if (ourStrongTiles.length === 0) return null;
+
+    // Sort by army count
+    ourStrongTiles.sort((a, b) => b.armies - a.armies);
+
+    // Move strongest armies toward closest enemy
+    for (const { tile } of ourStrongTiles) {
+      const closestEnemy = this.findClosestEnemy(tile, enemies);
+      if (closestEnemy !== -1) {
+        const move = this.moveToward(tile, closestEnemy);
+        if (move) return move;
+      }
     }
 
     return null;
   }
 
-  private expandToFog(): { from: number; to: number } | null {
+  private findClosestEnemy(from: number, enemies: number[]): number {
+    let closest = -1;
+    let minDistance = Infinity;
+
+    for (const enemy of enemies) {
+      const distance = this.getDistance(from, enemy);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closest = enemy;
+      }
+    }
+
+    return closest;
+  }
+
+  private moveToward(
+    from: number,
+    target: number
+  ): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
+    const adjacent = this.getAdjacentTiles(from);
+
+    let bestMove: { tile: number; distance: number } | null = null;
+    let bestDistance = Infinity;
+
+    for (const adj of adjacent) {
+      if (
+        (terrain[adj] === -1 ||
+          terrain[adj] === -3 ||
+          terrain[adj] === this.gameState.playerIndex) &&
+        !this.wouldCreateLoop(from, adj)
+      ) {
+        const distance = this.getDistance(adj, target);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestMove = { tile: adj, distance };
+        }
+      }
+    }
+
+    if (bestMove) {
+      return { from, to: bestMove.tile };
+    }
+
+    return null;
+  }
+
+  private exploreFog(): { from: number; to: number } | null {
+    const { armies, terrain } = this.gameState;
+
+    // Find tiles on the edge of fog
+    const fogExpansion: Array<{ from: number; to: number; priority: number }> =
+      [];
 
     for (let i = 0; i < terrain.length; i++) {
       if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
@@ -262,43 +239,34 @@ export class ArrowBot extends BaseBot {
 
         for (const adj of adjacent) {
           if (terrain[adj] === -3 && !this.wouldCreateLoop(i, adj)) {
-            return { from: i, to: adj };
+            // Count how many fog neighbors this tile has
+            const adjOfAdj = this.getAdjacentTiles(adj);
+            const fogNeighbors = adjOfAdj.filter(
+              (tile) => terrain[tile] === -3
+            ).length;
+
+            fogExpansion.push({
+              from: i,
+              to: adj,
+              priority: fogNeighbors * 10 + armies[i],
+            });
           }
         }
       }
     }
 
-    return null;
-  }
+    if (fogExpansion.length > 0) {
+      fogExpansion.sort((a, b) => b.priority - a.priority);
+      return { from: fogExpansion[0].from, to: fogExpansion[0].to };
+    }
 
-  private findAnyValidMove(): { from: number; to: number } | null {
-    const { armies, terrain } = this.gameState;
-
+    // Fallback: expand to neutral territory
     for (let i = 0; i < terrain.length; i++) {
       if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
         const adjacent = this.getAdjacentTiles(i);
 
         for (const adj of adjacent) {
-          if (
-            (terrain[adj] === -1 || terrain[adj] === -3) &&
-            !this.wouldCreateLoop(i, adj)
-          ) {
-            return { from: i, to: adj };
-          }
-        }
-      }
-    }
-
-    for (let i = 0; i < terrain.length; i++) {
-      if (terrain[i] === this.gameState.playerIndex && armies[i] > 2) {
-        const adjacent = this.getAdjacentTiles(i);
-
-        for (const adj of adjacent) {
-          if (
-            terrain[adj] === this.gameState.playerIndex &&
-            armies[adj] < armies[i] &&
-            !this.wouldCreateLoop(i, adj)
-          ) {
+          if (terrain[adj] === -1 && !this.wouldCreateLoop(i, adj)) {
             return { from: i, to: adj };
           }
         }
@@ -306,33 +274,6 @@ export class ArrowBot extends BaseBot {
     }
 
     return null;
-  }
-
-  private addEdgeTargets() {
-    const { width, height } = this.gameState;
-
-    for (let i = 0; i < width; i++) {
-      this.explorationTargets.push(i);
-      this.explorationTargets.push((height - 1) * width + i);
-    }
-
-    for (let i = 0; i < height; i++) {
-      this.explorationTargets.push(i * width);
-      this.explorationTargets.push(i * width + width - 1);
-    }
-  }
-
-  private getOurTiles(): number[] {
-    const { terrain } = this.gameState;
-    const ourTiles = [];
-
-    for (let i = 0; i < terrain.length; i++) {
-      if (terrain[i] === this.gameState.playerIndex) {
-        ourTiles.push(i);
-      }
-    }
-
-    return ourTiles;
   }
 
   private getDistance(from: number, to: number): number {

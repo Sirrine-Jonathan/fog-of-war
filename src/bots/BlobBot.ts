@@ -1,84 +1,191 @@
 import { BaseBot } from "./BaseBot";
 
 export class BlobBot extends BaseBot {
-  private generationSources: Set<number> = new Set();
-  private frontlineTiles: Set<number> = new Set();
-  private pathCache: Map<string, number[]> = new Map();
-
   makeMove() {
     const { armies, terrain } = this.gameState;
 
-    this.updateSources();
-    this.updateFrontlines();
-
-    const enemyAttack = this.attackEnemiesStrategic();
-    if (enemyAttack) {
-      this.attack(enemyAttack.from, enemyAttack.to);
+    // Priority 1: Capture high-value targets
+    const priorityMove = this.capturePriorityTargets();
+    if (priorityMove) {
+      this.attack(priorityMove.from, priorityMove.to);
       return;
     }
 
-    const expansion = this.expandLightningFast();
+    // Priority 2: Even expansion from all fronts
+    const expansion = this.expandEvenly();
     if (expansion) {
       this.attack(expansion.from, expansion.to);
       return;
     }
 
-    const armyFlow = this.flowArmiesRobust();
-    if (armyFlow) {
-      this.attack(armyFlow.from, armyFlow.to);
+    // Priority 3: Attack weak enemies
+    const enemyAttack = this.attackWeakEnemies();
+    if (enemyAttack) {
+      this.attack(enemyAttack.from, enemyAttack.to);
+      return;
+    }
+
+    // Priority 4: Redistribute armies to maintain even front
+    const redistribute = this.redistributeArmies();
+    if (redistribute) {
+      this.attack(redistribute.from, redistribute.to);
     }
   }
 
-  private updateSources() {
-    const { terrain, armies } = this.gameState;
-    this.generationSources.clear();
-
-    const ourCapital = this.gameState.capitals[this.gameState.playerIndex];
-    if (ourCapital !== -1) {
-      this.generationSources.add(ourCapital);
-    }
-
-    for (let i = 0; i < this.gameState.cities.length; i++) {
-      const city = this.gameState.cities[i];
-      if (terrain[city] === this.gameState.playerIndex) {
-        this.generationSources.add(city);
-      }
-    }
+  private capturePriorityTargets(): { from: number; to: number } | null {
+    const { armies, terrain } = this.gameState;
 
     for (let i = 0; i < terrain.length; i++) {
-      if (terrain[i] === this.gameState.playerIndex && armies[i] > 5) {
-        this.generationSources.add(i);
+      if (terrain[i] === this.gameState.playerIndex && armies[i] > 2) {
+        const targets = this.getPriorityTargets(i);
+        if (targets.length > 0) {
+          return { from: i, to: targets[0] };
+        }
       }
     }
+
+    return null;
   }
 
-  private updateFrontlines() {
+  private expandEvenly(): { from: number; to: number } | null {
+    const { armies, terrain } = this.gameState;
+    const ourCapital = this.gameState.capitals[this.gameState.playerIndex];
+
+    if (ourCapital === -1) return null;
+
+    // Get all frontier tiles (tiles with unexpanded neighbors)
+    const frontierTiles = this.getFrontierTiles();
+
+    if (frontierTiles.length === 0) return null;
+
+    // Calculate center of our territory
+    const { centerX, centerY } = this.getTerritoryCenter();
+
+    // Score each expansion opportunity by how it contributes to even expansion
+    const expansions: Array<{
+      from: number;
+      to: number;
+      score: number;
+      distance: number;
+    }> = [];
+
+    for (const frontTile of frontierTiles) {
+      if (armies[frontTile] <= 1) continue;
+
+      const adjacent = this.getAdjacentTiles(frontTile);
+
+      for (const adj of adjacent) {
+        if (
+          (terrain[adj] === -1 || terrain[adj] === -3) &&
+          !this.wouldCreateLoop(frontTile, adj)
+        ) {
+          const adjRow = Math.floor(adj / this.gameState.width);
+          const adjCol = adj % this.gameState.width;
+
+          // Distance from our center - we want even expansion in all directions
+          const distFromCenter = Math.sqrt(
+            Math.pow(adjCol - centerX, 2) + Math.pow(adjRow - centerY, 2)
+          );
+
+          // Count how many of our tiles surround this position
+          const adjOfAdj = this.getAdjacentTiles(adj);
+          const ourNeighbors = adjOfAdj.filter(
+            (tile) => terrain[tile] === this.gameState.playerIndex
+          ).length;
+
+          // Score: prefer tiles that are:
+          // - At similar distance from center (even expansion)
+          // - Have fewer of our tiles around them (filling gaps)
+          // - Have more fog/unexplored around them (exploration bonus)
+          const fogNeighbors = adjOfAdj.filter(
+            (tile) => terrain[tile] === -3
+          ).length;
+
+          const score =
+            distFromCenter * 100 -
+            ourNeighbors * 50 +
+            fogNeighbors * 10 +
+            armies[frontTile];
+
+          expansions.push({
+            from: frontTile,
+            to: adj,
+            score,
+            distance: distFromCenter,
+          });
+        }
+      }
+    }
+
+    if (expansions.length === 0) return null;
+
+    // Find the average distance of all expansion opportunities
+    const avgDistance =
+      expansions.reduce((sum, e) => sum + e.distance, 0) / expansions.length;
+
+    // Prefer expansions closest to the average distance (maintains circular shape)
+    expansions.sort((a, b) => {
+      const aDistDiff = Math.abs(a.distance - avgDistance);
+      const bDistDiff = Math.abs(b.distance - avgDistance);
+      return aDistDiff - bDistDiff || b.score - a.score;
+    });
+
+    return { from: expansions[0].from, to: expansions[0].to };
+  }
+
+  private getFrontierTiles(): number[] {
     const { terrain } = this.gameState;
-    this.frontlineTiles.clear();
+    const frontier: number[] = [];
 
     for (let i = 0; i < terrain.length; i++) {
       if (terrain[i] === this.gameState.playerIndex) {
         const adjacent = this.getAdjacentTiles(i);
-        const hasExpansionTarget = adjacent.some(
-          (adj) =>
-            terrain[adj] === -1 ||
-            terrain[adj] === -3 ||
-            (terrain[adj] >= 0 && terrain[adj] !== this.gameState.playerIndex)
+        const hasUnexplored = adjacent.some(
+          (adj) => terrain[adj] === -1 || terrain[adj] === -3
         );
 
-        if (hasExpansionTarget) {
-          this.frontlineTiles.add(i);
+        if (hasUnexplored) {
+          frontier.push(i);
         }
       }
     }
+
+    return frontier;
   }
 
-  private attackEnemiesStrategic(): { from: number; to: number } | null {
-    const { armies, terrain } = this.gameState;
-    const attacks = [];
+  private getTerritoryCenter(): { centerX: number; centerY: number } {
+    const { terrain } = this.gameState;
+    let sumX = 0;
+    let sumY = 0;
+    let count = 0;
 
     for (let i = 0; i < terrain.length; i++) {
-      if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
+      if (terrain[i] === this.gameState.playerIndex) {
+        const row = Math.floor(i / this.gameState.width);
+        const col = i % this.gameState.width;
+        sumX += col;
+        sumY += row;
+        count++;
+      }
+    }
+
+    return {
+      centerX: count > 0 ? sumX / count : this.gameState.width / 2,
+      centerY: count > 0 ? sumY / count : this.gameState.height / 2,
+    };
+  }
+
+  private attackWeakEnemies(): { from: number; to: number } | null {
+    const { armies, terrain } = this.gameState;
+    const attacks: Array<{
+      from: number;
+      to: number;
+      advantage: number;
+      priority: number;
+    }> = [];
+
+    for (let i = 0; i < terrain.length; i++) {
+      if (terrain[i] === this.gameState.playerIndex && armies[i] > 2) {
         const adjacent = this.getAdjacentTiles(i);
 
         for (const adj of adjacent) {
@@ -86,14 +193,17 @@ export class BlobBot extends BaseBot {
             terrain[adj] >= 0 &&
             terrain[adj] !== this.gameState.playerIndex
           ) {
-            if (armies[i] > armies[adj] + 1 && !this.wouldCreateLoop(i, adj)) {
-              attacks.push({
-                from: i,
-                to: adj,
-                armyAdvantage: armies[i] - armies[adj],
-                isCapital: this.gameState.capitals.includes(adj),
-                isCity: this.gameState.cities.includes(adj),
-              });
+            const canWin = armies[i] > armies[adj] + 1;
+            if (canWin && !this.wouldCreateLoop(i, adj)) {
+              const advantage = armies[i] - armies[adj];
+              const isCapital = this.gameState.capitals.includes(adj);
+              const isCity = this.gameState.cities.includes(adj);
+
+              let priority = 50 + advantage;
+              if (isCapital) priority = 200;
+              else if (isCity) priority = 150;
+
+              attacks.push({ from: i, to: adj, advantage, priority });
             }
           }
         }
@@ -101,153 +211,72 @@ export class BlobBot extends BaseBot {
     }
 
     if (attacks.length > 0) {
-      attacks.sort((a, b) => {
-        if (a.isCapital !== b.isCapital) return a.isCapital ? -1 : 1;
-        if (a.isCity !== b.isCity) return a.isCity ? -1 : 1;
-        return b.armyAdvantage - a.armyAdvantage;
-      });
+      attacks.sort((a, b) => b.priority - a.priority);
       return { from: attacks[0].from, to: attacks[0].to };
     }
 
     return null;
   }
 
-  private expandLightningFast(): { from: number; to: number } | null {
+  private redistributeArmies(): { from: number; to: number } | null {
     const { armies, terrain } = this.gameState;
-    const expansions = [];
+    const frontierTiles = this.getFrontierTiles();
 
-    for (const frontTile of this.frontlineTiles) {
-      if (armies[frontTile] > 2) {
-        const adjacent = this.getAdjacentTiles(frontTile);
+    if (frontierTiles.length === 0) return null;
 
-        for (const adj of adjacent) {
-          if (
-            (terrain[adj] === -1 || terrain[adj] === -3) &&
-            !this.wouldCreateLoop(frontTile, adj)
-          ) {
-            let priority = this.getExpansionPriority(adj);
+    // Find the weakest frontier tile
+    let weakestFrontier = -1;
+    let minArmies = Infinity;
 
-            if (this.gameState.cities.includes(adj)) {
-              priority += 1000;
-            }
-
-            expansions.push({
-              from: frontTile,
-              to: adj,
-              armies: armies[frontTile],
-              priority: priority,
-            });
-          }
-        }
+    for (const tile of frontierTiles) {
+      if (armies[tile] < minArmies) {
+        minArmies = armies[tile];
+        weakestFrontier = tile;
       }
     }
 
-    if (expansions.length > 0) {
-      expansions.sort((a, b) => b.priority - a.priority || b.armies - a.armies);
-      const topExpansions = expansions.slice(0, 3);
-      return { from: topExpansions[0].from, to: topExpansions[0].to };
-    }
+    if (weakestFrontier === -1) return null;
 
-    return null;
-  }
-
-  private flowArmiesRobust(): { from: number; to: number } | null {
-    const { armies, terrain } = this.gameState;
+    // Find interior tiles with excess armies to redistribute
+    const interiorTiles: Array<{ tile: number; armies: number; dist: number }> =
+      [];
 
     for (let i = 0; i < terrain.length; i++) {
-      if (terrain[i] === this.gameState.playerIndex && armies[i] > 1) {
-        if (this.frontlineTiles.has(i)) continue;
-
-        const pathMove = this.findPathToFrontlineRobust(i);
-        if (pathMove) {
-          return pathMove;
-        }
+      if (
+        terrain[i] === this.gameState.playerIndex &&
+        armies[i] > 3 &&
+        !frontierTiles.includes(i)
+      ) {
+        const dist = this.getDistance(i, weakestFrontier);
+        interiorTiles.push({ tile: i, armies: armies[i], dist });
       }
     }
 
-    return null;
-  }
+    if (interiorTiles.length === 0) return null;
 
-  private findPathToFrontlineRobust(
-    from: number
-  ): { from: number; to: number } | null {
-    const { armies, terrain } = this.gameState;
+    // Sort by proximity to weakest frontier
+    interiorTiles.sort((a, b) => a.dist - b.dist || b.armies - a.armies);
 
-    const visited = new Set<number>();
-    const queue = [{ tile: from, path: [from] }];
-    visited.add(from);
+    // Move armies toward weakest frontier
+    const source = interiorTiles[0].tile;
+    const adjacent = this.getAdjacentTiles(source);
 
-    while (queue.length > 0) {
-      const { tile, path } = queue.shift()!;
-
-      if (this.frontlineTiles.has(tile) && tile !== from) {
-        if (path.length > 1) {
-          const nextTile = path[1];
-          if (
-            armies[from] > armies[nextTile] + 1 &&
-            !this.wouldCreateLoop(from, nextTile)
-          ) {
-            return { from, to: nextTile };
-          }
-        }
-      }
-
-      const adjacent = this.getAdjacentTiles(tile);
-      for (const adj of adjacent) {
-        if (!visited.has(adj) && terrain[adj] === this.gameState.playerIndex) {
-          visited.add(adj);
-          queue.push({ tile: adj, path: [...path, adj] });
-        }
-      }
-
-      if (path.length > 10) break;
-    }
-
-    const adjacent = this.getAdjacentTiles(from);
     for (const adj of adjacent) {
       if (
         terrain[adj] === this.gameState.playerIndex &&
-        armies[adj] < armies[from] &&
-        !this.wouldCreateLoop(from, adj)
+        !this.wouldCreateLoop(source, adj)
       ) {
-        return { from, to: adj };
+        const adjDist = this.getDistance(adj, weakestFrontier);
+        const sourceDist = this.getDistance(source, weakestFrontier);
+
+        // Move if it gets us closer to the weak point
+        if (adjDist < sourceDist) {
+          return { from: source, to: adj };
+        }
       }
     }
 
     return null;
-  }
-
-  private getExpansionPriority(position: number): number {
-    const { terrain } = this.gameState;
-    const adjacent = this.getAdjacentTiles(position);
-
-    let priority = 10;
-
-    const unknownNeighbors = adjacent.filter(
-      (adj) => terrain[adj] === -3
-    ).length;
-    priority += unknownNeighbors * 5;
-
-    const neutralNeighbors = adjacent.filter(
-      (adj) => terrain[adj] === -1
-    ).length;
-    priority += neutralNeighbors * 3;
-
-    return priority;
-  }
-
-  private getDistanceToNearestFrontline(position: number): number {
-    if (this.frontlineTiles.size === 0) return 0;
-
-    let minDistance = Infinity;
-    for (const frontTile of this.frontlineTiles) {
-      const distance = this.getDistance(position, frontTile);
-      if (distance < minDistance) {
-        minDistance = distance;
-      }
-    }
-
-    return Math.max(0, 50 - minDistance);
   }
 
   private getDistance(from: number, to: number): number {

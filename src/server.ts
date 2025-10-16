@@ -1123,7 +1123,7 @@ io.on("connection", (socket) => {
 
   socket.on(
     "invite_bot",
-    (gameId: string, botType: "blob" | "arrow" | "spiral") => {
+    (gameId: string, botType: "blob" | "arrow" | "spiral" | "titan") => {
       console.log(` Bot invite request: gameId=${gameId}, botType=${botType}`);
 
       if (!games.has(gameId)) {
@@ -1441,27 +1441,32 @@ io.on("connection", (socket) => {
       );
 
       // Check if game should be cleaned up (no connected human players)
-      const sockets = await io.in(gameId).fetchSockets();
-      const connectedHumans = sockets.filter(
-        (s) =>
-          s.data.playerIndex !== undefined &&
-          s.data.playerIndex >= 0 &&
-          !isBot(s, s.data.userId || "", s.data.username || "")
-      );
+      // Exception: Allow bot-only games for testing (e.g., "botarena")
+      const isBotArena = gameId === "botarena" || gameId.startsWith("bottest");
 
-      if (connectedHumans.length === 0) {
-        console.log(
-          `🧹 Game ${gameId} has no connected human players - cleaning up`
+      if (!isBotArena) {
+        const sockets = await io.in(gameId).fetchSockets();
+        const connectedHumans = sockets.filter(
+          (s) =>
+            s.data.playerIndex !== undefined &&
+            s.data.playerIndex >= 0 &&
+            !isBot(s, s.data.userId || "", s.data.username || "")
         );
-        const game = games.get(gameId);
-        if (game && game.isStarted()) {
-          sendSystemMessage(
-            gameId,
-            "Game abandoned - no human players remaining"
+
+        if (connectedHumans.length === 0) {
+          console.log(
+            `🧹 Game ${gameId} has no connected human players - cleaning up`
           );
-          setTimeout(() => {
-            game.endGame(-1);
-          }, 1000);
+          const game = games.get(gameId);
+          if (game && game.isStarted()) {
+            sendSystemMessage(
+              gameId,
+              "Game abandoned - no human players remaining"
+            );
+            setTimeout(() => {
+              game.endGame(-1);
+            }, 1000);
+          }
         }
       }
     }
