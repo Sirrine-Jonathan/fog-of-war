@@ -1021,6 +1021,7 @@ body.mobile-chat-active #chatInput {
   color: #fff;
   min-width: 100px;
   text-align: end;
+  padding-right: 12px;
 }
 
 @keyframes flashBonus {
@@ -1299,6 +1300,60 @@ body.mobile-game-active #gameCanvas > div:first-child {
   min-height: 0;
 }
 /* Remove old toggle button styles */
+
+/* Zoom Controls */
+.zoom-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 10;
+}
+
+.zoom-btn {
+  width: 40px;
+  height: 40px;
+  background: white;
+  border: 2px solid #ffd700;
+  border-radius: 8px;
+  font-size: 24px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+}
+
+.zoom-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+  background: #fffef7;
+}
+
+.zoom-btn:active {
+  transform: scale(0.95);
+}
+
+/* Mobile adjustments - smaller but still usable (44px is Apple's recommended minimum touch target) */
+@media (max-width: 768px) {
+  .zoom-controls {
+    bottom: 32px; /* Above mobile tab bar */
+    right: 16px;
+    gap: 16px;
+  }
+
+  .zoom-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 18px;
+    border-width: 1.5px;
+  }
+}
 
 /* Toast System */
 #toastContainer {

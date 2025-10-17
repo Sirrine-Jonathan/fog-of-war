@@ -2421,8 +2421,8 @@ canvas.addEventListener("wheel", (e) => {
   const worldX = (mouseX + camera.x) / camera.zoom;
   const worldY = (mouseY + camera.y) / camera.zoom;
 
-  // Reduced sensitivity: smaller zoom steps
-  const zoomFactor = e.deltaY > 0 ? 0.95 : 1.05;
+  // Much reduced sensitivity: finer zoom control
+  const zoomFactor = e.deltaY > 0 ? 0.98 : 1.02;
   const newZoom = Math.max(
     calculatedMinZoom,
     Math.min(camera.maxZoom, camera.zoom * zoomFactor)
@@ -2901,7 +2901,9 @@ function updatePlayersList() {
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
 
-  const headers = ["Player", "Tiles", "Armies", "Density", "Total"];
+  const headers = gameStarted
+    ? ["Player", "Tiles", "Armies", "Density", "Total"]
+    : ["Player"];
   if (isHost && !gameStarted) {
     headers.push("Actions");
   }
@@ -2944,7 +2946,8 @@ function updatePlayersList() {
     const nameCell = document.createElement("td");
     const playerSocketId = playerSocketMap.get(player.index);
     const isHostPlayer = playerSocketId === hostSocketId;
-    nameCell.textContent = (isHostPlayer ? "👑 " : "") + player.username;
+    nameCell.textContent =
+      (isHostPlayer && !player.isBot ? "👑 " : "") + player.username;
 
     if (player.isBot) {
       const botTag = document.createElement("span");
@@ -2962,34 +2965,42 @@ function updatePlayersList() {
     row.appendChild(nameCell);
 
     // Tiles cell
-    const tilesCell = document.createElement("td");
-    tilesCell.textContent = gameStarted ? player.stats.tiles : "-";
-    tilesCell.style.textAlign = "center";
-    row.appendChild(tilesCell);
+    if (headers.includes("Tiles")) {
+      const tilesCell = document.createElement("td");
+      tilesCell.textContent = gameStarted ? player.stats.tiles : "-";
+      tilesCell.style.textAlign = "center";
+      row.appendChild(tilesCell);
+    }
 
     // Armies cell
-    const armiesCell = document.createElement("td");
-    armiesCell.textContent = gameStarted ? player.stats.armies : "-";
-    armiesCell.style.textAlign = "center";
-    row.appendChild(armiesCell);
+    if (headers.includes("Armies")) {
+      const armiesCell = document.createElement("td");
+      armiesCell.textContent = gameStarted ? player.stats.armies : "-";
+      armiesCell.style.textAlign = "center";
+      row.appendChild(armiesCell);
+    }
 
     // Density cell
-    const densityCell = document.createElement("td");
-    const density =
-      player.stats.tiles > 0
-        ? (player.stats.armies / player.stats.tiles).toFixed(1)
-        : "0.0";
-    densityCell.textContent = gameStarted ? density : "-";
-    densityCell.style.textAlign = "center";
-    densityCell.style.fontWeight = "bold";
-    row.appendChild(densityCell);
+    if (headers.includes("Density")) {
+      const densityCell = document.createElement("td");
+      const density =
+        player.stats.tiles > 0
+          ? (player.stats.armies / player.stats.tiles).toFixed(1)
+          : "0.0";
+      densityCell.textContent = gameStarted ? density : "-";
+      densityCell.style.textAlign = "center";
+      densityCell.style.fontWeight = "bold";
+      row.appendChild(densityCell);
+    }
 
     // Total cell
-    const totalCell = document.createElement("td");
-    totalCell.textContent = gameStarted ? player.score : "-";
-    totalCell.style.textAlign = "center";
-    totalCell.style.fontWeight = "bold";
-    row.appendChild(totalCell);
+    if (headers.includes("Total")) {
+      const totalCell = document.createElement("td");
+      totalCell.textContent = gameStarted ? player.score : "-";
+      totalCell.style.textAlign = "center";
+      totalCell.style.fontWeight = "bold";
+      row.appendChild(totalCell);
+    }
 
     // Actions cell (only for host viewing non-bot human players when game not started)
     if (isHost && !gameStarted) {
@@ -3552,6 +3563,185 @@ function hideMobilePlayersAccordion() {
     mobileAccordion.style.display = "none";
   }
 }
+// Zoom control functions
+function zoomIn() {
+  if (!gameState) return;
+
+  const calculatedMinZoom = calculateMinZoom();
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  const worldX = (centerX + camera.x) / camera.zoom;
+  const worldY = (centerY + camera.y) / camera.zoom;
+
+  const zoomFactor = 1.05; // Reduced from 1.1 for finer control
+  const newZoom = Math.max(
+    calculatedMinZoom,
+    Math.min(camera.maxZoom, camera.zoom * zoomFactor)
+  );
+
+  if (newZoom !== camera.zoom) {
+    camera.zoom = newZoom;
+    camera.x = worldX * camera.zoom - centerX;
+    camera.y = worldY * camera.zoom - centerY;
+    camera.targetX = camera.x;
+    camera.targetY = camera.y;
+
+    centerCameraIfNeeded();
+
+    const mapWidth = gameState.width * 35 * camera.zoom;
+    const mapHeight = gameState.height * 35 * camera.zoom;
+
+    if (mapWidth > canvas.width) {
+      camera.x = Math.max(0, Math.min(camera.x, mapWidth - canvas.width));
+    }
+    if (mapHeight > canvas.height) {
+      camera.y = Math.max(0, Math.min(camera.y, mapHeight - canvas.height));
+    }
+
+    camera.targetX = camera.x;
+    camera.targetY = camera.y;
+
+    drawGame();
+  }
+}
+
+function zoomOut() {
+  if (!gameState) return;
+
+  const calculatedMinZoom = calculateMinZoom();
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  const worldX = (centerX + camera.x) / camera.zoom;
+  const worldY = (centerY + camera.y) / camera.zoom;
+
+  const zoomFactor = 0.95; // Reduced from 0.9 for finer control
+  const newZoom = Math.max(
+    calculatedMinZoom,
+    Math.min(camera.maxZoom, camera.zoom * zoomFactor)
+  );
+
+  if (newZoom !== camera.zoom) {
+    camera.zoom = newZoom;
+    camera.x = worldX * camera.zoom - centerX;
+    camera.y = worldY * camera.zoom - centerY;
+    camera.targetX = camera.x;
+    camera.targetY = camera.y;
+
+    centerCameraIfNeeded();
+
+    const mapWidth = gameState.width * 35 * camera.zoom;
+    const mapHeight = gameState.height * 35 * camera.zoom;
+
+    if (mapWidth > canvas.width) {
+      camera.x = Math.max(0, Math.min(camera.x, mapWidth - canvas.width));
+    }
+    if (mapHeight > canvas.height) {
+      camera.y = Math.max(0, Math.min(camera.y, mapHeight - canvas.height));
+    }
+
+    camera.targetX = camera.x;
+    camera.targetY = camera.y;
+
+    drawGame();
+  }
+}
+
+function fitToScreen() {
+  if (!gameState) return;
+
+  // Calculate zoom to fit with 20px padding top and bottom
+  const paddingTop = 20;
+  const paddingBottom = 20;
+  const availableHeight = canvas.height - paddingTop - paddingBottom;
+  const availableWidth = canvas.width;
+
+  const mapPixelWidth = gameState.width * 35;
+  const mapPixelHeight = gameState.height * 35;
+
+  // Calculate zoom that fits with padding
+  const zoomX = availableWidth / mapPixelWidth;
+  const zoomY = availableHeight / mapPixelHeight;
+
+  // Use smaller zoom to ensure both dimensions fit
+  camera.zoom = Math.min(zoomX, zoomY);
+
+  // Calculate the zoomed map size
+  const zoomedMapWidth = mapPixelWidth * camera.zoom;
+  const zoomedMapHeight = mapPixelHeight * camera.zoom;
+
+  // Center horizontally
+  camera.x = -(canvas.width - zoomedMapWidth) / 2;
+
+  // Center vertically with padding
+  camera.y = -(availableHeight - zoomedMapHeight) / 2 - paddingTop;
+
+  camera.targetX = camera.x;
+  camera.targetY = camera.y;
+
+  drawGame();
+}
+
+// Make zoom functions globally accessible
+window.zoomIn = zoomIn;
+window.zoomOut = zoomOut;
+window.fitToScreen = fitToScreen;
+
+// Long press functionality for zoom buttons
+let zoomInterval = null;
+
+function startLongPress(zoomFunction) {
+  // Execute immediately on first press
+  zoomFunction();
+
+  // Then execute repeatedly while held
+  zoomInterval = setInterval(zoomFunction, 200);
+}
+
+function stopLongPress() {
+  if (zoomInterval) {
+    clearInterval(zoomInterval);
+    zoomInterval = null;
+  }
+}
+
+// Add long press listeners to zoom buttons
+document.addEventListener("DOMContentLoaded", () => {
+  const zoomInBtn = document.getElementById("zoomInBtn");
+  const zoomOutBtn = document.getElementById("zoomOutBtn");
+
+  if (zoomInBtn) {
+    // Mouse events
+    zoomInBtn.addEventListener("mousedown", () => startLongPress(zoomIn));
+    zoomInBtn.addEventListener("mouseup", stopLongPress);
+    zoomInBtn.addEventListener("mouseleave", stopLongPress);
+
+    // Touch events
+    zoomInBtn.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      startLongPress(zoomIn);
+    });
+    zoomInBtn.addEventListener("touchend", stopLongPress);
+    zoomInBtn.addEventListener("touchcancel", stopLongPress);
+  }
+
+  if (zoomOutBtn) {
+    // Mouse events
+    zoomOutBtn.addEventListener("mousedown", () => startLongPress(zoomOut));
+    zoomOutBtn.addEventListener("mouseup", stopLongPress);
+    zoomOutBtn.addEventListener("mouseleave", stopLongPress);
+
+    // Touch events
+    zoomOutBtn.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      startLongPress(zoomOut);
+    });
+    zoomOutBtn.addEventListener("touchend", stopLongPress);
+    zoomOutBtn.addEventListener("touchcancel", stopLongPress);
+  }
+});
+
 // Ripple effect functions
 function createRipple(x, y, size = "normal") {
   const randomColor =

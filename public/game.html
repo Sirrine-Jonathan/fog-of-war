@@ -79,6 +79,33 @@
       <div class="mainRow">
         <div id="gameCanvas">
           <canvas id="gameBoard"></canvas>
+          <!-- Zoom Control Buttons -->
+          <div id="zoomControls" class="zoom-controls">
+            <button
+              id="zoomInBtn"
+              class="zoom-btn"
+              onclick="zoomIn()"
+              title="Zoom In"
+            >
+              +
+            </button>
+            <button
+              id="zoomOutBtn"
+              class="zoom-btn"
+              onclick="zoomOut()"
+              title="Zoom Out"
+            >
+              −
+            </button>
+            <button
+              id="fitToScreenBtn"
+              class="zoom-btn"
+              onclick="fitToScreen()"
+              title="Fit to Screen"
+            >
+              ⊡
+            </button>
+          </div>
           <div id="gameOverlay">
             <div id="preGameContent">
               <h1 id="gameTitle">Fog of War</h1>
